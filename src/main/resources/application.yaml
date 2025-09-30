@@ -1,3 +1,19 @@
 spring:
     application:
         name:  ok-chat
+    ai:
+        vectorstore:
+            type: typesense
+            typesense:
+                initialize-schema: true
+                collection-name: vector_store
+                embedding-dimension: 1536
+                client:
+                    protocol: http
+                    host: localhost
+                    port: 8108
+                    apiKey: Hu52dwsas2AdxdE
+        openai:
+            api-key: ${OPENAI_API_KEY}
+            embedding:
+                model: text-embedding-3-small

@@ -45,6 +45,9 @@ dependencies {
     implementation("org.springframework.ai:spring-ai-starter-vector-store-typesense")
     developmentOnly("org.springframework.ai:spring-ai-spring-boot-docker-compose")
 
+    /** logger */
+    implementation("io.github.oshai:kotlin-logging-jvm:7.0.0")
+
     /** test */
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

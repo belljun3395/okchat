@@ -1,8 +1,6 @@
 package com.okestro.okchat.confluence.config
 
-import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.okestro.okchat.confluence.client.ConfluenceClient
 import feign.Feign
 import feign.Logger
@@ -10,6 +8,7 @@ import feign.RequestInterceptor
 import feign.jackson.JacksonDecoder
 import feign.jackson.JacksonEncoder
 import feign.slf4j.Slf4jLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -18,12 +17,9 @@ import java.util.Base64
 @Configuration
 @EnableConfigurationProperties(ConfluenceProperties::class)
 class ConfluenceConfig {
-
-    @Bean
-    fun confluenceObjectMapper(): ObjectMapper {
-        return ObjectMapper()
-            .registerKotlinModule()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    private val log = KotlinLogging.logger {}
+    init {
+        log.info { "Confluence client configuration enabled" }
     }
 
     @Bean

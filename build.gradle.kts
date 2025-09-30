@@ -41,7 +41,6 @@ dependencies {
     implementation("org.springframework.ai:spring-ai-pdf-document-reader")
     implementation("org.springframework.ai:spring-ai-starter-mcp-client-webflux")
     implementation("org.springframework.ai:spring-ai-starter-model-chat-memory")
-    implementation("org.springframework.ai:spring-ai-starter-vector-store-elasticsearch")
     implementation("org.springframework.ai:spring-ai-starter-vector-store-typesense")
     developmentOnly("org.springframework.ai:spring-ai-spring-boot-docker-compose")
 

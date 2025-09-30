@@ -49,6 +49,11 @@ dependencies {
     /** logger */
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.0")
 
+    /** feign */
+    implementation("io.github.openfeign:feign-core:13.5")
+    implementation("io.github.openfeign:feign-jackson:13.5")
+    implementation("io.github.openfeign:feign-slf4j:13.5")
+
     /** test */
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

@@ -40,6 +40,7 @@ dependencies {
     /** spring ai */
     implementation("org.springframework.ai:spring-ai-advisors-vector-store")
     implementation("org.springframework.ai:spring-ai-pdf-document-reader")
+    implementation("org.springframework.ai:spring-ai-starter-model-openai")
     implementation("org.springframework.ai:spring-ai-starter-mcp-client-webflux")
     implementation("org.springframework.ai:spring-ai-starter-model-chat-memory")
     implementation("org.springframework.ai:spring-ai-starter-vector-store-typesense")

@@ -9,5 +9,4 @@ class OkchatApplicationTests {
     @Test
     fun contextLoads() {
     }
-
 }

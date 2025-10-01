@@ -5,6 +5,7 @@ import com.okestro.okchat.confluence.service.ContentHierarchy
 import com.okestro.okchat.confluence.service.ContentNode
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.document.Document
+import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
@@ -39,6 +40,9 @@ class ConfluenceSyncTask(
 ) : CommandLineRunner {
 
     private val log = KotlinLogging.logger {}
+
+    // Text splitter to handle large documents (max 800 tokens per chunk, 100 token overlap)
+    private val textSplitter = TokenTextSplitter(800, 100, 5, 10000, true)
 
     override fun run(vararg args: String?) {
         log.info { "========== Start Confluence Sync Task ==========" }
@@ -110,25 +114,56 @@ class ConfluenceSyncTask(
 
     /**
      * Convert Confluence hierarchy to vector store documents
+     * Splits large pages into chunks to fit embedding model token limits
      */
     private fun convertToDocuments(hierarchy: ContentHierarchy, spaceKey: String): List<Document> {
         val documents = mutableListOf<Document>()
 
         // Only convert pages (not folders)
         hierarchy.getAllPages().forEach { node ->
-            // Create document with page title and metadata
-            val document = Document(
-                node.id, // Use Confluence page ID as document ID
-                buildPageContent(node, hierarchy),
+            val pageContent = buildPageContent(node, hierarchy)
+            val path = getPagePath(node, hierarchy)
+
+            // Create initial document with metadata
+            val baseDocument = Document(
+                node.id,
+                pageContent,
                 mapOf(
                     "id" to node.id,
                     "title" to node.title,
                     "type" to "confluence-page",
                     "spaceKey" to spaceKey,
-                    "path" to getPagePath(node, hierarchy)
+                    "path" to path
                 )
             )
-            documents.add(document)
+
+            // Split document into chunks if too large
+            val chunks = try {
+                textSplitter.apply(listOf(baseDocument))
+            } catch (e: Exception) {
+                log.warn { "Failed to split document ${node.id}: ${e.message}. Using original document." }
+                listOf(baseDocument)
+            }
+
+            // If single chunk, use original page ID
+            // If multiple chunks, append chunk index to ID
+            if (chunks.size == 1) {
+                documents.add(chunks[0])
+            } else {
+                chunks.forEachIndexed { index, chunk ->
+                    val chunkDocument = Document(
+                        "${node.id}_chunk_$index",
+                        chunk.text ?: "",
+                        chunk.metadata + mapOf(
+                            "id" to node.id,
+                            "chunkIndex" to index,
+                            "totalChunks" to chunks.size
+                        )
+                    )
+                    documents.add(chunkDocument)
+                }
+                log.debug { "Split page ${node.id} (${node.title}) into ${chunks.size} chunks" }
+            }
         }
 
         return documents
@@ -139,13 +174,29 @@ class ConfluenceSyncTask(
      */
     private fun buildPageContent(node: ContentNode, hierarchy: ContentHierarchy): String {
         val path = getPagePath(node, hierarchy)
-        return """
-            Title: ${node.title}
-            Path: $path
-            Page ID: ${node.id}
+        val cleanContent = node.body?.let { stripHtml(it) } ?: ""
 
-            This page is managed in Confluence.
-        """.trimIndent()
+        return buildString {
+            append("Title: ${node.title}\n")
+            append("Path: $path\n")
+            append("Page ID: ${node.id}\n\n")
+            if (cleanContent.isNotBlank()) {
+                append("Content:\n")
+                append(cleanContent)
+            } else {
+                append("This page has no content.")
+            }
+        }
+    }
+
+    /**
+     * Strip HTML tags from content
+     */
+    private fun stripHtml(html: String): String {
+        return html
+            .replace(Regex("<.*?>"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
     }
 
     /**

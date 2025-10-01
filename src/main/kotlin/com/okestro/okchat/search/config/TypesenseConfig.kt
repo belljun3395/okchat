@@ -1,4 +1,4 @@
-package com.okestro.okchat.typense.config
+package com.okestro.okchat.search.config
 
 import org.springframework.ai.embedding.EmbeddingModel
 import org.springframework.ai.embedding.TokenCountBatchingStrategy

@@ -101,7 +101,8 @@ class ConfluenceService(
                 id = item.id,
                 title = item.title,
                 type = contentType,
-                parentId = item.parentId
+                parentId = item.parentId,
+                body = item.body?.storage?.value
             )
         }
 
@@ -228,7 +229,8 @@ data class ContentNode(
     val title: String,
     val type: ContentType,
     val parentId: String? = null,
-    val children: MutableList<ContentNode> = mutableListOf()
+    val children: MutableList<ContentNode> = mutableListOf(),
+    val body: String? = null
 )
 
 enum class ContentType {

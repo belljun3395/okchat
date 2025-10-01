@@ -1,6 +1,22 @@
 spring:
     application:
         name:  ok-chat
+    datasource:
+        url: jdbc:mysql://localhost:13306/okchat?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        username: root
+        password: root
+        hikari:
+            maximum-pool-size: 10
+            minimum-idle: 2
+            connection-timeout: 30000
+            idle-timeout: 600000
+            max-lifetime: 1800000
+    cloud:
+        task:
+            enabled: true  # Set to true to run as task mode
+            initialize-enabled: true
+            table-prefix: TASK_
     ai:
         vectorstore:
             type: typesense

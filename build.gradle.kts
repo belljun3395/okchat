@@ -21,6 +21,7 @@ repositories {
 }
 
 extra["springAiVersion"] = "1.0.2"
+extra["springCloudVersion"] = "2025.0.0"
 
 dependencies {
     /** kotlin  &  reactor */
@@ -36,6 +37,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+
+    /** spring cloud task */
+    implementation("org.springframework.cloud:spring-cloud-starter-task")
+    implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
+    runtimeOnly("com.mysql:mysql-connector-j")
 
     /** spring ai */
     implementation("org.springframework.ai:spring-ai-advisors-vector-store")
@@ -61,6 +67,7 @@ dependencies {
 dependencyManagement {
     imports {
         mavenBom("org.springframework.ai:spring-ai-bom:${property("springAiVersion")}")
+        mavenBom("org.springframework.cloud:spring-cloud-dependencies:${property("springCloudVersion")}")
     }
 }
 

@@ -1,8 +1,57 @@
 services:
-    typesense:
+    # =============================================================================
+    #  Search Services
+    # =============================================================================
+    okchat-typesense:
         image: 'typesense/typesense:29.0'
         command: '--data-dir /data --api-key=Hu52dwsas2AdxdE'
         volumes:
             - './typesense-data:/data'
         ports:
             - '8108:8108'
+    # =============================================================================
+    # Database Services
+    # =============================================================================
+    okchat-mysql:
+        container_name: okchat-mysql8
+        image: mysql/mysql-server:8.0.27
+        networks:
+            - okchat-network
+        environment:
+            - MYSQL_ROOT_PASSWORD=root
+            - MYSQL_ROOT_HOST=%
+            - TZ=Asia/Seoul
+        command: [
+            "--character-set-server=utf8mb4",
+            "--collation-server=utf8mb4_unicode_ci",
+            "--lower_case_table_names=1",
+            "--max_connections=2048",
+            "--wait_timeout=3600"
+        ]
+        ports:
+            - "13306:3306"  # MySQL Database
+        volumes:
+            - ./resources/mysql-init.d:/docker-entrypoint-initdb.d
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+            start_period: 30s
+        restart: unless-stopped
+
+    okchat-adminer:
+        container_name: okchat-adminer
+        image: adminer:4
+        networks:
+            - okchat-network
+        ports:
+            - "18080:8080"  # MySQL Web Admin
+        environment:
+            - ADMINER_DEFAULT_SERVER=okchat-mysql8
+            - ADMINER_DESIGN=nette
+            - ADMINER_PLUGINS=tables-filter tinymce
+
+networks:
+    okchat-network:
+        driver: bridge

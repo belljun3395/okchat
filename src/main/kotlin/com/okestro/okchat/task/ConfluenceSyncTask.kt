@@ -1,9 +1,11 @@
 package com.okestro.okchat.task
 
+import com.okestro.okchat.ai.support.KeywordExtractionService
 import com.okestro.okchat.confluence.service.ConfluenceService
 import com.okestro.okchat.confluence.service.ContentHierarchy
 import com.okestro.okchat.confluence.service.ContentNode
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.runBlocking
 import org.springframework.ai.document.Document
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.ai.vectorstore.VectorStore
@@ -36,6 +38,7 @@ class ConfluenceSyncTask(
     private val confluenceService: ConfluenceService,
     private val vectorStore: VectorStore,
     private val typesenseClient: Client,
+    private val keywordExtractionService: KeywordExtractionService,
     @Value("\${spring.ai.vectorstore.typesense.collection-name}") private val collectionName: String
 ) : CommandLineRunner {
 
@@ -115,6 +118,7 @@ class ConfluenceSyncTask(
     /**
      * Convert Confluence hierarchy to vector store documents
      * Splits large pages into chunks to fit embedding model token limits
+     * Extracts keywords for each document for better searchability
      */
     private fun convertToDocuments(hierarchy: ContentHierarchy, spaceKey: String): List<Document> {
         val documents = mutableListOf<Document>()
@@ -124,7 +128,19 @@ class ConfluenceSyncTask(
             val pageContent = buildPageContent(node, hierarchy)
             val path = getPagePath(node, hierarchy)
 
-            // Create initial document with metadata
+            // Extract keywords from document content
+            val keywords = runBlocking {
+                try {
+                    keywordExtractionService.extractKeywordsFromContent(pageContent, node.title)
+                } catch (e: Exception) {
+                    log.warn { "Failed to extract keywords for document ${node.id}: ${e.message}" }
+                    emptyList()
+                }
+            }
+
+            log.debug { "Extracted ${keywords.size} keywords for page ${node.id}: $keywords" }
+
+            // Create initial document with metadata including keywords
             val baseDocument = Document(
                 node.id,
                 pageContent,
@@ -133,7 +149,8 @@ class ConfluenceSyncTask(
                     "title" to node.title,
                     "type" to "confluence-page",
                     "spaceKey" to spaceKey,
-                    "path" to path
+                    "path" to path,
+                    "keywords" to keywords.joinToString(", ")
                 )
             )
 
@@ -157,7 +174,8 @@ class ConfluenceSyncTask(
                         chunk.metadata + mapOf(
                             "id" to node.id,
                             "chunkIndex" to index,
-                            "totalChunks" to chunks.size
+                            "totalChunks" to chunks.size,
+                            "keywords" to keywords.joinToString(", ")
                         )
                     )
                     documents.add(chunkDocument)

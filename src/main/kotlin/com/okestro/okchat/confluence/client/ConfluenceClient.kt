@@ -24,7 +24,7 @@ interface ConfluenceClient {
      * @return List of pages
      * @see <a href="https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-page/#api-spaces-id-pages-get">Confluence REST API - Get pages in space</a>
      */
-    @RequestLine("GET /spaces/{spaceId}/pages?limit={limit}&cursor={cursor}")
+    @RequestLine("GET /spaces/{spaceId}/pages?limit={limit}&cursor={cursor}&body-format=storage")
     fun getPagesBySpaceId(
         @Param("spaceId") spaceId: String,
         @Param("cursor") cursor: String? = null,
@@ -40,4 +40,30 @@ interface ConfluenceClient {
      */
     @RequestLine("GET /folders/{folderId}")
     fun getFolderById(@Param("folderId") folderId: String): FolderResponse
+
+    /**
+     * Get page by ID
+     *
+     * @param pageId The page ID
+     * @return Page information including body content
+     * @see <a href="https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-page/#api-pages-id-get">Confluence REST API - Get page</a>
+     */
+    @RequestLine("GET /pages/{pageId}?body-format=storage")
+    fun getPageById(@Param("pageId") pageId: String): Page
+
+    /**
+     * Get children pages of a page
+     *
+     * @param pageId The parent page ID
+     * @param cursor Pagination cursor
+     * @param limit Maximum number of results (default: 100)
+     * @return List of child pages
+     * @see <a href="https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-page/#api-pages-id-children-get">Confluence REST API - Get page children</a>
+     */
+    @RequestLine("GET /pages/{pageId}/children?limit={limit}&cursor={cursor}&body-format=storage")
+    fun getPageChildren(
+        @Param("pageId") pageId: String,
+        @Param("cursor") cursor: String? = null,
+        @Param("limit") limit: Int = 100
+    ): PageListResponse
 }

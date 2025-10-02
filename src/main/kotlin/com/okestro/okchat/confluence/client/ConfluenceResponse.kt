@@ -27,7 +27,16 @@ data class Page(
     val spaceId: String? = null,
     val status: String? = null,
     val version: Version? = null,
+    val body: Body? = null,
     val type: String? = null
+)
+
+data class Body(
+    val storage: Storage? = null
+)
+
+data class Storage(
+    val value: String
 )
 
 data class Version(

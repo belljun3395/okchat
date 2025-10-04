@@ -1,6 +1,7 @@
 package com.okestro.okchat.email.provider
 
 import com.okestro.okchat.email.config.EmailProperties
+import com.okestro.okchat.email.util.EmailContentCleaner
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.mail.Flags
 import jakarta.mail.Folder
@@ -180,19 +181,59 @@ abstract class AbstractEmailProvider(
 
     protected open suspend fun getPassword(): String? = config.password
 
-    private fun extractContent(message: Message): String =
-        when (val content = message.content) {
+    /**
+     * Extract and clean content from email message
+     * Handles both plain text and HTML content with proper preprocessing
+     */
+    private fun extractContent(message: Message): String {
+        val rawContent = when (val content = message.content) {
             is String -> content
-            is MimeMultipart -> {
-                buildString {
-                    for (i in 0 until content.count) {
-                        val bodyPart = content.getBodyPart(i)
-                        if (bodyPart.isMimeType("text/plain")) {
-                            append(bodyPart.content.toString())
-                        }
+            is MimeMultipart -> extractFromMultipart(content)
+            else -> ""
+        }
+
+        // Clean the extracted content
+        return EmailContentCleaner.cleanEmailContent(rawContent)
+    }
+
+    /**
+     * Recursively extract content from multipart email
+     * Prefers plain text, but falls back to HTML converted to text
+     */
+    private fun extractFromMultipart(multipart: MimeMultipart): String {
+        val textBuilder = StringBuilder()
+        val htmlBuilder = StringBuilder()
+
+        try {
+            for (i in 0 until multipart.count) {
+                val bodyPart = multipart.getBodyPart(i)
+
+                when {
+                    bodyPart.isMimeType("text/plain") -> {
+                        textBuilder.append(bodyPart.content.toString())
+                    }
+                    bodyPart.isMimeType("text/html") -> {
+                        htmlBuilder.append(bodyPart.content.toString())
+                    }
+                    bodyPart.content is MimeMultipart -> {
+                        // Recursive handling for nested multipart
+                        val nested = extractFromMultipart(bodyPart.content as MimeMultipart)
+                        textBuilder.append(nested)
                     }
                 }
             }
+        } catch (e: Exception) {
+            logger.error(e) { "Error extracting content from multipart message" }
+        }
+
+        // Prefer plain text, fallback to HTML converted to text
+        return when {
+            textBuilder.isNotEmpty() -> textBuilder.toString()
+            htmlBuilder.isNotEmpty() -> {
+                logger.debug { "Converting HTML content to plain text" }
+                EmailContentCleaner.convertHtmlToText(htmlBuilder.toString())
+            }
             else -> ""
         }
+    }
 }

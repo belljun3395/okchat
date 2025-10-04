@@ -11,16 +11,21 @@ import org.springframework.stereotype.Service
 
 /**
  * Service for searching documents in vector store
+ * Enhanced with Typesense hybrid search for better accuracy
  */
 @Service
 class DocumentSearchService(
-    private val vectorStore: VectorStore
+    private val vectorStore: VectorStore,
+    private val typesenseHybridSearchService: TypesenseHybridSearchService
 ) {
     private val log = KotlinLogging.logger {}
 
+    // Flag to enable/disable hybrid search (can be made configurable)
+    private val useHybridSearch = true
+
     /**
      * Keyword-based search - searches specifically in document keywords metadata
-     * This is useful when you want to search using extracted keywords
+     * ENHANCED: Uses Typesense text search for exact keyword matching
      *
      * @param keywords Keywords to search for
      * @param topK Number of results to return (default: 5)
@@ -34,6 +39,14 @@ class DocumentSearchService(
     ): List<SearchResult> = withContext(Dispatchers.IO) {
         log.info { "[Keyword Search] Searching with keywords: '$keywords' (topK=$topK, threshold=$similarityThreshold)" }
 
+        // Use hybrid search if enabled, otherwise fall back to vector search
+        if (useHybridSearch) {
+            val results = typesenseHybridSearchService.keywordSearch(keywords, topK)
+            log.info { "[Keyword Search] Found ${results.size} documents (Typesense text search)" }
+            return@withContext results.filter { it.score.value >= similarityThreshold }
+        }
+
+        // Fallback: Vector search with keyword boost
         val searchRequest = SearchRequest.builder()
             .query(keywords)
             .topK(topK)
@@ -66,13 +79,13 @@ class DocumentSearchService(
             )
         }.sortedByDescending { it.score } //  Clear: higher similarity is better
 
-        log.info { "[Keyword Search] Found ${results.size} documents with keyword matches" }
+        log.info { "[Keyword Search] Found ${results.size} documents with keyword matches (vector fallback)" }
         results
     }
 
     /**
      * Content-based search - searches specifically in document content
-     * Uses semantic similarity on document content
+     * ENHANCED: Uses Typesense hybrid search (text + vector) for best results
      *
      * @param query Search query related to content
      * @param topK Number of results to return (default: 5)
@@ -86,6 +99,19 @@ class DocumentSearchService(
     ): List<SearchResult> = withContext(Dispatchers.IO) {
         log.info { "[Content Search] Searching content for: '$query' (topK=$topK, threshold=$similarityThreshold)" }
 
+        // Use hybrid search if enabled (best for content search)
+        if (useHybridSearch) {
+            val results = typesenseHybridSearchService.hybridSearch(
+                query = query,
+                topK = topK,
+                textWeight = 0.4, // Balance between text and semantic
+                vectorWeight = 0.6 // Slightly prefer semantic for content
+            )
+            log.info { "[Content Search] Found ${results.size} documents (Typesense hybrid search)" }
+            return@withContext results.filter { it.score.value >= similarityThreshold }
+        }
+
+        // Fallback: Pure vector search
         val searchRequest = SearchRequest.builder()
             .query(query)
             .topK(topK)
@@ -95,7 +121,7 @@ class DocumentSearchService(
 
         val documents = vectorStore.similaritySearch(searchRequest)
 
-        log.info { "[Content Search] Found ${documents.size} documents with similar content" }
+        log.info { "[Content Search] Found ${documents.size} documents with similar content (vector fallback)" }
 
         documents.map { doc ->
             val distance = doc.metadata["distance"]?.toString()?.toDoubleOrNull() ?: 1.0
@@ -114,7 +140,7 @@ class DocumentSearchService(
 
     /**
      * Title-based search - searches specifically in document titles
-     * Uses string matching and semantic similarity on document titles
+     * ENHANCED: Uses Typesense text search with heavy title weighting
      *
      * @param query Search query to match against titles
      * @param topK Number of results to return (default: 5)
@@ -128,6 +154,14 @@ class DocumentSearchService(
     ): List<SearchResult> = withContext(Dispatchers.IO) {
         log.info { "[Title Search] Searching titles for: '$query' (topK=$topK, threshold=$similarityThreshold)" }
 
+        // Use hybrid search if enabled
+        if (useHybridSearch) {
+            val results = typesenseHybridSearchService.titleSearch(query, topK)
+            log.info { "[Title Search] Found ${results.size} documents (Typesense text search)" }
+            return@withContext results.filter { it.score.value >= similarityThreshold }
+        }
+
+        // Fallback: Vector search with title matching boost
         val searchRequest = SearchRequest.builder()
             .query(query)
             .topK(topK * 3) // Get more results for better title matching
@@ -167,7 +201,7 @@ class DocumentSearchService(
             .sortedByDescending { it.score }
             .take(topK)
 
-        log.info { "[Title Search] Found ${results.size} documents with title matches" }
+        log.info { "[Title Search] Found ${results.size} documents with title matches (vector fallback)" }
         results
     }
 

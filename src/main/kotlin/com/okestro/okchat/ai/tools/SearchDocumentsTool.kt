@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component
 import org.typesense.api.Client
 import org.typesense.model.SearchParameters
 
-@Component("search DocumentsTool")
+@Component("searchDocumentsTool")
 @Description("Search documents in  vector store using keyword search")
 class SearchDocumentsTool(
     private val typesenseClient: Client,

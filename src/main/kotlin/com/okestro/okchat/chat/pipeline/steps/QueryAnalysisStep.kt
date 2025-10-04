@@ -37,13 +37,16 @@ class QueryAnalysisStep(
             log.info { "[${getStepName()}] Keywords extracted: $keywords" }
         }
 
-        // Extract date keywords (month-only by default, unless specific day is mentioned)
+        // Extract date keywords
+        // Include all days if query contains "all" or "every" keywords
+        val includeAllDays = Regex("(?i)(모든|전체|모두|전부|all|every)").containsMatchIn(context.userMessage)
         val dateKeywords = DateExtractor.extractDateKeywords(
             context.userMessage,
-            includeAllDays = false // 월 단위 검색이 기본
+            includeAllDays = includeAllDays
         )
         if (dateKeywords.isNotEmpty()) {
-            log.info { "[${getStepName()}] Date keywords: $dateKeywords" }
+            val dayLevelInfo = if (includeAllDays) " (day-level expansion)" else ""
+            log.info { "[${getStepName()}] Date keywords: $dateKeywords$dayLevelInfo" }
         }
 
         val allKeywords = (keywords + dateKeywords).distinct()

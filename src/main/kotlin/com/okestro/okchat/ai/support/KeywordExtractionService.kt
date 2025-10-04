@@ -21,7 +21,7 @@ class KeywordExtractionService(
      */
     suspend fun extractKeywords(message: String): List<String> {
         val keywordPrompt = """
-            Extract 2-5 important keywords from the following user message for document search.
+            Extract important keywords from the following user message for document search.
 
             IMPORTANT: Provide keywords in BOTH Korean and English when applicable.
             - If the message is in Korean, provide both Korean terms and their English equivalents
@@ -66,7 +66,7 @@ class KeywordExtractionService(
      */
     suspend fun extractKeywordsFromContent(content: String, title: String? = null): List<String> {
         val contentPrompt = """
-            Extract 3-8 important keywords from the following document content for search indexing.
+            Extract important keywords from the following document content for search indexing.
 
             IMPORTANT: Provide keywords in BOTH Korean and English when applicable.
             - Focus on key concepts, technologies, processes, and topics

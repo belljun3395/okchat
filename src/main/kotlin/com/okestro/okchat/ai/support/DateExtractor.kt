@@ -118,17 +118,17 @@ object DateExtractor {
                 // Add key dates only (reduces from 30 keywords to ~10)
                 val strategicDays = buildList {
                     // Week starts (Mondays typically)
-                    add(1)   // First day
-                    add(8)   // Week 2 start
-                    add(15)  // Week 3 start (mid-month)
-                    add(22)  // Week 4 start
+                    add(1) // First day
+                    add(8) // Week 2 start
+                    add(15) // Week 3 start (mid-month)
+                    add(22) // Week 4 start
                     if (daysInMonth >= 29) add(29) // Week 5 start
 
                     // Common meeting days
-                    add(7)   // End of first week
-                    add(14)  // End of second week
-                    add(21)  // End of third week
-                    add(28)  // End of fourth week
+                    add(7) // End of first week
+                    add(14) // End of second week
+                    add(21) // End of third week
+                    add(28) // End of fourth week
 
                     // Last day
                     add(daysInMonth)

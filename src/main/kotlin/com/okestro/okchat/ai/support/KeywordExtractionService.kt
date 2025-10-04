@@ -30,8 +30,9 @@ class KeywordExtractionService(
             ✅ Technical terms and technologies
             ✅ Entities (people, teams, products, projects)
             ✅ Action verbs (개발, 검색, 분석, search, analyze)
-            ✅ For compound terms: full term + 1 key component only
-               Example: "주간회의록" → "주간회의록, 회의록"
+            ✅ For compound terms: full term + meaningful components
+               Example: "주간회의록" → "주간회의록, 회의록, 회의" (broader search)
+               Example: "개발파트" → "개발파트, 개발" (broader search)
 
             AVOID (these are handled separately or add noise):
             ❌ Dates and numbers (handled by DateExtractor)
@@ -41,7 +42,7 @@ class KeywordExtractionService(
             ❌ Ambiguous short forms (<2 characters)
 
             FORMAT: Comma-separated list only, no explanation
-            TARGET: 5-8 keywords (max 10)
+            TARGET: 7-10 keywords for broader coverage (max 12)
 
             EXAMPLES:
             ✅ Input: "백엔드 개발 레포 정보"
@@ -49,18 +50,18 @@ class KeywordExtractionService(
                (6 keywords - good balance, skipped generic "정보")
 
             ✅ Input: "PPP 개발 회의록 문의"
-               Output: "PPP, 개발, development, 회의록, meeting minutes, 문의, inquiry"
-               (7 keywords - includes entity PPP + bilingual pairs)
+               Output: "PPP, 개발, development, 회의록, 회의, meeting minutes, 문의, inquiry"
+               (8 keywords - includes entity PPP + bilingual + components)
 
             ❌ Input: "2025년 9월 주간회의록 요약"
                Bad: "2025, 2025년, 9월, September, 09, 250, 주간, 회의록, 회의, 주간회의, meeting, weekly, minutes"
                (13 keywords - too many, includes dates, over-variations)
-               Good: "주간회의록, 회의록, weekly meeting, meeting minutes, 요약, summary"
-               (6 keywords - focused, dates handled separately)
+               Good: "주간회의록, 회의록, 회의, weekly meeting, meeting minutes, meeting, 요약, summary"
+               (8 keywords - broader coverage with "회의" for general meetings, dates handled separately)
 
             User message: "$message"
 
-            Keywords (5-8 core terms):
+            Keywords (7-10 core terms):
         """.trimIndent()
 
         return try {
@@ -80,8 +81,8 @@ class KeywordExtractionService(
                 ?.filter { it.length >= 2 } // Remove single characters or too short
                 ?: listOf(message)
 
-            // Remove duplicates (case-insensitive) and limit to 10 max (RRF optimization)
-            keywords.distinctBy { it.lowercase() }.take(10)
+            // Remove duplicates (case-insensitive) and limit to 12 max (RRF optimization)
+            keywords.distinctBy { it.lowercase() }.take(12)
         } catch (e: Exception) {
             log.warn { "Failed to extract keywords: ${e.message}. Using original message." }
             listOf(message)

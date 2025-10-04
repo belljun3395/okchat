@@ -62,7 +62,7 @@ class SearchDocumentsTool(
 
             val searchParameters = SearchParameters()
                 .q(query)
-                .queryBy("content") // Search in content field only (metadata fields are not directly searchable)
+                .queryBy("content,metadata.title") // Search in both content and title
                 .perPage(limit)
                 .page(1)
 

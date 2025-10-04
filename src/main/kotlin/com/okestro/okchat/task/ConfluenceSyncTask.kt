@@ -126,13 +126,14 @@ class ConfluenceSyncTask(
 
         // Only convert pages (not folders)
         hierarchy.getAllPages().forEach { node ->
-            val pageContent = buildPageContent(node, hierarchy)
             val path = getPagePath(node, hierarchy)
 
-            // Extract keywords from document content
+            // Extract keywords FIRST (before building content)
             val keywords = runBlocking {
                 try {
-                    keywordExtractionService.extractKeywordsFromContent(pageContent, node.title)
+                    // Build preliminary content for keyword extraction
+                    val preliminaryContent = node.body?.let { stripHtml(it) } ?: ""
+                    keywordExtractionService.extractKeywordsFromContent(preliminaryContent, node.title)
                 } catch (e: Exception) {
                     log.warn { "Failed to extract keywords for document ${node.id}: ${e.message}" }
                     emptyList()
@@ -140,6 +141,9 @@ class ConfluenceSyncTask(
             }
 
             log.debug { "Extracted ${keywords.size} keywords for page ${node.id}: $keywords" }
+
+            // Build page content WITH keywords included for search
+            val pageContent = buildPageContent(node, hierarchy, keywords)
 
             // Create initial document with metadata including keywords
             val baseDocument = Document(
@@ -189,16 +193,28 @@ class ConfluenceSyncTask(
     }
 
     /**
-     * Build page content for embedding
+     * Build page content for embedding and search
+     * Includes extracted keywords for better searchability
      */
-    private fun buildPageContent(node: ContentNode, hierarchy: ContentHierarchy): String {
+    private fun buildPageContent(
+        node: ContentNode,
+        hierarchy: ContentHierarchy,
+        keywords: List<String> = emptyList()
+    ): String {
         val path = getPagePath(node, hierarchy)
         val cleanContent = node.body?.let { stripHtml(it) } ?: ""
 
         return buildString {
             append("Title: ${node.title}\n")
             append("Path: $path\n")
-            append("Page ID: ${node.id}\n\n")
+            append("Page ID: ${node.id}\n")
+
+            // Include keywords for better search matching
+            if (keywords.isNotEmpty()) {
+                append("Keywords: ${keywords.joinToString(", ")}\n")
+            }
+
+            append("\n")
             if (cleanContent.isNotBlank()) {
                 append("Content:\n")
                 append(cleanContent)

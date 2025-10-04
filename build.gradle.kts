@@ -68,6 +68,9 @@ dependencies {
     /** microsoft oauth2 */
     implementation("com.microsoft.azure:msal4j:1.16.2")
 
+    /** jsoup for HTML parsing in emails */
+    implementation("org.jsoup:jsoup:1.18.1")
+
     /** redis */
     implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
 

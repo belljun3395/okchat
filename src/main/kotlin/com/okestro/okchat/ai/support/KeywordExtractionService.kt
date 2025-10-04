@@ -27,6 +27,12 @@ class KeywordExtractionService(
             - If the message is in Korean, provide both Korean terms and their English equivalents
             - If the message is in English, provide both English terms and their Korean equivalents
             - For technical terms, include both languages (e.g., "백엔드, backend, 개발, development")
+            - For dates and time periods, include various formats and partial matches:
+              * "2025년 9월" → "2025년 9월, 2025-09, 9월, September, 250909, 250"
+              * "주간회의" → "주간회의, 주간 회의, weekly meeting, 주간, weekly"
+              * Keep year-month combinations, partial year codes, and spacing variations
+            - Extract both specific terms AND general topic keywords
+            - For document titles or page names, include the full title and key components
 
             Return ONLY the keywords separated by commas, without any explanation or formatting.
 
@@ -36,6 +42,12 @@ class KeywordExtractionService(
 
             - Input: "User Guide folder contents"
               Output: "User Guide, 유저 가이드, folder, 폴더, contents, 내용"
+
+            - Input: "2025년 9월 주간회의록 요약"
+              Output: "2025년 9월, 2025-09, 9월, September, 250, 주간회의, 주간 회의, weekly meeting, 회의록, meeting minutes, 요약, summary, 주간, weekly"
+
+            - Input: "PPP 개발 회의록 문의"
+              Output: "PPP, 개발, development, 회의록, meeting minutes, 회의, meeting, 문의, inquiry"
 
             User message: "$message"
 

@@ -31,7 +31,8 @@ class TypesenseConfig(
     fun typesenseClient(): Client {
         val nodes: MutableList<Node> = ArrayList()
         nodes.add(Node(clientProtocol, clientHost, clientPort.toString()))
-        val configuration = org.typesense.api.Configuration(nodes, Duration.ofSeconds(5), clientApiKey)
+        // Increased timeout for bulk operations (embedding generation can take time)
+        val configuration = org.typesense.api.Configuration(nodes, Duration.ofSeconds(120), clientApiKey)
         return Client(configuration)
     }
 

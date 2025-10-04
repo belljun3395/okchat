@@ -4,7 +4,7 @@ import com.okestro.okchat.ai.support.DateExtractor
 import com.okestro.okchat.ai.support.KeywordExtractionService
 import com.okestro.okchat.ai.support.QueryClassifier
 import com.okestro.okchat.chat.pipeline.ChatContext
-import com.okestro.okchat.chat.pipeline.ChatPipelineStep
+import com.okestro.okchat.chat.pipeline.FirstChatPipelineStep
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
 
@@ -19,7 +19,7 @@ private val log = KotlinLogging.logger {}
 @Component
 class QueryAnalysisStep(
     private val keywordExtractionService: KeywordExtractionService
-) : ChatPipelineStep {
+) : FirstChatPipelineStep {
 
     override suspend fun execute(context: ChatContext): ChatContext {
         log.info { "[${getStepName()}] Analyzing query: ${context.userMessage}" }

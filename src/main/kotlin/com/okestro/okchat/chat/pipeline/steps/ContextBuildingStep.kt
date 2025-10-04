@@ -1,10 +1,11 @@
 package com.okestro.okchat.chat.pipeline.steps
 
 import com.okestro.okchat.chat.pipeline.ChatContext
-import com.okestro.okchat.chat.pipeline.ChatPipelineStep
+import com.okestro.okchat.chat.pipeline.OptionalChatPipelineStep
 import com.okestro.okchat.search.service.SearchResult
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
 
 private val log = KotlinLogging.logger {}
@@ -14,9 +15,10 @@ private val log = KotlinLogging.logger {}
  * Organizes documents by relevance and formats for AI
  */
 @Component
+@Order(2)
 class ContextBuildingStep(
     @Value("\${confluence.base-url}") private val confluenceBaseUrl: String
-) : ChatPipelineStep {
+) : OptionalChatPipelineStep {
 
     companion object {
         private const val TOP_RESULTS_FOR_CONTEXT = 50

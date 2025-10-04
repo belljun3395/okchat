@@ -2,7 +2,7 @@ package com.okestro.okchat.chat.pipeline.steps
 
 import com.okestro.okchat.ai.support.DynamicPromptBuilder
 import com.okestro.okchat.chat.pipeline.ChatContext
-import com.okestro.okchat.chat.pipeline.ChatPipelineStep
+import com.okestro.okchat.chat.pipeline.LastChatPipelineStep
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.chat.prompt.PromptTemplate
 import org.springframework.stereotype.Component
@@ -14,7 +14,7 @@ private val log = KotlinLogging.logger {}
  * Uses dynamic prompt based on query type
  */
 @Component
-class PromptGenerationStep : ChatPipelineStep {
+class PromptGenerationStep : LastChatPipelineStep {
 
     override suspend fun execute(context: ChatContext): ChatContext {
         log.info { "[${getStepName()}] Generating prompt" }

@@ -1,10 +1,11 @@
 package com.okestro.okchat.chat.pipeline.steps
 
 import com.okestro.okchat.chat.pipeline.ChatContext
-import com.okestro.okchat.chat.pipeline.ChatPipelineStep
+import com.okestro.okchat.chat.pipeline.OptionalChatPipelineStep
 import com.okestro.okchat.search.service.DocumentSearchService
 import com.okestro.okchat.search.service.SearchResult
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
 
 private val log = KotlinLogging.logger {}
@@ -14,9 +15,10 @@ private val log = KotlinLogging.logger {}
  * Uses multi-strategy search (keyword, title, content)
  */
 @Component
+@Order(1)
 class DocumentSearchStep(
     private val documentSearchService: DocumentSearchService
-) : ChatPipelineStep {
+) : OptionalChatPipelineStep {
 
     companion object {
         private const val MAX_SEARCH_RESULTS = 200

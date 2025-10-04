@@ -25,11 +25,14 @@ class DocumentSearchStep(
 ) : OptionalChatPipelineStep {
 
     companion object {
-        private const val MAX_SEARCH_RESULTS = 200
+        private const val MAX_SEARCH_RESULTS = 50 // Optimized: reduced from 200 to improve performance
         private const val RRF_K = 60.0 // Standard RRF constant
-        private const val KEYWORD_WEIGHT = 1.0 // RRF weight for keyword search
-        private const val TITLE_WEIGHT = 1.2 // RRF weight for title search (slightly prefer)
-        private const val CONTENT_WEIGHT = 0.8 // RRF weight for content search
+
+        // RRF weights adjusted for Typesense hybrid search
+        // Higher weights = stronger influence in final ranking
+        private const val KEYWORD_WEIGHT = 1.3 // Increased: text search is now more accurate
+        private const val TITLE_WEIGHT = 1.5 // Increased: title matching is critical
+        private const val CONTENT_WEIGHT = 0.8 // Maintained: hybrid search balances this
     }
 
     override suspend fun execute(context: ChatContext): ChatContext {

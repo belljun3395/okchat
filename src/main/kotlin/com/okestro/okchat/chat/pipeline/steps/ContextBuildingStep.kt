@@ -22,10 +22,10 @@ class ContextBuildingStep(
 ) : OptionalChatPipelineStep {
 
     companion object {
-        private const val TOP_RESULTS_FOR_CONTEXT = 30
+        private const val TOP_RESULTS_FOR_CONTEXT = 10 // Optimized: reduced from 30 to fit token limits
         private const val HIGH_RELEVANCE_THRESHOLD = 1.2 // similarity (0~1) + boost (0.2~2.0) = 0.2~3.0
         private const val MEDIUM_RELEVANCE_THRESHOLD = 0.8 // 0.8 이상이면 괜찮은 매칭
-        private const val MAX_CONTENT_LENGTH = 3000
+        private const val MAX_CONTENT_LENGTH = 1500 // Optimized: reduced from 3000 to save tokens
         private const val MAX_OTHER_RESULTS_PREVIEW = 5
         private val DATE_PATTERN = Regex("""(\d{6})""")
     }

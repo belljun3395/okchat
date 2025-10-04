@@ -60,6 +60,15 @@ dependencies {
     implementation("io.github.openfeign:feign-jackson:13.5")
     implementation("io.github.openfeign:feign-slf4j:13.5")
 
+    /** jakarta mail */
+    implementation("org.eclipse.angus:angus-mail:2.0.3")
+
+    /** microsoft oauth2 */
+    implementation("com.microsoft.azure:msal4j:1.16.2")
+
+    /** redis */
+    implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
+
     /** test */
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

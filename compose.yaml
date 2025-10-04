@@ -52,6 +52,21 @@ services:
             - ADMINER_DESIGN=nette
             - ADMINER_PLUGINS=tables-filter tinymce
 
+    # =============================================================================
+    # Cache Services
+    # =============================================================================
+    okchat-redis:
+        image: redis:latest
+        container_name: okchat-redis
+        ports:
+            - "16379:6379"
+
+    okchat-redis-insight:
+        image: redislabs/redisinsight:latest
+        container_name: okchat-redis-insight
+        ports:
+            - "18081:5540"
+
 networks:
     okchat-network:
         driver: bridge

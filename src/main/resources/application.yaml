@@ -12,6 +12,10 @@ spring:
             connection-timeout: 30000
             idle-timeout: 600000
             max-lifetime: 1800000
+    data:
+        redis:
+            host: localhost
+            port: 16379
     cloud:
         task:
             enabled: true  # Set to true to run as task mode
@@ -40,3 +44,33 @@ confluence:
         type: BASIC
         email: ${CONFLUENCE_EMAIL}
         api-token: ${CONFLUENCE_API_TOKEN}
+
+email:
+    polling:
+        interval: 60000
+        initial-delay: 10000
+    mail:
+        protocol: imaps
+        timeout: 10000
+        connection-timeout: 10000
+        debug: true
+        debug-auth: true
+        ssl:
+            enabled: true
+            trust: "*"
+
+    providers:
+        gmail:
+            type: GMAIL
+            host: imap.gmail.com
+            port: 993
+            username: ${GMAIL_USERNAME}
+            auth-type: OAUTH2
+            enabled: true
+            oauth2:
+                client-id: ${GMAIL_CLIENT_ID}
+                client-secret: ${GMAIL_CLIENT_SECRET}
+                tenant-id: ${GMAIL_TENANT_ID:common}
+                scopes:
+                    - https://mail.google.com/
+                redirect-uri: http://localhost:8080/oauth2/callback

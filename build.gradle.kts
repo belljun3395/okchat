@@ -41,6 +41,8 @@ dependencies {
     /** spring cloud task */
     implementation("org.springframework.cloud:spring-cloud-starter-task")
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
+    implementation("org.springframework.integration:spring-integration-core")
+    implementation("org.springframework.integration:spring-integration-jdbc")
     runtimeOnly("com.mysql:mysql-connector-j")
 
     /** spring ai */

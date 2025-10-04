@@ -21,6 +21,7 @@ spring:
             enabled: true  # Set to true to run as task mode
             initialize-enabled: true
             table-prefix: TASK_
+            single-instance-enabled: true
     ai:
         vectorstore:
             type: typesense
@@ -74,3 +75,9 @@ email:
                 scopes:
                     - https://mail.google.com/
                 redirect-uri: http://localhost:8080/oauth2/callback
+
+task:
+    confluence-sync:
+        enabled: false
+    email-polling:
+        enabled: false

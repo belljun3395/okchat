@@ -12,7 +12,6 @@ import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.cloud.task.configuration.EnableTask
 import org.springframework.stereotype.Component
 import org.typesense.api.Client
 import org.typesense.model.SearchParameters
@@ -28,9 +27,8 @@ import org.typesense.model.SearchParameters
  * Run with: --spring.cloud.task.name=confluence-sync-task
  */
 @Component
-@EnableTask
 @ConditionalOnProperty(
-    name = ["spring.cloud.task.enabled"],
+    name = ["task.confluence-sync.enabled"],
     havingValue = "true",
     matchIfMissing = false
 )

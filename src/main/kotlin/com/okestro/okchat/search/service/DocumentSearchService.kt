@@ -174,6 +174,7 @@ class DocumentSearchService(
     /**
      * Calculate title matching score
      * Higher score for exact matches, partial matches, and substring matches
+     * RRF-optimized: Strong boost for date pattern matches (YYMMDD format)
      */
     private fun calculateTitleMatchScore(query: String, title: String): Double {
         val queryLower = query.lowercase()
@@ -191,6 +192,19 @@ class DocumentSearchService(
             score += 1.5
         }
 
+        // Date pattern matching (e.g., "2509" matches "250908_주간회의")
+        // Extract date-like patterns from query (4-6 digit numbers)
+        val datePatterns = Regex("\\d{4,6}").findAll(queryLower)
+        datePatterns.forEach { pattern ->
+            val dateStr = pattern.value
+            // Strong match if title starts with this date pattern
+            if (titleLower.startsWith(dateStr)) {
+                score += 3.0 // Higher than exact match for date-prefixed titles
+            } else if (titleLower.contains(dateStr)) {
+                score += 2.0 // Contains date pattern
+            }
+        }
+
         // Word-by-word matching
         val queryWords = queryLower.split(Regex("\\s+"))
         val titleWords = titleLower.split(Regex("\\s+|_|-"))
@@ -201,6 +215,8 @@ class DocumentSearchService(
                     when {
                         // Exact word match
                         titleWord == queryWord -> score += 0.5
+                        // Title starts with query word (prefix match for dates)
+                        titleWord.startsWith(queryWord) && queryWord.length >= 4 -> score += 0.8
                         // Title word contains query word
                         titleWord.contains(queryWord) -> score += 0.3
                         // Query word contains title word (for short codes)

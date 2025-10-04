@@ -101,10 +101,26 @@ class ConfluenceSyncTask(
                 log.info { "4. No documents to delete" }
             }
 
-            // 5. Store/Update in Typesense
-            log.info { "5. Storing/Updating in Typesense..." }
-            vectorStore.add(documents)
-            log.info { "✓ Stored/Updated ${documents.size} documents (${currentIds.size - existingIds.size} new, ${existingIds.intersect(currentIds).size} updated)" }
+            // 5. Store/Update in Typesense (batch processing to avoid timeout)
+            log.info { "5. Storing/Updating in Typesense (batch processing)..." }
+            val batchSize = 10 // Process 10 documents at a time
+            val batches = documents.chunked(batchSize)
+            var successCount = 0
+
+            batches.forEachIndexed { batchIndex, batch ->
+                val batchNum = batchIndex + 1
+                try {
+                    log.info { "  [Batch $batchNum/${batches.size}] Adding ${batch.size} documents..." }
+                    vectorStore.add(batch)
+                    successCount += batch.size
+                    log.info { "  [Batch $batchNum/${batches.size}] ✓ Successfully added ${batch.size} documents (Total: $successCount/${documents.size})" }
+                } catch (e: Exception) {
+                    log.error(e) { "  [Batch $batchNum/${batches.size}] ✗ Failed to add batch: ${e.message}" }
+                    throw e // Rethrow to mark task as failed
+                }
+            }
+
+            log.info { "✓ Stored/Updated $successCount documents (${currentIds.size - existingIds.size} new, ${existingIds.intersect(currentIds).size} updated)" }
 
             // 5. Summary
             log.info { "========== Sync Completed ==========" }

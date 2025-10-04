@@ -4,6 +4,7 @@ import com.okestro.okchat.ai.support.KeywordExtractionService
 import com.okestro.okchat.confluence.service.ConfluenceService
 import com.okestro.okchat.confluence.service.ContentHierarchy
 import com.okestro.okchat.confluence.service.ContentNode
+import com.okestro.okchat.confluence.util.ContentHierarchyVisualizer
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import org.springframework.ai.document.Document
@@ -60,7 +61,9 @@ class ConfluenceSyncTask(
             // 1. Fetch Confluence content hierarchy
             log.info { "1. Fetching Confluence content..." }
             val spaceId = confluenceService.getSpaceIdByKey(spaceKey)
-            val hierarchy = confluenceService.getSpaceContentHierarchy(spaceId)
+            val hierarchy = confluenceService.getSpaceContentHierarchy(spaceId).apply {
+                log.info { "Content Hierarchy:\n${ContentHierarchyVisualizer.visualize(this)}" }
+            }
 
             log.info { "✓ Retrieved ${hierarchy.getTotalCount()} contents" }
             log.info { "  - Folders: ${hierarchy.getAllFolders().size}" }

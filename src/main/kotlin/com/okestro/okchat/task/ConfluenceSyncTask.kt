@@ -6,6 +6,10 @@ import com.okestro.okchat.confluence.service.ContentHierarchy
 import com.okestro.okchat.confluence.service.ContentNode
 import com.okestro.okchat.confluence.util.ContentHierarchyVisualizer
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import org.springframework.ai.document.Document
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
@@ -79,9 +83,11 @@ class ConfluenceSyncTask(
             }
             log.info { "✓ Found ${existingIds.size} existing documents" }
 
-            // 3. Convert to vector store documents
-            log.info { "3. Converting to vector store documents..." }
-            val documents = convertToDocuments(hierarchy, spaceKey)
+            // 3. Convert to vector store documents (parallel processing)
+            log.info { "3. Converting to vector store documents (parallel processing)..." }
+            val documents = runBlocking {
+                convertToDocuments(hierarchy, spaceKey)
+            }
             val currentIds = documents.map { it.id }.toSet()
             log.info { "✓ Converted ${documents.size} documents" }
 
@@ -137,92 +143,97 @@ class ConfluenceSyncTask(
      * Splits large pages into chunks to fit embedding model token limits
      * Extracts keywords for each document for better searchability
      */
-    private fun convertToDocuments(hierarchy: ContentHierarchy, spaceKey: String): List<Document> {
+    private suspend fun convertToDocuments(hierarchy: ContentHierarchy, spaceKey: String): List<Document> {
         val documents = mutableListOf<Document>()
         val allPages = hierarchy.getAllPages()
         val totalPages = allPages.size
 
         log.info { "Converting $totalPages pages to vector store documents..." }
 
-        // Only convert pages (not folders)
-        allPages.forEachIndexed { index, node ->
-            val pageNum = index + 1
-            val path = getPagePath(node, hierarchy)
+        // Only convert pages (not folders) - Process in parallel
+        val allDocuments = coroutineScope {
+            allPages.mapIndexed { index, node ->
+                async(Dispatchers.IO) {
+                    val pageNum = index + 1
+                    val path = getPagePath(node, hierarchy)
 
-            log.info { "[$pageNum/$totalPages] Processing: '${node.title}' (ID: ${node.id})" }
-            log.info { "  └─ Path: $path" }
+                    log.info { "[$pageNum/$totalPages] Processing: '${node.title}' (ID: ${node.id})" }
+                    log.info { "  └─ Path: $path" }
 
-            // Extract keywords FIRST (before building content)
-            log.info { "  └─ Extracting keywords..." }
-            val keywords = runBlocking {
-                try {
-                    // Build preliminary content for keyword extraction
-                    val preliminaryContent = node.body?.let { stripHtml(it) } ?: ""
-                    keywordExtractionService.extractKeywordsFromContent(preliminaryContent, node.title)
-                } catch (e: Exception) {
-                    log.warn { "  └─ Failed to extract keywords for '${node.title}': ${e.message}" }
-                    emptyList()
-                }
-            }
+                    // Extract keywords FIRST (before building content)
+                    log.info { "  └─ Extracting keywords..." }
+                    val keywords = try {
+                        // Build preliminary content for keyword extraction
+                        val preliminaryContent = node.body?.let { stripHtml(it) } ?: ""
+                        keywordExtractionService.extractKeywordsFromContent(preliminaryContent, node.title)
+                    } catch (e: Exception) {
+                        log.warn { "  └─ Failed to extract keywords for '${node.title}': ${e.message}" }
+                        emptyList()
+                    }
 
-            if (keywords.isNotEmpty()) {
-                log.info { "  └─ Keywords extracted: ${keywords.joinToString(", ")}" }
-            } else {
-                log.info { "  └─ No keywords extracted" }
-            }
+                    if (keywords.isNotEmpty()) {
+                        log.info { "  └─ Keywords extracted: ${keywords.joinToString(", ")}" }
+                    } else {
+                        log.info { "  └─ No keywords extracted" }
+                    }
 
-            // Build page content WITH keywords included for search
-            val pageContent = buildPageContent(node, hierarchy, keywords)
-            val contentLength = pageContent.length
+                    // Build page content WITH keywords included for search
+                    val pageContent = buildPageContent(node, hierarchy, keywords)
+                    val contentLength = pageContent.length
 
-            // Create initial document with metadata including keywords
-            val baseDocument = Document(
-                node.id,
-                pageContent,
-                mapOf(
-                    "id" to node.id,
-                    "title" to node.title,
-                    "type" to "confluence-page",
-                    "spaceKey" to spaceKey,
-                    "path" to path,
-                    "keywords" to keywords.joinToString(", ")
-                )
-            )
-
-            // Split document into chunks if too large
-            log.info { "  └─ Content length: $contentLength chars, splitting if needed..." }
-            val chunks = try {
-                textSplitter.apply(listOf(baseDocument))
-            } catch (e: Exception) {
-                log.warn { "  └─ Failed to split '${node.title}': ${e.message}. Using original document." }
-                listOf(baseDocument)
-            }
-
-            // If single chunk, use original page ID
-            // If multiple chunks, append chunk index to ID
-            if (chunks.size == 1) {
-                documents.add(chunks[0])
-                log.info { "  └─ ✓ Document created (single chunk)" }
-            } else {
-                chunks.forEachIndexed { chunkIndex, chunk ->
-                    val chunkDocument = Document(
-                        "${node.id}_chunk_$chunkIndex",
-                        chunk.text ?: "",
-                        chunk.metadata + mapOf(
+                    // Create initial document with metadata including keywords
+                    val baseDocument = Document(
+                        node.id,
+                        pageContent,
+                        mapOf(
                             "id" to node.id,
-                            "chunkIndex" to chunkIndex,
-                            "totalChunks" to chunks.size,
+                            "title" to node.title,
+                            "type" to "confluence-page",
+                            "spaceKey" to spaceKey,
+                            "path" to path,
                             "keywords" to keywords.joinToString(", ")
                         )
                     )
-                    documents.add(chunkDocument)
-                }
-                log.info { "  └─ ✓ Document split into ${chunks.size} chunks" }
-            }
 
-            log.info { "  └─ Progress: $pageNum/$totalPages (${String.format("%.1f", (pageNum.toDouble() / totalPages) * 100)}%)" }
-            log.info { "" } // Empty line for readability
+                    // Split document into chunks if too large
+                    log.info { "  └─ Content length: $contentLength chars, splitting if needed..." }
+                    val chunks = try {
+                        textSplitter.apply(listOf(baseDocument))
+                    } catch (e: Exception) {
+                        log.warn { "  └─ Failed to split '${node.title}': ${e.message}. Using original document." }
+                        listOf(baseDocument)
+                    }
+
+                    // If single chunk, use original page ID
+                    // If multiple chunks, append chunk index to ID
+                    val resultDocuments = if (chunks.size == 1) {
+                        log.info { "  └─ ✓ Document created (single chunk)" }
+                        chunks
+                    } else {
+                        log.info { "  └─ ✓ Document split into ${chunks.size} chunks" }
+                        chunks.mapIndexed { chunkIndex, chunk ->
+                            Document(
+                                "${node.id}_chunk_$chunkIndex",
+                                chunk.text ?: "",
+                                chunk.metadata + mapOf(
+                                    "id" to node.id,
+                                    "chunkIndex" to chunkIndex,
+                                    "totalChunks" to chunks.size,
+                                    "keywords" to keywords.joinToString(", ")
+                                )
+                            )
+                        }
+                    }
+
+                    log.info { "  └─ Progress: $pageNum/$totalPages (${String.format("%.1f", (pageNum.toDouble() / totalPages) * 100)}%)" }
+                    log.info { "" } // Empty line for readability
+
+                    resultDocuments
+                }
+            }.awaitAll().flatten()
         }
+
+        documents.addAll(allDocuments)
 
         return documents
     }

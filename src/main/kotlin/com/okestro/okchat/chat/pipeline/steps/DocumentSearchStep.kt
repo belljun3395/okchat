@@ -38,14 +38,8 @@ class DocumentSearchStep(
 
         val allResults = coroutineScope {
             val keywordJob = async { searchByKeywords(allKeywords) }
-            val titleJob = async {
-                if (!context.dateKeywords.isNullOrEmpty()) {
-                    searchByTitle(context.userMessage)
-                } else {
-                    emptyMap()
-                }
-            }
-            val contentJob = async { searchByContent(context.userMessage) }
+            val titleJob = async { searchTitlesByQuery(context.userMessage) }
+            val contentJob = async { searchContentByQuery(context.userMessage) }
 
             val results = mutableMapOf<String, SearchResult>()
             results.putAll(keywordJob.await())
@@ -60,7 +54,7 @@ class DocumentSearchStep(
             .take(MAX_SEARCH_RESULTS)
 
         log.info { "[${getStepName()}] Found ${combinedResults.size} unique documents" }
-        log.info { "[${getStepName()}] Top 5 scores: ${combinedResults.take(5).map { "%.2f".format(it.score) }}" }
+        log.info { "[${getStepName()}] Top 5 scores: ${combinedResults.take(5).map { "%.2f".format(it.score.value) }}" }
 
         return context.copy(searchResults = combinedResults)
     }
@@ -96,14 +90,17 @@ class DocumentSearchStep(
         return results
     }
 
-    private suspend fun searchByTitle(
+    /**
+     * Search titles in parallel
+     */
+    private suspend fun searchTitlesByQuery(
         query: String
     ): Map<String, SearchResult> {
         log.info { "  [Title Search] Searching titles" }
 
         val results = mutableMapOf<String, SearchResult>()
-        val titleResults = documentSearchService.searchByTitle(query, MAX_SEARCH_RESULTS)
 
+        val titleResults = documentSearchService.searchByTitle(query, MAX_SEARCH_RESULTS)
         titleResults.forEach { result ->
             val existing = results[result.id]
             if (existing == null || result.score > existing.score) {
@@ -111,18 +108,21 @@ class DocumentSearchStep(
             }
         }
 
-        log.info { "    Found ${titleResults.size} results from title search" }
+        log.info { "    Found ${results.size} results from title search" }
         return results
     }
 
-    private suspend fun searchByContent(
+    /**
+     * Search content semantically
+     */
+    private suspend fun searchContentByQuery(
         query: String
     ): Map<String, SearchResult> {
         log.info { "  [Content Search] Semantic search on content" }
 
         val results = mutableMapOf<String, SearchResult>()
-        val contentResults = documentSearchService.searchByContent(query, MAX_SEARCH_RESULTS)
 
+        val contentResults = documentSearchService.searchByContent(query, MAX_SEARCH_RESULTS)
         contentResults.forEach { result ->
             val existing = results[result.id]
             if (existing == null || result.score > existing.score) {
@@ -130,7 +130,7 @@ class DocumentSearchStep(
             }
         }
 
-        log.info { "    Found ${contentResults.size} results from content search" }
+        log.info { "    Found ${results.size} results from content search" }
         return results
     }
 

@@ -23,8 +23,8 @@ class ContextBuildingStep(
 
     companion object {
         private const val TOP_RESULTS_FOR_CONTEXT = 30
-        private const val HIGH_RELEVANCE_THRESHOLD = 1.2 // ✅ similarity (0~1) + boost (0.2~2.0) = 0.2~3.0
-        private const val MEDIUM_RELEVANCE_THRESHOLD = 0.8 // ✅ 0.8 이상이면 괜찮은 매칭
+        private const val HIGH_RELEVANCE_THRESHOLD = 1.2 // similarity (0~1) + boost (0.2~2.0) = 0.2~3.0
+        private const val MEDIUM_RELEVANCE_THRESHOLD = 0.8 // 0.8 이상이면 괜찮은 매칭
         private const val MAX_CONTENT_LENGTH = 3000
         private const val MAX_OTHER_RESULTS_PREVIEW = 5
         private val DATE_PATTERN = Regex("""(\d{6})""")
@@ -48,9 +48,9 @@ class ContextBuildingStep(
     }
 
     private fun buildContextText(results: List<SearchResult>, userQuestion: String): String {
-        val highRelevance = results.filter { it.score >= HIGH_RELEVANCE_THRESHOLD }
-        val mediumRelevance = results.filter { it.score >= MEDIUM_RELEVANCE_THRESHOLD && it.score < HIGH_RELEVANCE_THRESHOLD }
-        val otherResults = results.filter { it.score < MEDIUM_RELEVANCE_THRESHOLD }
+        val highRelevance = results.filter { it.score.value >= HIGH_RELEVANCE_THRESHOLD }
+        val mediumRelevance = results.filter { it.score.value >= MEDIUM_RELEVANCE_THRESHOLD && it.score.value < HIGH_RELEVANCE_THRESHOLD }
+        val otherResults = results.filter { it.score.value < MEDIUM_RELEVANCE_THRESHOLD }
 
         return buildString {
             appendHeader(userQuestion, results.size, highRelevance.size)
@@ -100,7 +100,7 @@ class ContextBuildingStep(
 
         append("📄 기타 관련 문서 (${documents.size}개):\n")
         documents.take(MAX_OTHER_RESULTS_PREVIEW).forEach { result ->
-            append("- ${result.title} (점수: ${"%.2f".format(result.score)})\n")
+            append("- ${result.title} (점수: ${"%.2f".format(result.score.value)})\n")
         }
         if (documents.size > MAX_OTHER_RESULTS_PREVIEW) {
             append("... 외 ${documents.size - MAX_OTHER_RESULTS_PREVIEW}개\n")
@@ -123,7 +123,7 @@ class ContextBuildingStep(
         append("$index. ${result.title}\n")
         append("   링크: $pageUrl\n")
         append("   경로: ${result.path}\n")
-        append("   관련도: ${"%.2f".format(result.score)}")
+        append("   관련도: ${"%.2f".format(result.score.value)}")
 
         extractAndAppendDate(result.title)
         append("\n")

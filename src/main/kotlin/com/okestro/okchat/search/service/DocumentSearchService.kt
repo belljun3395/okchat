@@ -1,5 +1,7 @@
 package com.okestro.okchat.search.service
 
+import com.okestro.okchat.search.model.SearchScore
+import com.okestro.okchat.search.model.builder
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -32,8 +34,6 @@ class DocumentSearchService(
     ): List<SearchResult> = withContext(Dispatchers.IO) {
         log.info { "[Keyword Search] Searching with keywords: '$keywords' (topK=$topK, threshold=$similarityThreshold)" }
 
-        // Search using keywords field in semantic search
-        // The query will be matched against document embeddings, but we can boost keyword matches
         val searchRequest = SearchRequest.builder()
             .query(keywords)
             .topK(topK)
@@ -46,24 +46,25 @@ class DocumentSearchService(
         // Filter and sort by keyword relevance
         val results = documents.map { doc ->
             val docKeywords = doc.metadata["keywords"]?.toString() ?: ""
-            val keywordScore = calculateKeywordScore(keywords, docKeywords)
-
-            // Convert distance to similarity score (1 - distance)
-            // Distance is 0~1, where 0 = perfect match, 1 = no match
-            // Similarity should be 1~0, where 1 = perfect match, 0 = no match
             val distance = doc.metadata["distance"]?.toString()?.toDoubleOrNull() ?: 1.0
-            val similarityScore = 1.0 - distance
+            val keywordMatchCount = countKeywordMatches(keywords, docKeywords)
 
-            SearchResult(
+            //  Type-safe score calculation using builder
+            val score = SearchScore.fromDistance(distance)
+                .builder()
+                .addKeywordBoost(keywordMatchCount, boostPerMatch = 0.1)
+                .build()
+
+            SearchResult.withSimilarity(
                 id = doc.metadata["id"]?.toString() ?: "",
                 title = doc.metadata["title"]?.toString() ?: "Untitled",
                 content = doc.text ?: "",
                 path = doc.metadata["path"]?.toString() ?: "",
                 spaceKey = doc.metadata["spaceKey"]?.toString() ?: "",
                 keywords = docKeywords,
-                score = similarityScore + keywordScore // Base similarity + keyword boost
+                similarity = score
             )
-        }.sortedByDescending { it.score }
+        }.sortedByDescending { it.score } //  Clear: higher similarity is better
 
         log.info { "[Keyword Search] Found ${results.size} documents with keyword matches" }
         results
@@ -97,18 +98,16 @@ class DocumentSearchService(
         log.info { "[Content Search] Found ${documents.size} documents with similar content" }
 
         documents.map { doc ->
-            // Convert distance to similarity score
             val distance = doc.metadata["distance"]?.toString()?.toDoubleOrNull() ?: 1.0
-            val similarityScore = 1.0 - distance
-
-            SearchResult(
+            //  Type-safe: explicitly convert distance to similarity
+            SearchResult.fromVectorSearch(
                 id = doc.metadata["id"]?.toString() ?: "",
                 title = doc.metadata["title"]?.toString() ?: "Untitled",
                 content = doc.text ?: "",
                 path = doc.metadata["path"]?.toString() ?: "",
                 spaceKey = doc.metadata["spaceKey"]?.toString() ?: "",
                 keywords = doc.metadata["keywords"]?.toString() ?: "",
-                score = similarityScore
+                distance = distance
             )
         }
     }
@@ -145,18 +144,21 @@ class DocumentSearchService(
 
             // Only include if there's some title match
             if (titleMatchScore > 0.0) {
-                // Convert distance to similarity score
                 val distance = doc.metadata["distance"]?.toString()?.toDoubleOrNull() ?: 1.0
-                val similarityScore = 1.0 - distance
+                //  Type-safe score calculation with title boost
+                val score = SearchScore.fromDistance(distance)
+                    .builder()
+                    .addTitleBoost(titleMatchScore)
+                    .build()
 
-                SearchResult(
+                SearchResult.withSimilarity(
                     id = doc.metadata["id"]?.toString() ?: "",
                     title = title,
                     content = doc.text ?: "",
                     path = doc.metadata["path"]?.toString() ?: "",
                     spaceKey = doc.metadata["spaceKey"]?.toString() ?: "",
                     keywords = doc.metadata["keywords"]?.toString() ?: "",
-                    score = similarityScore + titleMatchScore // Base similarity + title match boost
+                    similarity = score
                 )
             } else {
                 null
@@ -212,11 +214,11 @@ class DocumentSearchService(
     }
 
     /**
-     * Calculate keyword matching score
-     * Higher score if more keywords match
+     * Count keyword matches between search keywords and document keywords
+     * Returns the number of matching keywords
      */
-    private fun calculateKeywordScore(searchKeywords: String, docKeywords: String): Double {
-        if (docKeywords.isBlank()) return 0.0
+    private fun countKeywordMatches(searchKeywords: String, docKeywords: String): Int {
+        if (docKeywords.isBlank()) return 0
 
         val searchTerms = searchKeywords.split(",")
             .map { it.trim().lowercase() }
@@ -227,19 +229,16 @@ class DocumentSearchService(
             .filter { it.isNotBlank() }
             .toSet()
 
-        val matchCount = searchTerms.count { term ->
+        return searchTerms.count { term ->
             docTerms.any { docTerm ->
                 docTerm.contains(term) || term.contains(docTerm)
             }
         }
-
-        // Boost score by 0.1 for each matching keyword
-        return matchCount * 0.1
     }
 }
 
 /**
- * Search result data class
+ * Search result data class with type-safe scoring
  */
 data class SearchResult(
     val id: String,
@@ -248,5 +247,47 @@ data class SearchResult(
     val path: String,
     val spaceKey: String,
     val keywords: String = "",
-    val score: Double
-)
+    val score: SearchScore.SimilarityScore //  Type-safe: always similarity (higher is better)
+) : Comparable<SearchResult> {
+    /**
+     * For backward compatibility - returns the similarity value
+     */
+    val scoreValue: Double get() = score.value
+
+    override fun compareTo(other: SearchResult): Int {
+        return score.compareTo(other.score)
+    }
+
+    companion object {
+        /**
+         * Factory method to create SearchResult from vector search with distance
+         */
+        fun fromVectorSearch(
+            id: String,
+            title: String,
+            content: String,
+            path: String,
+            spaceKey: String,
+            keywords: String = "",
+            distance: Double //  Explicitly named "distance"
+        ): SearchResult {
+            val score = SearchScore.fromDistance(distance).toSimilarity()
+            return SearchResult(id, title, content, path, spaceKey, keywords, score)
+        }
+
+        /**
+         * Factory method to create SearchResult with similarity score
+         */
+        fun withSimilarity(
+            id: String,
+            title: String,
+            content: String,
+            path: String,
+            spaceKey: String,
+            keywords: String = "",
+            similarity: SearchScore.SimilarityScore
+        ): SearchResult {
+            return SearchResult(id, title, content, path, spaceKey, keywords, similarity)
+        }
+    }
+}

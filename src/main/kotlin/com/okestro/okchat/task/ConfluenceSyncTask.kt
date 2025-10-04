@@ -123,27 +123,41 @@ class ConfluenceSyncTask(
      */
     private fun convertToDocuments(hierarchy: ContentHierarchy, spaceKey: String): List<Document> {
         val documents = mutableListOf<Document>()
+        val allPages = hierarchy.getAllPages()
+        val totalPages = allPages.size
+
+        log.info { "Converting $totalPages pages to vector store documents..." }
 
         // Only convert pages (not folders)
-        hierarchy.getAllPages().forEach { node ->
+        allPages.forEachIndexed { index, node ->
+            val pageNum = index + 1
             val path = getPagePath(node, hierarchy)
 
+            log.info { "[$pageNum/$totalPages] Processing: '${node.title}' (ID: ${node.id})" }
+            log.info { "  └─ Path: $path" }
+
             // Extract keywords FIRST (before building content)
+            log.info { "  └─ Extracting keywords..." }
             val keywords = runBlocking {
                 try {
                     // Build preliminary content for keyword extraction
                     val preliminaryContent = node.body?.let { stripHtml(it) } ?: ""
                     keywordExtractionService.extractKeywordsFromContent(preliminaryContent, node.title)
                 } catch (e: Exception) {
-                    log.warn { "Failed to extract keywords for document ${node.id}: ${e.message}" }
+                    log.warn { "  └─ Failed to extract keywords for '${node.title}': ${e.message}" }
                     emptyList()
                 }
             }
 
-            log.debug { "Extracted ${keywords.size} keywords for page ${node.id}: $keywords" }
+            if (keywords.isNotEmpty()) {
+                log.info { "  └─ Keywords extracted: ${keywords.joinToString(", ")}" }
+            } else {
+                log.info { "  └─ No keywords extracted" }
+            }
 
             // Build page content WITH keywords included for search
             val pageContent = buildPageContent(node, hierarchy, keywords)
+            val contentLength = pageContent.length
 
             // Create initial document with metadata including keywords
             val baseDocument = Document(
@@ -160,10 +174,11 @@ class ConfluenceSyncTask(
             )
 
             // Split document into chunks if too large
+            log.info { "  └─ Content length: $contentLength chars, splitting if needed..." }
             val chunks = try {
                 textSplitter.apply(listOf(baseDocument))
             } catch (e: Exception) {
-                log.warn { "Failed to split document ${node.id}: ${e.message}. Using original document." }
+                log.warn { "  └─ Failed to split '${node.title}': ${e.message}. Using original document." }
                 listOf(baseDocument)
             }
 
@@ -171,22 +186,26 @@ class ConfluenceSyncTask(
             // If multiple chunks, append chunk index to ID
             if (chunks.size == 1) {
                 documents.add(chunks[0])
+                log.info { "  └─ ✓ Document created (single chunk)" }
             } else {
-                chunks.forEachIndexed { index, chunk ->
+                chunks.forEachIndexed { chunkIndex, chunk ->
                     val chunkDocument = Document(
-                        "${node.id}_chunk_$index",
+                        "${node.id}_chunk_$chunkIndex",
                         chunk.text ?: "",
                         chunk.metadata + mapOf(
                             "id" to node.id,
-                            "chunkIndex" to index,
+                            "chunkIndex" to chunkIndex,
                             "totalChunks" to chunks.size,
                             "keywords" to keywords.joinToString(", ")
                         )
                     )
                     documents.add(chunkDocument)
                 }
-                log.debug { "Split page ${node.id} (${node.title}) into ${chunks.size} chunks" }
+                log.info { "  └─ ✓ Document split into ${chunks.size} chunks" }
             }
+
+            log.info { "  └─ Progress: $pageNum/$totalPages (${String.format("%.1f", (pageNum.toDouble() / totalPages) * 100)}%)" }
+            log.info { "" } // Empty line for readability
         }
 
         return documents

@@ -81,7 +81,7 @@ object DateExtractor {
 
     /**
      * Add multiple date format variations for a given year and month
-     * * @param includeAllDays If true, adds YYMMDD for all days in the month
+     * * @param includeAllDays If true, adds strategic day patterns instead of all 30 days (RRF optimized)
      */
     private fun addDateVariations(set: MutableSet<String>, year: String, month: String, includeAllDays: Boolean) {
         val monthInt = month.toIntOrNull() ?: return
@@ -100,22 +100,46 @@ object DateExtractor {
         // Slash format
         set.add("$year/$month")
 
-        // Short formats (YYMM)
+        // Short formats (YYMM) - for month-level matching
         set.add("$shortYear$month") // 2509
 
-        // Generate day-level dates only if needed
+        // RRF-optimized: Add partial patterns for better title matching
+        // "2509" matches "250908", "250901", etc. via substring matching
+        set.add("$shortYear$month*") // Wildcard pattern (if supported by search)
+
+        // Strategic day samples instead of all days (RRF optimization)
         if (includeAllDays) {
             try {
                 val yearMonth = YearMonth.of(yearInt, monthInt)
                 val daysInMonth = yearMonth.lengthOfMonth()
 
-                log.debug { "Generating day-level dates for $year-$month ($daysInMonth days)" }
+                log.debug { "Generating strategic day patterns for $year-$month (RRF optimized)" }
 
-                // Add YYMMDD patterns for each day in the month
-                for (day in 1..daysInMonth) {
-                    val dayStr = day.toString().padStart(2, '0')
-                    set.add("$shortYear$month$dayStr") // e.g., 250901, 250902, ..., 250930
+                // Add key dates only (reduces from 30 keywords to ~10)
+                val strategicDays = buildList {
+                    // Week starts (Mondays typically)
+                    add(1)   // First day
+                    add(8)   // Week 2 start
+                    add(15)  // Week 3 start (mid-month)
+                    add(22)  // Week 4 start
+                    if (daysInMonth >= 29) add(29) // Week 5 start
+
+                    // Common meeting days
+                    add(7)   // End of first week
+                    add(14)  // End of second week
+                    add(21)  // End of third week
+                    add(28)  // End of fourth week
+
+                    // Last day
+                    add(daysInMonth)
                 }
+
+                strategicDays.distinct().sorted().forEach { day ->
+                    val dayStr = day.toString().padStart(2, '0')
+                    set.add("$shortYear$month$dayStr") // e.g., 250901, 250908, 250915, 250922, 250929, 250930
+                }
+
+                log.debug { "Generated ${strategicDays.size} strategic day keywords (instead of $daysInMonth)" }
             } catch (e: Exception) {
                 log.warn { "Failed to parse date for day generation: $year-$month" }
             }

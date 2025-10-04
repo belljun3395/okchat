@@ -3,6 +3,7 @@ package com.okestro.okchat.ai.support
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.prompt.Prompt
+import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.stereotype.Service
 
 private val log = KotlinLogging.logger {}
@@ -18,45 +19,58 @@ class KeywordExtractionService(
 
     /**
      * Extract keywords from the message using LLM (in both Korean and English)
-     * Optimized to avoid over-extraction and noise keywords
+     * Optimized for RRF-based hybrid search: quality over quantity
      */
     suspend fun extractKeywords(message: String): List<String> {
         val keywordPrompt = """
-            Extract important keywords from the following user message for document search.
+            Extract 5-8 core keywords from the user message for hybrid search (BM25 + semantic).
 
-            GUIDELINES:
-            1. Extract CORE concepts and topics (avoid too many variations)
-            2. Include both Korean and English equivalents when applicable
-            3. For dates, include ONLY meaningful formats:
-               ✅ "2025년 9월", "2025-09", "9월", "September"
-               ❌ "250", "250909" (too short/ambiguous - avoid these)
-            4. For compound terms, include the full term AND key components:
-               - "주간회의록" → "주간회의록, 회의록, 주간회의"
-            5. Limit to 5-10 keywords maximum (focus on quality, not quantity)
-            6. Avoid overly specific variations unless explicitly needed
+            EXTRACT (include both Korean and English):
+            ✅ Core concepts and topics
+            ✅ Technical terms and technologies
+            ✅ Entities (people, teams, products, projects)
+            ✅ Action verbs (개발, 검색, 분석, search, analyze)
+            ✅ For compound terms: full term + 1 key component only
+               Example: "주간회의록" → "주간회의록, 회의록"
 
-            Return ONLY the keywords separated by commas, without explanation.
+            AVOID (these are handled separately or add noise):
+            ❌ Dates and numbers (handled by DateExtractor)
+            ❌ Stop words (이, 그, 저, the, a, an, is, are)
+            ❌ Morphological variations (개발/개발자/개발팀 - pick one)
+            ❌ Overly generic terms alone ("문서", "정보", "내용")
+            ❌ Ambiguous short forms (<2 characters)
 
-            Examples:
-            - Input: "백엔드 개발 레포 정보"
-              Output: "백엔드, backend, 개발, development, 레포, repository, 정보, information"
+            FORMAT: Comma-separated list only, no explanation
+            TARGET: 5-8 keywords (max 10)
 
-            - Input: "User Guide folder contents"
-              Output: "User Guide, 유저 가이드, folder, 폴더, contents, 내용"
+            EXAMPLES:
+            ✅ Input: "백엔드 개발 레포 정보"
+               Output: "백엔드, backend, 개발, development, 레포, repository"
+               (6 keywords - good balance, skipped generic "정보")
 
-            - Input: "2025년 9월 주간회의록 요약"
-              Output: "2025년 9월, 2025-09, 9월, September, 주간회의록, 회의록, weekly meeting, 요약, summary"
+            ✅ Input: "PPP 개발 회의록 문의"
+               Output: "PPP, 개발, development, 회의록, meeting minutes, 문의, inquiry"
+               (7 keywords - includes entity PPP + bilingual pairs)
 
-            - Input: "PPP 개발 회의록 문의"
-              Output: "PPP, 개발, development, 회의록, meeting minutes, 문의, inquiry"
+            ❌ Input: "2025년 9월 주간회의록 요약"
+               Bad: "2025, 2025년, 9월, September, 09, 250, 주간, 회의록, 회의, 주간회의, meeting, weekly, minutes"
+               (13 keywords - too many, includes dates, over-variations)
+               Good: "주간회의록, 회의록, weekly meeting, meeting minutes, 요약, summary"
+               (6 keywords - focused, dates handled separately)
 
             User message: "$message"
 
-            Keywords (5-10 core terms):
+            Keywords (5-8 core terms):
         """.trimIndent()
 
         return try {
-            val response = chatModel.call(Prompt(keywordPrompt))
+            // Use lower temperature for consistent keyword extraction
+            val options = OpenAiChatOptions.builder()
+                .temperature(0.3) // Lower = more consistent (vs 0.7 default)
+                .maxTokens(100) // Limit output length for efficiency
+                .build()
+
+            val response = chatModel.call(Prompt(keywordPrompt, options))
             val keywordsText = response.result.output.text?.trim()
             log.debug { "Extracted keywords (KR+EN): $keywordsText" }
 
@@ -66,8 +80,8 @@ class KeywordExtractionService(
                 ?.filter { it.length >= 2 } // Remove single characters or too short
                 ?: listOf(message)
 
-            // Remove duplicates (case-insensitive) and limit to 15 max
-            keywords.distinctBy { it.lowercase() }.take(15)
+            // Remove duplicates (case-insensitive) and limit to 10 max (RRF optimization)
+            keywords.distinctBy { it.lowercase() }.take(10)
         } catch (e: Exception) {
             log.warn { "Failed to extract keywords: ${e.message}. Using original message." }
             listOf(message)

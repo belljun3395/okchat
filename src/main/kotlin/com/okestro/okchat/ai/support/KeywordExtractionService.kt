@@ -18,23 +18,24 @@ class KeywordExtractionService(
 
     /**
      * Extract keywords from the message using LLM (in both Korean and English)
+     * Optimized to avoid over-extraction and noise keywords
      */
     suspend fun extractKeywords(message: String): List<String> {
         val keywordPrompt = """
             Extract important keywords from the following user message for document search.
 
-            IMPORTANT: Provide keywords in BOTH Korean and English when applicable.
-            - If the message is in Korean, provide both Korean terms and their English equivalents
-            - If the message is in English, provide both English terms and their Korean equivalents
-            - For technical terms, include both languages (e.g., "백엔드, backend, 개발, development")
-            - For dates and time periods, include various formats and partial matches:
-              * "2025년 9월" → "2025년 9월, 2025-09, 9월, September, 250909, 250"
-              * "주간회의" → "주간회의, 주간 회의, weekly meeting, 주간, weekly"
-              * Keep year-month combinations, partial year codes, and spacing variations
-            - Extract both specific terms AND general topic keywords
-            - For document titles or page names, include the full title and key components
+            GUIDELINES:
+            1. Extract CORE concepts and topics (avoid too many variations)
+            2. Include both Korean and English equivalents when applicable
+            3. For dates, include ONLY meaningful formats:
+               ✅ "2025년 9월", "2025-09", "9월", "September"
+               ❌ "250", "250909" (too short/ambiguous - avoid these)
+            4. For compound terms, include the full term AND key components:
+               - "주간회의록" → "주간회의록, 회의록, 주간회의"
+            5. Limit to 5-10 keywords maximum (focus on quality, not quantity)
+            6. Avoid overly specific variations unless explicitly needed
 
-            Return ONLY the keywords separated by commas, without any explanation or formatting.
+            Return ONLY the keywords separated by commas, without explanation.
 
             Examples:
             - Input: "백엔드 개발 레포 정보"
@@ -44,14 +45,14 @@ class KeywordExtractionService(
               Output: "User Guide, 유저 가이드, folder, 폴더, contents, 내용"
 
             - Input: "2025년 9월 주간회의록 요약"
-              Output: "2025년 9월, 2025-09, 9월, September, 250, 주간회의, 주간 회의, weekly meeting, 회의록, meeting minutes, 요약, summary, 주간, weekly"
+              Output: "2025년 9월, 2025-09, 9월, September, 주간회의록, 회의록, weekly meeting, 요약, summary"
 
             - Input: "PPP 개발 회의록 문의"
-              Output: "PPP, 개발, development, 회의록, meeting minutes, 회의, meeting, 문의, inquiry"
+              Output: "PPP, 개발, development, 회의록, meeting minutes, 문의, inquiry"
 
             User message: "$message"
 
-            Keywords (Korean and English):
+            Keywords (5-10 core terms):
         """.trimIndent()
 
         return try {
@@ -62,10 +63,11 @@ class KeywordExtractionService(
             val keywords = keywordsText?.split(",")
                 ?.map { it.trim() }
                 ?.filter { it.isNotBlank() }
+                ?.filter { it.length >= 2 } // Remove single characters or too short
                 ?: listOf(message)
 
-            // Remove duplicates (case-insensitive)
-            keywords.distinctBy { it.lowercase() }
+            // Remove duplicates (case-insensitive) and limit to 15 max
+            keywords.distinctBy { it.lowercase() }.take(15)
         } catch (e: Exception) {
             log.warn { "Failed to extract keywords: ${e.message}. Using original message." }
             listOf(message)

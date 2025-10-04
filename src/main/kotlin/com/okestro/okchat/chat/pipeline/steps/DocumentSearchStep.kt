@@ -5,6 +5,9 @@ import com.okestro.okchat.chat.pipeline.OptionalChatPipelineStep
 import com.okestro.okchat.search.service.DocumentSearchService
 import com.okestro.okchat.search.service.SearchResult
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
 
@@ -12,7 +15,7 @@ private val log = KotlinLogging.logger {}
 
 /**
  * Search for relevant documents
- * Uses multi-strategy search (keyword, title, content)
+ * Uses multi-strategy search (keyword, title, content) with PARALLEL execution
  */
 @Component
 @Order(1)
@@ -22,28 +25,34 @@ class DocumentSearchStep(
 
     companion object {
         private const val MAX_SEARCH_RESULTS = 200
-        private const val KEYWORD_MATCH_BOOST = 1.2
-        private const val ADDITIONAL_KEYWORD_BOOST = 0.5
-        private const val TITLE_MATCH_BOOST = 1.3
-        private const val CONTENT_MATCH_BOOST = 1.1
+        private const val KEYWORD_MATCH_BOOST = 1.5 //  similarity (0~1) + boost
+        private const val ADDITIONAL_KEYWORD_BOOST = 0.8 //  추가 매칭마다 누적
+        private const val TITLE_MATCH_BOOST = 2.0 //  제목 매칭 중요
+        private const val CONTENT_MATCH_BOOST = 1.2 //  내용 매칭 기본
     }
 
     override suspend fun execute(context: ChatContext): ChatContext {
         log.info { "[${getStepName()}] Starting multi-strategy search" }
 
-        val allResults = mutableMapOf<String, SearchResult>()
         val allKeywords = context.getAllKeywords()
 
-        // Strategy 1: Keyword-based search
-        searchByKeywords(allKeywords, allResults)
+        val allResults = coroutineScope {
+            val keywordJob = async { searchByKeywords(allKeywords) }
+            val titleJob = async {
+                if (!context.dateKeywords.isNullOrEmpty()) {
+                    searchByTitle(context.userMessage)
+                } else {
+                    emptyMap()
+                }
+            }
+            val contentJob = async { searchByContent(context.userMessage) }
 
-        // Strategy 2: Title-based search (for date queries)
-        if (!context.dateKeywords.isNullOrEmpty()) {
-            searchByTitle(context.userMessage, allResults)
+            val results = mutableMapOf<String, SearchResult>()
+            results.putAll(keywordJob.await())
+            results.putAll(titleJob.await())
+            results.putAll(contentJob.await())
+            results
         }
-
-        // Strategy 3: Content-based semantic search
-        searchByContent(context.userMessage, allResults)
 
         // Sort and limit results
         val combinedResults = allResults.values
@@ -57,37 +66,44 @@ class DocumentSearchStep(
     }
 
     private suspend fun searchByKeywords(
-        keywords: List<String>,
-        results: MutableMap<String, SearchResult>
-    ) {
-        if (keywords.isEmpty()) return
+        keywords: List<String>
+    ): Map<String, SearchResult> {
+        if (keywords.isEmpty()) return emptyMap()
 
-        log.info { "  [Keyword Search] Searching ${keywords.size} keywords individually" }
+        log.info { "  [Keyword Search] Searching ${keywords.size} keywords (parallel)" }
 
-        keywords.forEach { keyword ->
-            val keywordResults = documentSearchService.searchByKeywords(keyword, MAX_SEARCH_RESULTS)
-
-            keywordResults.forEach { result ->
-                val existing = results[result.id]
-                if (existing == null) {
-                    results[result.id] = result.copy(score = result.score * KEYWORD_MATCH_BOOST)
-                } else {
-                    val boostedScore = existing.score + (result.score * ADDITIONAL_KEYWORD_BOOST)
-                    results[result.id] = existing.copy(score = boostedScore)
+        val results = mutableMapOf<String, SearchResult>()
+        coroutineScope {
+            keywords.chunked(5).map { chunk ->
+                async {
+                    chunk.forEach { keyword ->
+                        val keywordResults = documentSearchService.searchByKeywords(keyword, MAX_SEARCH_RESULTS)
+                        keywordResults.forEach { result ->
+                            val existing = results[result.id]
+                            if (existing == null) {
+                                results[result.id] = result.copy(score = result.score * KEYWORD_MATCH_BOOST)
+                            } else {
+                                val boostedScore = existing.score + (result.score * ADDITIONAL_KEYWORD_BOOST)
+                                results[result.id] = existing.copy(score = boostedScore)
+                            }
+                        }
+                    }
                 }
-            }
+            }.awaitAll()
         }
 
         log.info { "    Found ${results.size} unique documents from keyword search" }
+        return results
     }
 
     private suspend fun searchByTitle(
-        query: String,
-        results: MutableMap<String, SearchResult>
-    ) {
+        query: String
+    ): Map<String, SearchResult> {
         log.info { "  [Title Search] Searching titles" }
 
+        val results = mutableMapOf<String, SearchResult>()
         val titleResults = documentSearchService.searchByTitle(query, MAX_SEARCH_RESULTS)
+
         titleResults.forEach { result ->
             val existing = results[result.id]
             if (existing == null || result.score > existing.score) {
@@ -96,15 +112,17 @@ class DocumentSearchStep(
         }
 
         log.info { "    Found ${titleResults.size} results from title search" }
+        return results
     }
 
     private suspend fun searchByContent(
-        query: String,
-        results: MutableMap<String, SearchResult>
-    ) {
+        query: String
+    ): Map<String, SearchResult> {
         log.info { "  [Content Search] Semantic search on content" }
 
+        val results = mutableMapOf<String, SearchResult>()
         val contentResults = documentSearchService.searchByContent(query, MAX_SEARCH_RESULTS)
+
         contentResults.forEach { result ->
             val existing = results[result.id]
             if (existing == null || result.score > existing.score) {
@@ -113,6 +131,7 @@ class DocumentSearchStep(
         }
 
         log.info { "    Found ${contentResults.size} results from content search" }
+        return results
     }
 
     override fun getStepName(): String = "Document Search"

@@ -13,6 +13,7 @@ private val log = KotlinLogging.logger {}
 /**
  * Build context from search results
  * Organizes documents by relevance and formats for AI
+ * OPTIMIZED: Focus on top results with clear hierarchy
  */
 @Component
 @Order(2)
@@ -21,11 +22,11 @@ class ContextBuildingStep(
 ) : OptionalChatPipelineStep {
 
     companion object {
-        private const val TOP_RESULTS_FOR_CONTEXT = 50
-        private const val HIGH_RELEVANCE_THRESHOLD = 1.5
-        private const val MEDIUM_RELEVANCE_THRESHOLD = 1.0
-        private const val MAX_CONTENT_LENGTH = 2000
-        private const val MAX_OTHER_RESULTS_PREVIEW = 10
+        private const val TOP_RESULTS_FOR_CONTEXT = 30
+        private const val HIGH_RELEVANCE_THRESHOLD = 1.2 // ✅ similarity (0~1) + boost (0.2~2.0) = 0.2~3.0
+        private const val MEDIUM_RELEVANCE_THRESHOLD = 0.8 // ✅ 0.8 이상이면 괜찮은 매칭
+        private const val MAX_CONTENT_LENGTH = 3000
+        private const val MAX_OTHER_RESULTS_PREVIEW = 5
         private val DATE_PATTERN = Regex("""(\d{6})""")
     }
 
@@ -52,26 +53,36 @@ class ContextBuildingStep(
         val otherResults = results.filter { it.score < MEDIUM_RELEVANCE_THRESHOLD }
 
         return buildString {
-            appendHeader(userQuestion, results.size)
+            appendHeader(userQuestion, results.size, highRelevance.size)
             appendHighRelevanceDocuments(highRelevance)
             appendMediumRelevanceDocuments(mediumRelevance)
             appendOtherResults(otherResults)
+            appendImportantInstruction()
         }
     }
 
-    private fun StringBuilder.appendHeader(question: String, totalCount: Int) {
-        append("=== 검색 결과 분석 ===\n")
+    private fun StringBuilder.appendHeader(question: String, totalCount: Int, highCount: Int) {
+        append("=== 🎯 검색 결과 분석 ===\n")
         append("질문: $question\n")
-        append("총 ${totalCount}개 문서 발견\n\n")
+        append("총 ${totalCount}개 문서 발견")
+        if (highCount > 0) {
+            append(" (고관련성: ${highCount}개)")
+        }
+        append("\n\n")
     }
 
     private fun StringBuilder.appendHighRelevanceDocuments(documents: List<SearchResult>) {
         if (documents.isEmpty()) return
 
-        append("🎯 고관련성 문서 (${documents.size}개):\n\n")
+        append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+        append("🎯 고관련성 문서 (${documents.size}개)\n")
+        append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+        append("⚠️ 다음 문서들이 질문과 가장 관련이 높습니다. 우선적으로 참고하세요!\n\n")
+
         documents.forEachIndexed { index, result ->
             appendDocumentInfo(index + 1, result, detailed = true)
         }
+        append("\n")
     }
 
     private fun StringBuilder.appendMediumRelevanceDocuments(documents: List<SearchResult>) {
@@ -81,6 +92,7 @@ class ContextBuildingStep(
         documents.forEachIndexed { index, result ->
             appendDocumentInfo(index + 1, result, detailed = true)
         }
+        append("\n")
     }
 
     private fun StringBuilder.appendOtherResults(documents: List<SearchResult>) {
@@ -94,6 +106,15 @@ class ContextBuildingStep(
             append("... 외 ${documents.size - MAX_OTHER_RESULTS_PREVIEW}개\n")
         }
         append("\n")
+    }
+
+    private fun StringBuilder.appendImportantInstruction() {
+        append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+        append("⚠️ 중요 지침:\n")
+        append("1. 위의 검색 결과를 **반드시 먼저** 확인하세요\n")
+        append("2. 고관련성 문서에 답이 있으면 그것을 기반으로 답변하세요\n")
+        append("3. 정보가 부족한 경우에만 도구(tool)를 사용하세요\n")
+        append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
     }
 
     private fun StringBuilder.appendDocumentInfo(index: Int, result: SearchResult, detailed: Boolean) {

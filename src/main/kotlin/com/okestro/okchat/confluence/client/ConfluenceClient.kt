@@ -66,4 +66,20 @@ interface ConfluenceClient {
         @Param("cursor") cursor: String? = null,
         @Param("limit") limit: Int = 100
     ): PageListResponse
+
+    /**
+     * Get direct children (pages and folders) of a folder
+     *
+     * @param folderId The parent folder ID
+     * @param cursor Pagination cursor
+     * @param limit Maximum number of results (default: 100)
+     * @return List of child pages and folders
+     * @see <a href="https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-children/#api-folders-id-direct-children-get">Confluence REST API - Get folder direct children</a>
+     */
+    @RequestLine("GET /folders/{folderId}/direct-children?limit={limit}&cursor={cursor}&body-format=storage")
+    fun getFolderChildren(
+        @Param("folderId") folderId: String,
+        @Param("cursor") cursor: String? = null,
+        @Param("limit") limit: Int = 100
+    ): PageListResponse
 }

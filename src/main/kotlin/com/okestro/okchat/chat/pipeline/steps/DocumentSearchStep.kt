@@ -72,10 +72,7 @@ class DocumentSearchStep(
         val sortedTitleResults = titleResults.sortedByDescending { it.score }
         val sortedContentResults = contentResults.sortedByDescending { it.score }
 
-        log.info { "[${getStepName()}] Multi-search completed" }
-        log.info { "  - Keyword results: ${sortedKeywordResults.size}" }
-        log.info { "  - Title results: ${sortedTitleResults.size}" }
-        log.info { "  - Content results: ${sortedContentResults.size}" }
+        log.info { "[${getStepName()}] Multi-search completed: keyword=${sortedKeywordResults.size}, title=${sortedTitleResults.size}, content=${sortedContentResults.size}" }
 
         // Apply Reciprocal Rank Fusion to combine rankings
         // Note: RRF already deduplicates by document ID, keeping highest RRF score
@@ -88,14 +85,19 @@ class DocumentSearchStep(
         ).take(MAX_SEARCH_RESULTS)
 
         log.info { "[${getStepName()}] Found ${combinedResults.size} documents via RRF (after deduplication)" }
-        log.info { "[${getStepName()}] Top 5 RRF scores: ${combinedResults.take(5).map { "%.4f".format(it.score.value) }}" }
-
-        // Log ALL RRF results (not just top 10)
-        log.info { "[${getStepName()}] ━━━ All ${combinedResults.size} RRF results ━━━" }
-        combinedResults.forEachIndexed { index, result ->
-            log.info { "  [RRF ${index + 1}] ${result.title} (score: ${"%.4f".format(result.score.value)}, id: ${result.id}, content: ${result.content.length} chars)" }
+        
+        // Log top 5 for quick reference, full list in DEBUG
+        if (log.isDebugEnabled()) {
+            log.debug { "[${getStepName()}] ━━━ All ${combinedResults.size} RRF results ━━━" }
+            combinedResults.forEachIndexed { index, result ->
+                log.debug { "  [RRF ${index + 1}] ${result.title} (score: ${"%.4f".format(result.score.value)}, id: ${result.id}, content: ${result.content.length} chars)" }
+            }
+            log.debug { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
+        } else {
+            log.info { "[${getStepName()}] Top 5: ${
+                combinedResults.take(5).joinToString(", ") { "${it.title}(${"%.4f".format(it.score.value)})" }
+            }" }
         }
-        log.info { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
 
         return context.copy(searchResults = combinedResults)
     }

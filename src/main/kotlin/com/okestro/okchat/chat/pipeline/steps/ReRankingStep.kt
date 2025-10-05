@@ -97,11 +97,17 @@ class ReRankingStep(
         val finalResults = reranked + remaining
 
         log.info { "[${getStepName()}] Re-ranking completed: ${topK.size} input → ${reranked.size} output" }
-        log.info { "[${getStepName()}] ━━━ All ${reranked.size} re-ranked results ━━━" }
-        reranked.forEachIndexed { index, result ->
-            log.info { "  [${index + 1}] ${result.title} (score: ${"%.4f".format(result.score.value)}, id: ${result.id}, content: ${result.content.length} chars)" }
+        
+        // Log top 5 for quick reference, full list in DEBUG
+        if (log.isDebugEnabled()) {
+            log.debug { "[${getStepName()}] ━━━ All ${reranked.size} re-ranked results ━━━" }
+            reranked.forEachIndexed { index, result ->
+                log.debug { "  [${index + 1}] ${result.title} (score: ${"%.4f".format(result.score.value)}, id: ${result.id}, content: ${result.content.length} chars)" }
+            }
+            log.debug { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
+        } else {
+            log.info { "[${getStepName()}] Top 5: ${reranked.take(5).map { "${it.title}(${"%.4f".format(it.score.value)})" }.joinToString(", ")}" }
         }
-        log.info { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
 
         return context.copy(searchResults = finalResults)
     }

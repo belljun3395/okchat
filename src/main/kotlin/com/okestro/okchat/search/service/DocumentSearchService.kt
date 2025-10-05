@@ -165,20 +165,22 @@ class DocumentSearchService(
                 "title=${titleResults.size}, content=${contentResults.size}"
         }
 
-        // Log top results from each search type
-        log.info { "[Multi-Search] ━━━ Keyword search top 5 ━━━" }
-        keywordResults.take(5).forEachIndexed { i, r ->
-            log.info { "  [K${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
-        }
+        // Log top results from each search type (DEBUG only)
+        if (log.isDebugEnabled()) {
+            log.debug { "[Multi-Search] ━━━ Keyword search top 5 ━━━" }
+            keywordResults.take(5).forEachIndexed { i, r ->
+                log.debug { "  [K${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
+            }
 
-        log.info { "[Multi-Search] ━━━ Title search top 5 ━━━" }
-        titleResults.take(5).forEachIndexed { i, r ->
-            log.info { "  [T${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
-        }
+            log.debug { "[Multi-Search] ━━━ Title search top 5 ━━━" }
+            titleResults.take(5).forEachIndexed { i, r ->
+                log.debug { "  [T${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
+            }
 
-        log.info { "[Multi-Search] ━━━ Content search top 5 ━━━" }
-        contentResults.take(5).forEachIndexed { i, r ->
-            log.info { "  [C${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
+            log.debug { "[Multi-Search] ━━━ Content search top 5 ━━━" }
+            contentResults.take(5).forEachIndexed { i, r ->
+                log.debug { "  [C${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
+            }
         }
 
         return Triple(keywordResults, titleResults, contentResults)
@@ -252,7 +254,7 @@ class DocumentSearchService(
                     pageResults.first()
                 } else {
                     // Multiple chunks from same page - merge all content
-                    log.info { "[Merge] Page $pageId (${pageResults.first().title}): Merging ${pageResults.size} chunks" }
+                    log.debug { "[Merge] Page $pageId (${pageResults.first().title}): Merging ${pageResults.size} chunks" }
 
                     // Use the highest scoring chunk as base
                     val baseResult = pageResults.maxByOrNull { it.score.value }!!
@@ -274,7 +276,7 @@ class DocumentSearchService(
                         .trim()
 
                     val chunkSizes = pageResults.map { "${it.content.length}" }.joinToString("+")
-                    log.info { "[Merge] Page $pageId: Merged ${mergedContent.length} chars from ${pageResults.size} chunks [$chunkSizes]" }
+                    log.debug { "[Merge] Page $pageId: Merged ${mergedContent.length} chars from ${pageResults.size} chunks [$chunkSizes]" }
 
                     // Return merged result with combined content
                     baseResult.copy(content = mergedContent)

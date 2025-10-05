@@ -43,21 +43,21 @@ class ContextBuildingStep(
         val topResults = searchResults.take(TOP_RESULTS_FOR_CONTEXT)
         log.info { "[${getStepName()}] Using top ${topResults.size} documents for context" }
 
-        // Log ALL top documents in detail
-        log.info { "[${getStepName()}] ━━━ All ${topResults.size} documents selected for context ━━━" }
-        topResults.forEachIndexed { index, result ->
-            log.info { "  [${index + 1}/${topResults.size}] ${result.title}" }
-            log.info { "       Score: ${"%.4f".format(result.score.value)}, ID: ${result.id}" }
-            log.info { "       Content: ${result.content.length} chars" }
-            log.info { "       Preview: ${result.content.take(150).replace("\n", " ")}..." }
+        // Log top documents in DEBUG mode
+        if (log.isDebugEnabled()) {
+            log.debug { "[${getStepName()}] ━━━ All ${topResults.size} documents selected for context ━━━" }
+            topResults.forEachIndexed { index, result ->
+                log.debug { "  [${index + 1}/${topResults.size}] ${result.title}" }
+                log.debug { "       Score: ${"%.4f".format(result.score.value)}, ID: ${result.id}" }
+                log.debug { "       Content: ${result.content.length} chars" }
+                log.debug { "       Preview: ${result.content.take(150).replace("\n", " ")}..." }
+            }
+            log.debug { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
         }
-        log.info { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
 
         val contextText = buildContextText(topResults, context.userMessage)
         log.info { "[${getStepName()}] Built context: ${contextText.length} chars" }
-        log.info {
-            "[${getStepName()}] Context :\n" + contextText
-        }
+        log.debug { "[${getStepName()}] Context detail:\n" + contextText }
 
         return context.copy(contextText = contextText)
     }
@@ -66,13 +66,16 @@ class ContextBuildingStep(
         // Filter out documents with minimal content (metadata-only chunks)
         val validResults = results.filter { it.content.length > 100 }
 
-        log.info { "[${getStepName()}] Content filtering: ${results.size} → ${validResults.size} results" }
         if (results.size > validResults.size) {
             val filtered = results.filter { it.content.length <= 100 }
-            log.info { "[${getStepName()}] Filtered out ${filtered.size} minimal content documents:" }
-            filtered.take(5).forEach {
-                log.info { "    - ${it.title} (content: ${it.content.length} chars)" }
+            log.info { "[${getStepName()}] Content filtering: ${results.size} → ${validResults.size} results (filtered ${filtered.size} minimal docs)" }
+            if (log.isDebugEnabled()) {
+                filtered.take(5).forEach {
+                    log.debug { "    - ${it.title} (content: ${it.content.length} chars)" }
+                }
             }
+        } else {
+            log.debug { "[${getStepName()}] Content filtering: ${results.size} → ${validResults.size} results" }
         }
 
         val highRelevance = validResults.filter { it.score.value >= HIGH_RELEVANCE_THRESHOLD }

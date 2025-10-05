@@ -31,10 +31,12 @@ class QueryAnalysisStep(
 
         // Extract keywords using AI (if not provided)
         val keywords = context.providedKeywords ?: keywordExtractionService.extractKeywords(context.userMessage)
-        if (context.providedKeywords != null) {
-            log.info { "[${getStepName()}] Keywords provided: $keywords" }
-        } else {
-            log.info { "[${getStepName()}] Keywords extracted: $keywords" }
+        log.debug {
+            if (context.providedKeywords != null) {
+                "[${getStepName()}] Keywords provided: $keywords"
+            } else {
+                "[${getStepName()}] Keywords extracted: $keywords"
+            }
         }
 
         // Extract date keywords
@@ -44,12 +46,10 @@ class QueryAnalysisStep(
             context.userMessage,
             includeAllDays = true // Always include strategic days for YYMMDD title matching
         )
-        if (dateKeywords.isNotEmpty()) {
-            log.info { "[${getStepName()}] Date keywords: $dateKeywords" }
-        }
+        log.debug { "[${getStepName()}] Date keywords: $dateKeywords" }
 
         val allKeywords = (keywords + dateKeywords).distinct()
-        log.info { "[${getStepName()}] Total keywords: ${allKeywords.size}" }
+        log.info { "[${getStepName()}] Analysis complete: ${allKeywords.size} keywords (${keywords.size} semantic, ${dateKeywords.size} date)" }
 
         return context.copy(
             queryAnalysis = queryAnalysis,

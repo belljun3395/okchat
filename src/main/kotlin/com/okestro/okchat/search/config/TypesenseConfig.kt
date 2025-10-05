@@ -40,11 +40,12 @@ class TypesenseConfig(
 
     @Bean
     fun vectorStore(client: Client, embeddingModel: EmbeddingModel): VectorStore {
+        log.info { "Creating TypesenseVectorStore with collection: $collectionName, embedding dimension: $embeddingDimension" }
         return TypesenseVectorStore.builder(client, embeddingModel)
             .collectionName(collectionName) // Optional: defaults to "documents"
             .embeddingDimension(embeddingDimension) // Optional: defaults to 1536
             .initializeSchema(false) // We handle schema initialization ourselves for Korean support
-            .batchingStrategy(TokenCountBatchingStrategy()) // Optional: defaults to TokenCountBatchingStrategy
+            .batchingStrategy(TokenCountBatchingStrategy()) // Batching for performance
             .build()
     }
 }

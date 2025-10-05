@@ -39,17 +39,22 @@ class TypesenseSchemaInitializer(
                 val titleField = existingCollection.fields?.find { it.name == "metadata.title" }
                 val keywordsField = existingCollection.fields?.find { it.name == "metadata.keywords" }
 
-                // Check if Korean tokenizer is already configured
+                // Check if Korean tokenizer is configured
                 val hasKoreanSupport = contentField?.locale == "ko" ||
                     titleField?.locale == "ko" ||
                     keywordsField?.locale == "ko"
 
                 if (!hasKoreanSupport) {
                     log.warn {
-                        "Collection exists but doesn't have Korean support. " +
-                            "Consider recreating the collection with Korean tokenizer support."
+                        "Collection exists but doesn't have optimal search configuration. " +
+                            "Korean support: $hasKoreanSupport"
                     }
-                    log.warn { "To enable Korean search: 1) Delete the collection, 2) Restart the application" }
+                    log.warn { "To enable improved search (Korean + infix matching):" }
+                    log.warn { "  1) Delete collection: curl -X DELETE -H 'X-TYPESENSE-API-KEY: <key>' http://localhost:8108/collections/$collectionName" }
+                    log.warn { "  2) Restart the application to recreate with improved schema" }
+                    log.warn { "  3) Re-sync Confluence data" }
+                } else {
+                    log.info { "Collection has Korean support. Infix matching will be enabled on recreation." }
                 }
 
                 return
@@ -89,13 +94,14 @@ class TypesenseSchemaInitializer(
                 }
             )
 
-            // Metadata fields with Korean support
+            // Metadata fields with Korean support and infix matching
             // Using dot notation for nested fields (metadata.*)
             fields.add(
                 Field().apply {
                     name = "metadata.title"
                     type = FieldTypes.STRING
                     locale = "ko" // Enable Korean tokenization
+                    isInfix = true // Enable infix matching for better partial matches (e.g., "0804" matches "250804")
                 }
             )
 
@@ -104,6 +110,7 @@ class TypesenseSchemaInitializer(
                     name = "metadata.keywords"
                     type = FieldTypes.STRING
                     locale = "ko" // Enable Korean tokenization
+                    isInfix = true // Enable infix matching for better keyword search
                 }
             )
 

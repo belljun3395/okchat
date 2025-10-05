@@ -42,6 +42,11 @@ class ContextBuildingStep(
         val topResults = searchResults.take(TOP_RESULTS_FOR_CONTEXT)
         log.info { "[${getStepName()}] Using top ${topResults.size} documents" }
 
+        // Debug: Log top documents for debugging
+        topResults.forEachIndexed { index, result ->
+            log.info { "  [${index + 1}] ${result.title} (score: ${"%.4f".format(result.score.value)}, id: ${result.id})" }
+        }
+
         val contextText = buildContextText(topResults, context.userMessage)
 
         return context.copy(contextText = contextText)

@@ -85,6 +85,11 @@ class DocumentSearchStep(
         log.info { "[${getStepName()}] Found ${combinedResults.size} documents via RRF" }
         log.info { "[${getStepName()}] Top 5 RRF scores: ${combinedResults.take(5).map { "%.4f".format(it.score.value) }}" }
 
+        // Debug: Log top 10 RRF results for debugging
+        combinedResults.take(10).forEachIndexed { index, result ->
+            log.info { "  [RRF ${index + 1}] ${result.title} (score: ${"%.4f".format(result.score.value)}, id: ${result.id})" }
+        }
+
         return context.copy(searchResults = combinedResults)
     }
 

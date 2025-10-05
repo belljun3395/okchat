@@ -106,5 +106,24 @@ data class RRFConfig(
      * Weight for content hybrid search in RRF
      * Higher = semantic/content matches have stronger influence
      */
-    var contentWeight: Double = 0.8
+    var contentWeight: Double = 0.8,
+
+    /**
+     * Date boost multiplier for RRF scores
+     * When a document's title matches extracted date keywords (e.g., "250804" matches "2025년 8월"),
+     * multiply its RRF score by this factor
+     * Higher = stronger prioritization of date-matched results
+     * Default: 3.0 (3x boost for date matches)
+     */
+    var dateBoostFactor: Double = 3.0,
+
+    /**
+     * Path hierarchy boost multiplier for RRF scores
+     * When a document's path matches query intent (e.g., "팀회의" path for meeting queries),
+     * multiply its RRF score by this factor
+     * This leverages the fact that users organize documents hierarchically by type
+     * Higher = stronger prioritization of path-matched results
+     * Default: 2.0 (2x boost for path matches)
+     */
+    var pathBoostFactor: Double = 2.0
 )

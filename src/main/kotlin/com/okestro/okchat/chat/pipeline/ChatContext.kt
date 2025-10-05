@@ -1,7 +1,7 @@
 package com.okestro.okchat.chat.pipeline
 
 import com.okestro.okchat.ai.support.QueryClassifier
-import com.okestro.okchat.search.service.SearchResult
+import com.okestro.okchat.search.model.SearchResult
 
 /**
  * Context object that flows through the chat processing pipeline

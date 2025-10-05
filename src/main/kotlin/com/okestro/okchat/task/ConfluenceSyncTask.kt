@@ -225,17 +225,26 @@ class ConfluenceSyncTask(
                         }
                     }
 
+                    // Extract path keywords (each level of hierarchy becomes a keyword)
+                    // Example: "PPP 개발 Repositories > Backend > API" → ["PPP 개발 Repositories", "Backend", "API"]
+                    val pathKeywords = path.split(" > ").map { it.trim() }.filter { it.isNotBlank() }
+
+                    // Combine content keywords + path keywords for better hierarchical search
+                    val allKeywords = (keywords + pathKeywords).distinct()
+
                     if (keywords.isNotEmpty()) {
-                        log.info { "  └─ Keywords extracted: ${keywords.joinToString(", ")}" }
+                        log.info { "  └─ Content keywords: ${keywords.joinToString(", ")}" }
                     } else {
-                        log.info { "  └─ No keywords extracted" }
+                        log.info { "  └─ No content keywords extracted" }
                     }
+                    log.info { "  └─ Path keywords: ${pathKeywords.joinToString(", ")}" }
+                    log.info { "  └─ Total keywords: ${allKeywords.size} (${keywords.size} content + ${pathKeywords.size} path)" }
 
                     // Build page content WITH keywords included for search
-                    val pageContent = buildPageContent(node, hierarchy, keywords)
+                    val pageContent = buildPageContent(node, hierarchy, allKeywords)
                     val contentLength = pageContent.length
 
-                    // Create initial document with metadata including keywords
+                    // Create initial document with metadata including ALL keywords (content + path)
                     val baseDocument = Document(
                         node.id,
                         pageContent,
@@ -245,7 +254,7 @@ class ConfluenceSyncTask(
                             "type" to "confluence-page",
                             "spaceKey" to spaceKey,
                             "path" to path,
-                            "keywords" to keywords.joinToString(", ")
+                            "keywords" to allKeywords.joinToString(", ")
                         )
                     )
 
@@ -273,7 +282,7 @@ class ConfluenceSyncTask(
                                     "id" to node.id,
                                     "chunkIndex" to chunkIndex,
                                     "totalChunks" to chunks.size,
-                                    "keywords" to keywords.joinToString(", ")
+                                    "keywords" to allKeywords.joinToString(", ")
                                 )
                             )
                         }

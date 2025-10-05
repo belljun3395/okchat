@@ -14,6 +14,7 @@ private val log = KotlinLogging.logger {}
 object DateExtractor {
 
     private val yearMonthKoreanRegex = Regex("""(\d{4})년\s*(\d{1,2})월""")
+    private val shortYearMonthKoreanRegex = Regex("""(\d{2})년\s*(\d{1,2})월""") // 25년 8월 형식
     private val yearMonthDashRegex = Regex("""(\d{4})-(\d{1,2})""")
     private val yearMonthSlashRegex = Regex("""(\d{4})/(\d{1,2})""")
     private val shortYearMonthRegex = Regex("""(\d{2})(\d{2})(\d{2})""") // 250710 형식
@@ -38,6 +39,15 @@ object DateExtractor {
             val year = match.groupValues[1]
             val month = match.groupValues[2].padStart(2, '0')
             addDateVariations(dateKeywords, year, month, shouldIncludeAllDays)
+        }
+
+        // Extract "YY년 MM월" format (e.g., "25년 8월")
+        shortYearMonthKoreanRegex.findAll(text).forEach { match ->
+            val shortYear = match.groupValues[1]
+            val month = match.groupValues[2].padStart(2, '0')
+            // Assume 20XX for years
+            val fullYear = "20$shortYear"
+            addDateVariations(dateKeywords, fullYear, month, shouldIncludeAllDays)
         }
 
         // Extract "YYYY-MM" format
@@ -178,6 +188,7 @@ object DateExtractor {
      */
     fun containsDateExpression(text: String): Boolean {
         return yearMonthKoreanRegex.containsMatchIn(text) ||
+            shortYearMonthKoreanRegex.containsMatchIn(text) ||
             yearMonthDashRegex.containsMatchIn(text) ||
             yearMonthSlashRegex.containsMatchIn(text) ||
             shortYearMonthRegex.containsMatchIn(text)

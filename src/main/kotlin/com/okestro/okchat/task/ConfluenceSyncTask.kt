@@ -1,6 +1,7 @@
 package com.okestro.okchat.task
 
 import com.okestro.okchat.ai.support.KeywordExtractionService
+import com.okestro.okchat.chunking.ChunkingStrategy
 import com.okestro.okchat.confluence.service.ConfluenceService
 import com.okestro.okchat.confluence.service.ContentHierarchy
 import com.okestro.okchat.confluence.service.ContentNode
@@ -12,7 +13,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import org.springframework.ai.document.Document
-import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
@@ -42,13 +42,11 @@ class ConfluenceSyncTask(
     private val vectorStore: VectorStore,
     private val typesenseClient: Client,
     private val keywordExtractionService: KeywordExtractionService,
+    private val chunkingStrategy: ChunkingStrategy,
     @Value("\${spring.ai.vectorstore.typesense.collection-name}") private val collectionName: String
 ) : CommandLineRunner {
 
     private val log = KotlinLogging.logger {}
-
-    // Text splitter to handle large documents (max 800 tokens per chunk, 100 token overlap)
-    private val textSplitter = TokenTextSplitter(800, 100, 5, 10000, true)
 
     override fun run(vararg args: String?) {
         log.info { "========== Start Confluence Sync Task ==========" }
@@ -198,9 +196,9 @@ class ConfluenceSyncTask(
                     // Split document into chunks if too large
                     log.info { "  └─ Content length: $contentLength chars, splitting if needed..." }
                     val chunks = try {
-                        textSplitter.apply(listOf(baseDocument))
+                        chunkingStrategy.chunk(baseDocument)
                     } catch (e: Exception) {
-                        log.warn { "  └─ Failed to split '${node.title}': ${e.message}. Using original document." }
+                        log.warn { "  └─ Failed to chunk '${node.title}': ${e.message}. Using original document." }
                         listOf(baseDocument)
                     }
 

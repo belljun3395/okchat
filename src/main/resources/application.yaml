@@ -109,9 +109,13 @@ search:
         title:
             query-by: "metadata.title,content"
             weights: "10,1"     # Heavy weight on title field
+            query-by: "metadata.title,content,metadata.keywords"
+            weights: "10,3,1"   # Heavy weight on title field
         content:
             query-by: "metadata.title,content,metadata.keywords"
             weights: "5,3,10"   # Balanced weights
+            query-by: "content,metadata.title,metadata.keywords"
+            weights: "10,5,3"   # Heavy weight on content field, title and keywords as supporting context
 
 rag:
     confluence:
@@ -131,3 +135,8 @@ rag:
         keyword-weight: 1.3
         title-weight: 1.5
         content-weight: 0.8
+        keyword-weight: 1.0
+        title-weight: 2.0  # Increased: Title matching (e.g., "250901") is most important for meeting records
+        content-weight: 1.0
+        date-boost-factor: 3.0  # Multiply RRF score when document title matches date keywords (e.g., "250804" in query date range)
+        path-boost-factor: 2.0  # Multiply RRF score when document path hierarchy matches query intent (e.g., "팀회의" path for meeting queries)

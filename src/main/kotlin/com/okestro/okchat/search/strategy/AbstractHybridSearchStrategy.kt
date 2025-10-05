@@ -34,24 +34,27 @@ abstract class AbstractHybridSearchStrategy(
 
         val results = hits.map { hit ->
             val document = hit.document
-            val metadata = document["metadata"] as? Map<*, *> ?: emptyMap<String, Any>()
 
-            val combinedScore = combineScores(hit.textScore, hit.vectorScore)
-
-            val rawId = metadata["id"]?.toString() ?: ""
+            // Typesense stores metadata as flat keys with dot notation (metadata.title, etc.)
+            val rawId = document["id"]?.toString() ?: ""
             val actualPageId = if (rawId.contains("_chunk_")) {
                 rawId.substringBefore("_chunk_")
             } else {
                 rawId
             }
 
+            // Apply configured weights to combine text and vector scores
+            val combinedScore = combineScores(hit.textScore, hit.vectorScore)
+            val title = document["metadata.title"]?.toString() ?: "Untitled"
+            log.trace { "[${getName()}] Result: id=$actualPageId, title=$title, textScore=${hit.textScore}, vectorScore=${hit.vectorScore}, weighted=$combinedScore" }
+
             SearchResult.withSimilarity(
                 id = actualPageId,
-                title = metadata["title"]?.toString() ?: "Untitled",
+                title = title,
                 content = document["content"]?.toString() ?: "",
-                path = metadata["path"]?.toString() ?: "",
-                spaceKey = metadata["spaceKey"]?.toString() ?: "",
-                keywords = metadata["keywords"]?.toString() ?: "",
+                path = document["metadata.path"]?.toString() ?: "",
+                spaceKey = document["metadata.spaceKey"]?.toString() ?: "",
+                keywords = document["metadata.keywords"]?.toString() ?: "",
                 similarity = SearchScore.SimilarityScore(combinedScore)
             )
         }.sortedByDescending { it.score }

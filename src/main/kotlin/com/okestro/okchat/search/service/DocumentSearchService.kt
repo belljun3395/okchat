@@ -39,10 +39,19 @@ class DocumentSearchService(
         topK: Int = 5,
         similarityThreshold: Double = 0.0
     ): List<SearchResult> {
-        log.info { "[Keyword Search] keywords='$keywords', topK=$topK" }
+        if (keywords.isBlank()) {
+            log.warn { "[Keyword Search] Empty keywords provided" }
+            return emptyList()
+        }
 
-        return keywordStrategy.search(keywords, topK)
-            .filter { it.score.value >= similarityThreshold }
+        log.info { "[Keyword Search] keywords='$keywords', topK=$topK, threshold=$similarityThreshold" }
+
+        val allResults = keywordStrategy.search(keywords, topK)
+        val filtered = allResults.filter { it.score.value >= similarityThreshold }
+        val deduplicated = deduplicateResults(filtered)
+
+        log.info { "[Keyword Search] Found ${allResults.size} results, filtered to ${filtered.size}, deduplicated to ${deduplicated.size}" }
+        return deduplicated.take(topK)
     }
 
     /**
@@ -53,10 +62,19 @@ class DocumentSearchService(
         topK: Int = 5,
         similarityThreshold: Double = 0.0
     ): List<SearchResult> {
-        log.info { "[Title Search] query='$query', topK=$topK" }
+        if (query.isBlank()) {
+            log.warn { "[Title Search] Empty query provided" }
+            return emptyList()
+        }
 
-        return titleStrategy.search(query, topK)
-            .filter { it.score.value >= similarityThreshold }
+        log.info { "[Title Search] query='$query', topK=$topK, threshold=$similarityThreshold" }
+
+        val allResults = titleStrategy.search(query, topK)
+        val filtered = allResults.filter { it.score.value >= similarityThreshold }
+        val deduplicated = deduplicateResults(filtered)
+
+        log.info { "[Title Search] Found ${allResults.size} results, filtered to ${filtered.size}, deduplicated to ${deduplicated.size}" }
+        return deduplicated.take(topK)
     }
 
     /**
@@ -68,13 +86,22 @@ class DocumentSearchService(
         topK: Int = 5,
         similarityThreshold: Double = 0.0
     ): List<SearchResult> {
-        log.info { "[Content Search] query='$query', keywords='$keywords', topK=$topK" }
-
         // Use keywords if provided, otherwise use query
         val searchQuery = keywords.ifEmpty { query }
 
-        return contentStrategy.search(searchQuery, topK)
-            .filter { it.score.value >= similarityThreshold }
+        if (searchQuery.isBlank()) {
+            log.warn { "[Content Search] Empty search query provided" }
+            return emptyList()
+        }
+
+        log.info { "[Content Search] query='$query', keywords='$keywords', searchQuery='$searchQuery', topK=$topK, threshold=$similarityThreshold" }
+
+        val allResults = contentStrategy.search(searchQuery, topK)
+        val filtered = allResults.filter { it.score.value >= similarityThreshold }
+        val deduplicated = deduplicateResults(filtered)
+
+        log.info { "[Content Search] Found ${allResults.size} results, filtered to ${filtered.size}, deduplicated to ${deduplicated.size}" }
+        return deduplicated.take(topK)
     }
 
     /**
@@ -123,14 +150,35 @@ class DocumentSearchService(
         log.debug { "[Multi-Search] Executing batched search..." }
         val responses = searchClient.multiHybridSearch(requests)
 
-        // Parse responses into SearchResults
-        val keywordResults = parseSearchResults(responses[0])
-        val titleResults = parseSearchResults(responses[1])
-        val contentResults = parseSearchResults(responses[2])
+        // Parse responses into SearchResults and deduplicate
+        log.debug { "[Multi-Search] Parsing keyword results..." }
+        val keywordResults = deduplicateResults(parseSearchResults(responses[0]))
+
+        log.debug { "[Multi-Search] Parsing title results..." }
+        val titleResults = deduplicateResults(parseSearchResults(responses[1]))
+
+        log.debug { "[Multi-Search] Parsing content results..." }
+        val contentResults = deduplicateResults(parseSearchResults(responses[2]))
 
         log.info {
             "[Multi-Search] Completed: keyword=${keywordResults.size}, " +
                 "title=${titleResults.size}, content=${contentResults.size}"
+        }
+
+        // Log top results from each search type
+        log.info { "[Multi-Search] ━━━ Keyword search top 5 ━━━" }
+        keywordResults.take(5).forEachIndexed { i, r ->
+            log.info { "  [K${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
+        }
+
+        log.info { "[Multi-Search] ━━━ Title search top 5 ━━━" }
+        titleResults.take(5).forEachIndexed { i, r ->
+            log.info { "  [T${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
+        }
+
+        log.info { "[Multi-Search] ━━━ Content search top 5 ━━━" }
+        contentResults.take(5).forEachIndexed { i, r ->
+            log.info { "  [C${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
         }
 
         return Triple(keywordResults, titleResults, contentResults)
@@ -157,28 +205,82 @@ class DocumentSearchService(
     private fun parseSearchResults(response: com.okestro.okchat.search.client.HybridSearchResponse): List<SearchResult> {
         return response.hits.map { hit ->
             val document = hit.document
-            val metadata = document["metadata"] as? Map<*, *> ?: emptyMap<String, Any>()
 
-            // Combine text and vector scores based on weight settings
-            val combinedScore = hit.textScore + hit.vectorScore // Already weighted by Typesense
-
-            // Handle chunked documents - extract actual page ID
-            val rawId = metadata["id"]?.toString() ?: ""
+            // Typesense stores metadata as flat keys with dot notation (metadata.title, metadata.keywords, etc.)
+            // NOT as nested objects
+            val rawId = document["id"]?.toString() ?: ""
             val actualPageId = if (rawId.contains("_chunk_")) {
                 rawId.substringBefore("_chunk_")
             } else {
                 rawId
             }
 
+            // Scores are already normalized (0-1 range) by TypesenseSearchClientAdapter
+            val combinedScore = hit.textScore + hit.vectorScore
+
+            val title = document["metadata.title"]?.toString() ?: "Untitled"
+            val content = document["content"]?.toString() ?: ""
+            val path = document["metadata.path"]?.toString() ?: ""
+            val spaceKey = document["metadata.spaceKey"]?.toString() ?: ""
+            val keywords = document["metadata.keywords"]?.toString() ?: ""
+
+            log.trace { "[Parse] id=$actualPageId, title=$title, textScore=${hit.textScore}, vectorScore=${hit.vectorScore}, combined=$combinedScore" }
+
             SearchResult.withSimilarity(
                 id = actualPageId,
-                title = metadata["title"]?.toString() ?: "Untitled",
-                content = document["content"]?.toString() ?: "",
-                path = metadata["path"]?.toString() ?: "",
-                spaceKey = metadata["spaceKey"]?.toString() ?: "",
-                keywords = metadata["keywords"]?.toString() ?: "",
+                title = title,
+                content = content,
+                path = path,
+                spaceKey = spaceKey,
+                keywords = keywords,
                 similarity = SearchScore.SimilarityScore(combinedScore)
             )
         }
+    }
+
+    /**
+     * Deduplicate search results by page ID, keeping the best chunk for each page
+     * This is important when searching chunked documents where multiple chunks from the same page may match
+     * * Strategy: Prefer chunks with actual content over metadata-only chunks
+     */
+    private fun deduplicateResults(results: List<SearchResult>): List<SearchResult> {
+        return results
+            .groupBy { it.id }
+            .mapValues { (pageId, pageResults) ->
+                if (pageResults.size == 1) {
+                    // Single result, no merging needed
+                    pageResults.first()
+                } else {
+                    // Multiple chunks from same page - merge all content
+                    log.info { "[Merge] Page $pageId (${pageResults.first().title}): Merging ${pageResults.size} chunks" }
+
+                    // Use the highest scoring chunk as base
+                    val baseResult = pageResults.maxByOrNull { it.score.value }!!
+
+                    // Sort chunks by chunk index for correct order
+                    val sortedChunks = pageResults.sortedBy { result ->
+                        val id = result.id
+                        // Extract chunk index from ID like "123_chunk_2"
+                        if (id.contains("_chunk_")) {
+                            id.substringAfterLast("_chunk_").toIntOrNull() ?: 0
+                        } else {
+                            0
+                        }
+                    }
+
+                    // Merge all content from all chunks in correct order
+                    val mergedContent = sortedChunks
+                        .joinToString("\n\n") { it.content }
+                        .trim()
+
+                    val chunkSizes = pageResults.map { "${it.content.length}" }.joinToString("+")
+                    log.info { "[Merge] Page $pageId: Merged ${mergedContent.length} chars from ${pageResults.size} chunks [$chunkSizes]" }
+
+                    // Return merged result with combined content
+                    baseResult.copy(content = mergedContent)
+                }
+            }
+            .values
+            .sortedByDescending { it.score.value }
     }
 }

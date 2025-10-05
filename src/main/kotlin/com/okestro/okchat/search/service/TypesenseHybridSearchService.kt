@@ -1,12 +1,15 @@
 package com.okestro.okchat.search.service
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.okestro.okchat.search.model.SearchScore
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.withContext
 import org.springframework.ai.embedding.EmbeddingModel
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import org.springframework.web.reactive.function.client.WebClient
 import org.typesense.api.Client
 import org.typesense.model.SearchParameters
 
@@ -23,17 +26,25 @@ import org.typesense.model.SearchParameters
 class TypesenseHybridSearchService(
     private val typesenseClient: Client,
     private val embeddingModel: EmbeddingModel,
-    @Value("\${spring.ai.vectorstore.typesense.collection-name}") private val collectionName: String
+    @Value("\${spring.ai.vectorstore.typesense.collection-name}") private val collectionName: String,
+    @Value("\${spring.ai.vectorstore.typesense.client.protocol}") private val protocol: String,
+    @Value("\${spring.ai.vectorstore.typesense.client.host}") private val host: String,
+    @Value("\${spring.ai.vectorstore.typesense.client.port}") private val port: Int,
+    @Value("\${spring.ai.vectorstore.typesense.client.apiKey}") private val apiKey: String
 ) {
     private val log = KotlinLogging.logger {}
 
+    private val webClient = WebClient.builder()
+        .baseUrl("$protocol://$host:$port")
+        .defaultHeader("X-TYPESENSE-API-KEY", apiKey)
+        .build()
+
     /**
-     * Hybrid search - currently uses text search only
-     *
-     * NOTE: Vector search via URL query parameters exceeds Typesense's 4000 char limit
-     * TODO: Implement POST-based search for true hybrid search in future
+     * True hybrid search using direct HTTP POST request
+     * Combines vector search (semantic) with text search (keyword)
      *
      * @param query Search query
+     * @param keywords Extracted keywords for text search (optional, uses query if empty)
      * @param topK Number of results to return
      * @param textWeight Weight for text search (0.0 ~ 1.0)
      * @param vectorWeight Weight for vector search (0.0 ~ 1.0)
@@ -41,43 +52,62 @@ class TypesenseHybridSearchService(
      */
     suspend fun hybridSearch(
         query: String,
+        keywords: String = "",
         topK: Int = 50,
         textWeight: Double = 0.5,
         vectorWeight: Double = 0.5
     ): List<SearchResult> = withContext(Dispatchers.IO) {
-        log.info { "[Hybrid Search] Query: '$query' (topK=$topK)" }
-        log.debug { "[Hybrid Search] Currently using text-only search (vector search disabled due to URL length limit)" }
+        log.info { "[Hybrid Search] Query: '$query', Keywords: '$keywords' (topK=$topK)" }
+
+        val searchKeywords = keywords.ifEmpty { query }
 
         try {
-            // Build search parameters for text search
-            // Vector search disabled due to URL length limitation (embedding > 4000 chars)
-            val searchParameters = SearchParameters()
-                .q(query) // Text query
-                .queryBy("metadata.title,content,metadata.keywords") // Fields to search in
-                .queryByWeights("5,3,10") // keywords=10, title=5, content=3
-                .filterBy("metadata.type:=confluence-page") // Filter by type
-                .perPage(topK) // Limit results
-                .page(1)
-                .sortBy("_text_match:desc") // Sort by text match score
+            // Generate embedding for vector search
+            log.debug { "[Hybrid Search] Generating query embedding..." }
+            val queryEmbedding = embeddingModel.embed(query)
+            val embeddingVector = queryEmbedding.joinToString(",")
 
-            log.debug { "[Hybrid Search] Executing Typesense text search..." }
+            // Build search request body
+            val searchRequest = TypesenseSearchRequest(
+                q = searchKeywords,
+                queryBy = "metadata.title,content,metadata.keywords",
+                queryByWeights = "5,3,10",
+                vectorQuery = "embedding:([$embeddingVector], k:$topK)",
+                filterBy = "metadata.type:=confluence-page",
+                perPage = topK,
+                page = 1
+            )
 
-            // Execute search
-            val searchResult = typesenseClient.collections(collectionName)
-                .documents()
-                .search(searchParameters)
+            log.debug { "[Hybrid Search] Executing POST-based hybrid search..." }
 
-            val hits = searchResult.hits ?: emptyList()
+            // Execute search via HTTP POST (no URL length limit)
+            val response = webClient.post()
+                .uri("/collections/$collectionName/documents/search")
+                .bodyValue(searchRequest)
+                .retrieve()
+                .bodyToMono(TypesenseSearchResponse::class.java)
+                .awaitSingle()
+
+            val hits = response.hits ?: emptyList()
 
             log.info { "[Hybrid Search] Found ${hits.size} documents" }
 
-            // Convert to SearchResult
+            // Convert to SearchResult with combined scores
             val results = hits.mapNotNull { hit ->
                 val document = hit.document ?: return@mapNotNull null
                 val metadata = document["metadata"] as? Map<*, *> ?: emptyMap<String, Any>()
 
                 // Text match score (normalize to 0-1 range)
                 val textScore = (hit.textMatch?.toDouble() ?: 0.0) / 100.0
+
+                // Vector match score (normalize to 0-1 range)
+                val vectorScore = (hit.vectorDistance ?: 1.0).let { distance ->
+                    // Convert distance to similarity (lower distance = higher similarity)
+                    1.0 / (1.0 + distance)
+                }
+
+                // Combine scores with weights
+                val combinedScore = (textScore * textWeight) + (vectorScore * vectorWeight)
 
                 // Extract actual page ID (remove chunk suffix if present)
                 val rawId = metadata["id"]?.toString() ?: ""
@@ -94,11 +124,11 @@ class TypesenseHybridSearchService(
                     path = metadata["path"]?.toString() ?: "",
                     spaceKey = metadata["spaceKey"]?.toString() ?: "",
                     keywords = metadata["keywords"]?.toString() ?: "",
-                    similarity = SearchScore.SimilarityScore(textScore)
+                    similarity = SearchScore.SimilarityScore(combinedScore)
                 )
-            }
+            }.sortedByDescending { it.score }
 
-            log.info { "[Hybrid Search] Returning ${results.size} results" }
+            log.info { "[Hybrid Search] Returning ${results.size} results with hybrid scoring" }
             results
         } catch (e: Exception) {
             log.error(e) { "[Hybrid Search] Error during search: ${e.message}" }
@@ -280,3 +310,30 @@ class TypesenseHybridSearchService(
         }
     }
 }
+
+/**
+ * Typesense search request DTO
+ */
+data class TypesenseSearchRequest(
+    val q: String,
+    @JsonProperty("query_by") val queryBy: String,
+    @JsonProperty("query_by_weights") val queryByWeights: String? = null,
+    @JsonProperty("vector_query") val vectorQuery: String? = null,
+    @JsonProperty("filter_by") val filterBy: String? = null,
+    @JsonProperty("per_page") val perPage: Int = 10,
+    val page: Int = 1
+)
+
+/**
+ * Typesense search response DTO
+ */
+data class TypesenseSearchResponse(
+    val hits: List<TypesenseHit>? = null,
+    val found: Int? = null
+)
+
+data class TypesenseHit(
+    val document: Map<String, Any>? = null,
+    @JsonProperty("text_match") val textMatch: Long? = null,
+    @JsonProperty("vector_distance") val vectorDistance: Double? = null
+)

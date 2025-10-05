@@ -49,7 +49,7 @@ class DocumentSearchStep(
                 searchTitlesByQuery(context.userMessage).sortedByDescending { it.score }
             }
             val contentJob = async {
-                searchContentByQuery(context.userMessage).sortedByDescending { it.score }
+                searchContentByQuery(context.userMessage, allKeywords).sortedByDescending { it.score }
             }
 
             Triple(
@@ -159,16 +159,22 @@ class DocumentSearchStep(
     }
 
     /**
-     * Search content semantically
+     * Search content with hybrid search (semantic + keyword)
      */
     private suspend fun searchContentByQuery(
-        query: String
+        query: String,
+        keywords: List<String>
     ): List<SearchResult> {
-        log.info { "  [Content Search] Semantic search on content" }
+        log.info { "  [Content Search] Hybrid search on content" }
 
-        val contentResults = documentSearchService.searchByContent(query, MAX_SEARCH_RESULTS)
+        val keywordsString = keywords.joinToString(" ")
+        val contentResults = documentSearchService.searchByContent(
+            query = query,
+            keywords = keywordsString,
+            topK = MAX_SEARCH_RESULTS
+        )
 
-        log.info { "    Found ${contentResults.size} results from content search" }
+        log.info { "    Found ${contentResults.size} results from hybrid content search" }
         return contentResults
     }
 

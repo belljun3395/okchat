@@ -88,21 +88,24 @@ class DocumentSearchService(
      * ENHANCED: Uses Typesense hybrid search (text + vector) for best results
      *
      * @param query Search query related to content
+     * @param keywords Extracted keywords for text search (optional)
      * @param topK Number of results to return (default: 5)
      * @param similarityThreshold Minimum similarity score (0.0 ~ 1.0, default: 0.0)
      * @return List of documents with similar content
      */
     suspend fun searchByContent(
         query: String,
+        keywords: String = "",
         topK: Int = 5,
         similarityThreshold: Double = 0.0
     ): List<SearchResult> = withContext(Dispatchers.IO) {
-        log.info { "[Content Search] Searching content for: '$query' (topK=$topK, threshold=$similarityThreshold)" }
+        log.info { "[Content Search] Searching content for: '$query', keywords: '$keywords' (topK=$topK, threshold=$similarityThreshold)" }
 
         // Use hybrid search if enabled (best for content search)
         if (useHybridSearch) {
             val results = typesenseHybridSearchService.hybridSearch(
                 query = query,
+                keywords = keywords,
                 topK = topK,
                 textWeight = 0.4, // Balance between text and semantic
                 vectorWeight = 0.6 // Slightly prefer semantic for content

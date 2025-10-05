@@ -22,29 +22,31 @@ class PromptGenerationStep(
     override suspend fun execute(context: ChatContext): ChatContext {
         log.info { "[${getStepName()}] Generating prompt" }
 
-        val queryAnalysis = context.queryAnalysis
-            ?: throw IllegalStateException("Query analysis not available (FirstChatPipelineStep must run)")
+        val analysis = context.analysis
+            ?: throw IllegalStateException("Analysis not available (FirstChatPipelineStep must run)")
 
         // Context text is optional - may not be available if document search was skipped or found no results
-        val contextText = context.contextText ?: run {
+        val contextText = context.search?.contextText ?: run {
             log.warn { "[${getStepName()}] No context text available - generating prompt without RAG context" }
             "검색 결과 없음. 일반적인 지식을 바탕으로 답변해주세요."
         }
 
         // Build dynamic prompt based on query type (from externalized templates)
-        val promptTemplate = dynamicPromptBuilder.buildPrompt(queryAnalysis.type)
-        log.info { "[${getStepName()}] Using ${queryAnalysis.type} specialized prompt (with RAG context: ${context.contextText != null})" }
+        val promptTemplate = dynamicPromptBuilder.buildPrompt(analysis.queryAnalysis.type)
+        log.info { "[${getStepName()}] Using ${analysis.queryAnalysis.type} specialized prompt (with RAG context: ${context.search?.contextText != null})" }
 
         // Create prompt with context and question
         val template = PromptTemplate(promptTemplate)
         val prompt = template.create(
             mapOf(
                 "context" to contextText,
-                "question" to context.userMessage
+                "question" to context.input.message
             )
         )
 
-        return context.copy(promptText = prompt.contents)
+        return context.copy(
+            prompt = ChatContext.Prompt(text = prompt.contents)
+        )
     }
 
     override fun getStepName(): String = "Prompt Generation"

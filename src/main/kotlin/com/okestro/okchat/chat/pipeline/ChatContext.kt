@@ -6,34 +6,52 @@ import com.okestro.okchat.search.model.SearchResult
 /**
  * Context object that flows through the chat processing pipeline
  * Each step can read from and write to this context
- * * Design principles:
- * - Fields from FirstChatPipelineStep (required): Can be non-null in later stages
- * - Fields from OptionalChatPipelineStep: Must be nullable
- * - Fields from LastChatPipelineStep: Must be nullable (only set at end)
+ *
+ * Design principles:
+ * - UserInput: Always required (from user)
+ * - Analysis: Always required (FirstChatPipelineStep)
+ * - Search: Optional (OptionalChatPipelineStep)
+ * - Prompt: Required at end (LastChatPipelineStep)
  */
 data class ChatContext(
-    // ═══ Input (from user) ═══
-    val userMessage: String,
-    val providedKeywords: List<String>? = null,
-
-    // ═══ Query Analysis (FirstChatPipelineStep - always available after first step) ═══
-    val queryAnalysis: QueryClassifier.QueryAnalysis? = null,
-    val extractedKeywords: List<String>? = null,
-    val dateKeywords: List<String>? = null,
-
-    // ═══ Document Search (OptionalChatPipelineStep - may not be executed) ═══
-    val searchResults: List<SearchResult>? = null,
-
-    // ═══ Context Building (OptionalChatPipelineStep - may not be executed) ═══
-    val contextText: String? = null,
-
-    // ═══ Prompt Generation (LastChatPipelineStep - always executed) ═══
-    val promptText: String? = null
+    val input: UserInput,
+    val analysis: Analysis? = null,
+    val search: Search? = null,
+    val prompt: Prompt? = null
 ) {
     /**
-     * Get all keywords (extracted + date keywords)
+     * User input data
      */
-    fun getAllKeywords(): List<String> {
-        return ((extractedKeywords ?: emptyList()) + (dateKeywords ?: emptyList())).distinct()
+    data class UserInput(
+        val message: String,
+        val providedKeywords: List<String> = emptyList()
+    )
+
+    /**
+     * Query analysis result (FirstChatPipelineStep - always executed)
+     */
+    data class Analysis(
+        val queryAnalysis: QueryClassifier.QueryAnalysis,
+        val extractedKeywords: List<String>,
+        val dateKeywords: List<String>
+    ) {
+        fun getAllKeywords(): List<String> {
+            return (extractedKeywords + dateKeywords).distinct()
+        }
     }
+
+    /**
+     * Search context (OptionalChatPipelineStep - may not be executed)
+     */
+    data class Search(
+        val results: List<SearchResult>,
+        val contextText: String? = null
+    )
+
+    /**
+     * Prompt context (LastChatPipelineStep - always executed at end)
+     */
+    data class Prompt(
+        val text: String
+    )
 }

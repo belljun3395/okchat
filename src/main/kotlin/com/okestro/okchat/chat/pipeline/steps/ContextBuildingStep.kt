@@ -33,11 +33,11 @@ class ContextBuildingStep(
     override suspend fun execute(context: ChatContext): ChatContext {
         log.info { "[${getStepName()}] Building context from search results" }
 
-        val searchResults = context.searchResults
+        val searchResults = context.search?.results
         if (searchResults.isNullOrEmpty()) {
             log.warn { "[${getStepName()}] No search results available - returning empty context" }
-            // Return null contextText so PromptGenerationStep knows to use fallback
-            return context.copy(contextText = null)
+            // Keep search context as-is (without contextText)
+            return context
         }
 
         val topResults = searchResults.take(TOP_RESULTS_FOR_CONTEXT)
@@ -55,11 +55,13 @@ class ContextBuildingStep(
             log.debug { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
         }
 
-        val contextText = buildContextText(topResults, context.userMessage)
+        val contextText = buildContextText(topResults, context.input.message)
         log.info { "[${getStepName()}] Built context: ${contextText.length} chars" }
         log.debug { "[${getStepName()}] Context detail:\n" + contextText }
 
-        return context.copy(contextText = contextText)
+        return context.copy(
+            search = context.search.copy(contextText = contextText)
+        )
     }
 
     private fun buildContextText(results: List<SearchResult>, userQuestion: String): String {

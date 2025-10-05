@@ -37,11 +37,11 @@ class ReRankingStep(
      * Only execute re-ranking if we have search results
      */
     override fun shouldExecute(context: ChatContext): Boolean {
-        return !context.searchResults.isNullOrEmpty()
+        return !context.search?.results.isNullOrEmpty()
     }
 
     override suspend fun execute(context: ChatContext): ChatContext {
-        val searchResults = context.searchResults ?: return context
+        val searchResults = context.search?.results ?: return context
 
         if (searchResults.size <= 1) {
             log.info { "[${getStepName()}] Skipping: only ${searchResults.size} results" }
@@ -54,7 +54,7 @@ class ReRankingStep(
         val topK = searchResults.take(TOP_K_TO_RERANK)
 
         // Generate query embedding
-        val queryEmbedding = embeddingModel.embed(context.userMessage).toList()
+        val queryEmbedding = embeddingModel.embed(context.input.message).toList()
 
         // Re-score each document using hybrid approach:
         // Combine original RRF score (which includes date/path boosts) with semantic similarity
@@ -106,10 +106,14 @@ class ReRankingStep(
             }
             log.debug { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
         } else {
-            log.info { "[${getStepName()}] Top 5: ${reranked.take(5).map { "${it.title}(${"%.4f".format(it.score.value)})" }.joinToString(", ")}" }
+            log.info { "[${getStepName()}] Top 5: ${
+                reranked.take(5).joinToString(", ") { "${it.title}(${"%.4f".format(it.score.value)})" }
+            }" }
         }
 
-        return context.copy(searchResults = finalResults)
+        return context.copy(
+            search = context.search.copy(results = finalResults)
+        )
     }
 
     private fun cosineSimilarity(vec1: List<Float>, vec2: List<Float>): Double {

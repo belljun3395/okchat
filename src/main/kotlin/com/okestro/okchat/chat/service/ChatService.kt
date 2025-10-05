@@ -28,20 +28,22 @@ class ChatService(
      */
     fun chat(message: String, keywords: List<String>?): Flux<String> {
         return mono {
-            // Create initial context
+            // Create initial context with user input
             val initialContext = ChatContext(
-                userMessage = message,
-                providedKeywords = keywords
+                input = ChatContext.UserInput(
+                    message = message,
+                    providedKeywords = keywords ?: emptyList()
+                )
             )
 
             // Execute pipeline to process query and prepare prompt
             val processedContext = chatPipeline.execute(initialContext)
 
             log.info { "[AI Processing] Starting AI chat" }
-            log.debug { "Context preview: ${processedContext.contextText?.take(300)}..." }
+            log.debug { "Context preview: ${processedContext.search?.contextText?.take(300)}..." }
 
             // Create prompt from processed context
-            val promptText = processedContext.promptText
+            val promptText = processedContext.prompt?.text
                 ?: throw IllegalStateException("Prompt text not generated")
 
             // Create Spring AI Prompt object

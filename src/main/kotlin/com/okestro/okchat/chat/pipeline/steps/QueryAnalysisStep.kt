@@ -23,16 +23,20 @@ class QueryAnalysisStep(
 ) : FirstChatPipelineStep {
 
     override suspend fun execute(context: ChatContext): ChatContext {
-        log.info { "[${getStepName()}] Analyzing query: ${context.userMessage}" }
+        val userMessage = context.input.message
+        log.info { "[${getStepName()}] Analyzing query: $userMessage" }
 
         // Classify query type using AI
-        val queryAnalysis = queryClassifier.classify(context.userMessage)
+        val queryAnalysis = queryClassifier.classify(userMessage)
         log.info { "[${getStepName()}] Type: ${queryAnalysis.type}, Confidence: ${"%.2f".format(queryAnalysis.confidence)}" }
 
         // Extract keywords using AI (if not provided)
-        val keywords = context.providedKeywords ?: keywordExtractionService.extractKeywords(context.userMessage)
+        val providedKeywords = context.input.providedKeywords
+        val keywords = providedKeywords.ifEmpty {
+            keywordExtractionService.extractKeywords(userMessage)
+        }
         log.debug {
-            if (context.providedKeywords != null) {
+            if (providedKeywords.isNotEmpty()) {
                 "[${getStepName()}] Keywords provided: $keywords"
             } else {
                 "[${getStepName()}] Keywords extracted: $keywords"
@@ -43,7 +47,7 @@ class QueryAnalysisStep(
         // Always include strategic day patterns for better date matching (e.g., "250804" in titles)
         // This ensures month-level queries like "2025년 8월" can match day-specific titles
         val dateKeywords = DateExtractor.extractDateKeywords(
-            context.userMessage,
+            userMessage,
             includeAllDays = true // Always include strategic days for YYMMDD title matching
         )
         log.debug { "[${getStepName()}] Date keywords: $dateKeywords" }
@@ -52,9 +56,11 @@ class QueryAnalysisStep(
         log.info { "[${getStepName()}] Analysis complete: ${allKeywords.size} keywords (${keywords.size} semantic, ${dateKeywords.size} date)" }
 
         return context.copy(
-            queryAnalysis = queryAnalysis,
-            extractedKeywords = keywords,
-            dateKeywords = dateKeywords
+            analysis = ChatContext.Analysis(
+                queryAnalysis = queryAnalysis,
+                extractedKeywords = keywords,
+                dateKeywords = dateKeywords
+            )
         )
     }
 

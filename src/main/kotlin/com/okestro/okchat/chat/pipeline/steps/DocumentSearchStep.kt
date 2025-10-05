@@ -57,13 +57,14 @@ class DocumentSearchStep(
     override suspend fun execute(context: ChatContext): ChatContext {
         log.info { "[${getStepName()}] Starting optimized multi-search with RRF" }
 
-        val allKeywords = context.getAllKeywords()
+        val analysis = context.analysis ?: throw IllegalStateException("Analysis not available")
+        val allKeywords = analysis.getAllKeywords()
         val searchKeywords = SearchKeywords.fromStrings(allKeywords)
 
         // Execute all 3 search strategies in a SINGLE HTTP request using Typesense multi_search
         // This dramatically reduces network latency (3 roundtrips → 1 roundtrip)
         val searchResult = documentSearchService.multiSearch(
-            query = context.userMessage,
+            query = context.input.message,
             keywords = searchKeywords,
             topK = MAX_SEARCH_RESULTS
         )
@@ -81,8 +82,8 @@ class DocumentSearchStep(
             keywordResults = sortedKeywordResults,
             titleResults = sortedTitleResults,
             contentResults = sortedContentResults,
-            dateKeywords = context.dateKeywords ?: emptyList(),
-            queryType = context.queryAnalysis?.type
+            dateKeywords = analysis.dateKeywords,
+            queryType = analysis.queryAnalysis.type
         ).take(MAX_SEARCH_RESULTS)
 
         log.info { "[${getStepName()}] Found ${combinedResults.size} documents via RRF (after deduplication)" }
@@ -102,7 +103,9 @@ class DocumentSearchStep(
             }
         }
 
-        return context.copy(searchResults = combinedResults)
+        return context.copy(
+            search = ChatContext.Search(results = combinedResults)
+        )
     }
 
     /**

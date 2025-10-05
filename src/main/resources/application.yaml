@@ -32,7 +32,6 @@ spring:
         vectorstore:
             type: typesense
             typesense:
-                initialize-schema: true
                 collection-name: vector_store
                 embedding-dimension: 1536
                 client:

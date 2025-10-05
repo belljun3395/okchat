@@ -1,5 +1,6 @@
 package com.okestro.okchat.search.config
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.embedding.EmbeddingModel
 import org.springframework.ai.embedding.TokenCountBatchingStrategy
 import org.springframework.ai.vectorstore.VectorStore
@@ -13,12 +14,13 @@ import org.typesense.api.Client
 import org.typesense.resources.Node
 import java.time.Duration
 
+private val log = KotlinLogging.logger {}
+
 @Configuration
 @EnableAutoConfiguration(
     exclude = [TypesenseVectorStoreAutoConfiguration::class]
 )
 class TypesenseConfig(
-    @Value("\${spring.ai.vectorstore.typesense.initialize-schema}") val initializeSchema: Boolean,
     @Value("\${spring.ai.vectorstore.typesense.collection-name}") val collectionName: String,
     @Value("\${spring.ai.vectorstore.typesense.embedding-dimension}") val embeddingDimension: Int,
     @Value("\${spring.ai.vectorstore.typesense.client.protocol}") val clientProtocol: String,
@@ -41,7 +43,7 @@ class TypesenseConfig(
         return TypesenseVectorStore.builder(client, embeddingModel)
             .collectionName(collectionName) // Optional: defaults to "documents"
             .embeddingDimension(embeddingDimension) // Optional: defaults to 1536
-            .initializeSchema(initializeSchema) // Optional: defaults to false
+            .initializeSchema(false) // We handle schema initialization ourselves for Korean support
             .batchingStrategy(TokenCountBatchingStrategy()) // Optional: defaults to TokenCountBatchingStrategy
             .build()
     }

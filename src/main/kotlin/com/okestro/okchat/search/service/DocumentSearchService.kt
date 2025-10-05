@@ -4,12 +4,8 @@ import com.okestro.okchat.search.client.HybridSearchRequest
 import com.okestro.okchat.search.client.SearchClient
 import com.okestro.okchat.search.client.SearchFields
 import com.okestro.okchat.search.config.SearchFieldWeightConfig
-import com.okestro.okchat.search.config.SearchWeightConfig
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchScore
-import com.okestro.okchat.search.strategy.ContentSearchStrategy
-import com.okestro.okchat.search.strategy.KeywordSearchStrategy
-import com.okestro.okchat.search.strategy.TitleSearchStrategy
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.embedding.EmbeddingModel
 import org.springframework.stereotype.Service
@@ -22,12 +18,8 @@ private val log = KotlinLogging.logger {}
  */
 @Service
 class DocumentSearchService(
-    private val keywordStrategy: KeywordSearchStrategy,
-    private val titleStrategy: TitleSearchStrategy,
-    private val contentStrategy: ContentSearchStrategy,
     private val searchClient: SearchClient,
     private val embeddingModel: EmbeddingModel,
-    private val weightConfig: SearchWeightConfig,
     private val fieldConfig: SearchFieldWeightConfig
 ) {
 
@@ -202,7 +194,7 @@ class DocumentSearchService(
                         .joinToString("\n\n") { it.content }
                         .trim()
 
-                    val chunkSizes = pageResults.map { "${it.content.length}" }.joinToString("+")
+                    val chunkSizes = pageResults.joinToString("+") { "${it.content.length}" }
                     log.debug { "[Merge] Page $pageId: Merged ${mergedContent.length} chars from ${pageResults.size} chunks [$chunkSizes]" }
 
                     // Return merged result with combined content

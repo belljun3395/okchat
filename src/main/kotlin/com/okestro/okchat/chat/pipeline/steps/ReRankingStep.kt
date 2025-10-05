@@ -106,9 +106,11 @@ class ReRankingStep(
             }
             log.debug { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
         } else {
-            log.info { "[${getStepName()}] Top 5: ${
+            log.info {
+                "[${getStepName()}] Top 5: ${
                 reranked.take(5).joinToString(", ") { "${it.title}(${"%.4f".format(it.score.value)})" }
-            }" }
+                }"
+            }
         }
 
         return context.copy(

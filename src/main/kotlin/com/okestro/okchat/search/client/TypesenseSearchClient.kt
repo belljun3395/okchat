@@ -42,7 +42,10 @@ class TypesenseSearchClient(
                     "vector_query" to request.vectorQuery,
                     "filter_by" to request.filterBy,
                     "per_page" to request.perPage,
-                    "page" to request.page
+                    "page" to request.page,
+                    "prefix" to request.prefix,
+                    "num_typos" to request.numTypos,
+                    "typo_tokens_threshold" to request.typoTokensThreshold
                 ).filterValues { it != null }
             )
         )
@@ -101,7 +104,10 @@ class TypesenseSearchClient(
                     "vector_query" to request.vectorQuery,
                     "filter_by" to request.filterBy,
                     "per_page" to request.perPage,
-                    "page" to request.page
+                    "page" to request.page,
+                    "prefix" to request.prefix,
+                    "num_typos" to request.numTypos,
+                    "typo_tokens_threshold" to request.typoTokensThreshold
                 ).filterValues { it != null }
             }
         )
@@ -150,7 +156,10 @@ data class TypesenseSearchRequest(
     @JsonProperty("vector_query") val vectorQuery: String? = null,
     @JsonProperty("filter_by") val filterBy: String? = null,
     @JsonProperty("per_page") val perPage: Int = 10,
-    val page: Int = 1
+    val page: Int = 1,
+    val prefix: Boolean = true, // Enable prefix matching (e.g., "2508" matches "250804")
+    @JsonProperty("num_typos") val numTypos: Int = 2, // Allow fuzzy matching with 2 typos
+    @JsonProperty("typo_tokens_threshold") val typoTokensThreshold: Int = 0 // Apply typos to all tokens
 )
 
 data class TypesenseSearchResponse(

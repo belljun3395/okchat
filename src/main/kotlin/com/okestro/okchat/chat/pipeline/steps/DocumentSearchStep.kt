@@ -3,6 +3,7 @@ package com.okestro.okchat.chat.pipeline.steps
 import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.chat.pipeline.OptionalChatPipelineStep
 import com.okestro.okchat.config.RagProperties
+import com.okestro.okchat.search.model.SearchKeywords
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchScore
 import com.okestro.okchat.search.service.DocumentSearchService
@@ -57,13 +58,13 @@ class DocumentSearchStep(
         log.info { "[${getStepName()}] Starting optimized multi-search with RRF" }
 
         val allKeywords = context.getAllKeywords()
-        val keywordsString = allKeywords.joinToString(" ")
+        val searchKeywords = SearchKeywords.fromStrings(allKeywords)
 
         // Execute all 3 search strategies in a SINGLE HTTP request using Typesense multi_search
         // This dramatically reduces network latency (3 roundtrips → 1 roundtrip)
         val searchResult = documentSearchService.multiSearch(
             query = context.userMessage,
-            keywords = keywordsString,
+            keywords = searchKeywords,
             topK = MAX_SEARCH_RESULTS
         )
 

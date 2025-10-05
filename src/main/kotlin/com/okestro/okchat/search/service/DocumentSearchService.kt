@@ -3,6 +3,7 @@ package com.okestro.okchat.search.service
 import com.okestro.okchat.search.client.SearchClient
 import com.okestro.okchat.search.config.SearchFieldWeightConfig
 import com.okestro.okchat.search.model.MultiSearchResult
+import com.okestro.okchat.search.model.SearchKeywords
 import com.okestro.okchat.search.util.HybridSearchUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.embedding.EmbeddingModel
@@ -29,10 +30,11 @@ class DocumentSearchService(
      */
     suspend fun multiSearch(
         query: String,
-        keywords: String,
+        keywords: SearchKeywords,
         topK: Int = 50
     ): MultiSearchResult {
-        log.info { "[Multi-Search] Executing optimized multi-search: query='$query', keywords='$keywords', topK=$topK" }
+        val keywordsQuery = keywords.toOrQuery()
+        log.info { "[Multi-Search] Executing optimized multi-search: query='$query', keywords='$keywordsQuery' (${keywords.terms().size} terms), topK=$topK" }
 
         // Generate embedding once (reused for all searches)
         log.debug { "[Multi-Search] Generating embedding..." }
@@ -40,23 +42,23 @@ class DocumentSearchService(
 
         // Build 3 search requests with different field configurations
         val requests = listOf(
-            // 1. Keyword search
+            // 1. Keyword search - use OR-connected keywords
             HybridSearchUtils.buildSearchRequest(
-                query = keywords,
+                query = keywordsQuery,
                 embedding = embedding,
                 fields = fieldConfig.keyword,
                 topK = topK
             ),
-            // 2. Title search
+            // 2. Title search - use natural query
             HybridSearchUtils.buildSearchRequest(
                 query = query,
                 embedding = embedding,
                 fields = fieldConfig.title,
                 topK = topK
             ),
-            // 3. Content search
+            // 3. Content search - use keywords if available, otherwise query
             HybridSearchUtils.buildSearchRequest(
-                query = keywords.ifEmpty { query },
+                query = if (keywords.isEmpty()) query else keywordsQuery,
                 embedding = embedding,
                 fields = fieldConfig.content,
                 topK = topK

@@ -1,7 +1,7 @@
 package com.okestro.okchat.ai.tools.confluence
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.okestro.okchat.confluence.service.ConfluenceService
+import com.okestro.okchat.confluence.service.ContentCollector
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
 import org.springframework.context.annotation.Description
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component
 @Component("getPagesBySpaceIdConfluenceTool")
 @Description("Get all pages in a Confluence space by space ID")
 class GetPagesBySpaceIdConfluenceTool(
-    private val confluenceService: ConfluenceService,
+    private val contentCollector: ContentCollector,
     private val objectMapper: ObjectMapper
 ) : ToolCallback {
     override fun getToolDefinition(): ToolDefinition {
@@ -46,7 +46,7 @@ class GetPagesBySpaceIdConfluenceTool(
                 ?: return "Invalid input: spaceId parameter is required"
             val limit = (input["limit"] as? Number)?.toInt() ?: 20
 
-            val allPages = confluenceService.getAllPages(spaceId)
+            val allPages = contentCollector.collectAllContent(spaceId)
             val limitedPages = allPages.take(limit)
 
             if (limitedPages.isEmpty()) {

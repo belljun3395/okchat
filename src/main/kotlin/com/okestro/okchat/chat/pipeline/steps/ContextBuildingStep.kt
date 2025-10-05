@@ -16,7 +16,7 @@ private val log = KotlinLogging.logger {}
  * OPTIMIZED: Focus on top results with clear hierarchy
  */
 @Component
-@Order(2)
+@Order(3) // After ReRankingStep (@Order(2))
 class ContextBuildingStep(
     @Value("\${confluence.base-url}") private val confluenceBaseUrl: String
 ) : OptionalChatPipelineStep {

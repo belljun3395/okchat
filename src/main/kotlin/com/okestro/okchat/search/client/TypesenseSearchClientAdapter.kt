@@ -16,18 +16,7 @@ class TypesenseSearchClientAdapter(
     override suspend fun hybridSearch(request: HybridSearchRequest): HybridSearchResponse {
         log.debug { "[Typesense Adapter] Executing search: q='${request.textQuery}'" }
 
-        val typesenseRequest = TypesenseSearchRequest(
-            q = request.textQuery,
-            queryBy = request.fields.queryBy.joinToString(","),
-            queryByWeights = request.fields.weights.joinToString(","),
-            vectorQuery = "embedding:([${request.vectorQuery.joinToString(",")}], k:${request.limit})",
-            filterBy = request.filters.entries.joinToString(" && ") { "${it.key}:=${it.value}" }
-                .takeIf { it.isNotEmpty() },
-            perPage = request.limit,
-            page = 1
-        )
-
-        val typesenseResponse = typesenseClient.search(typesenseRequest)
+        val typesenseResponse = typesenseClient.search(request.toTypesenseRequest())
 
         val hits = typesenseResponse.hits?.map { hit ->
             val normalizedTextScore = normalizeTextMatch(hit.textMatch)
@@ -56,18 +45,7 @@ class TypesenseSearchClientAdapter(
         }
 
         // Convert all HybridSearchRequests to TypesenseSearchRequests
-        val typesenseRequests = requests.map { request ->
-            TypesenseSearchRequest(
-                q = request.textQuery,
-                queryBy = request.fields.queryBy.joinToString(","),
-                queryByWeights = request.fields.weights.joinToString(","),
-                vectorQuery = "embedding:([${request.vectorQuery.joinToString(",")}], k:${request.limit})",
-                filterBy = request.filters.entries.joinToString(" && ") { "${it.key}:=${it.value}" }
-                    .takeIf { it.isNotEmpty() },
-                perPage = request.limit,
-                page = 1
-            )
-        }
+        val typesenseRequests = requests.map { it.toTypesenseRequest() }
 
         // Execute all searches in a single HTTP request
         val typesenseResponses = typesenseClient.multiSearch(typesenseRequests)
@@ -115,3 +93,17 @@ class TypesenseSearchClientAdapter(
         return 1.0 / (1.0 + vectorDistance)
     }
 }
+
+/**
+ * Convert HybridSearchRequest to TypesenseSearchRequest
+ */
+private fun HybridSearchRequest.toTypesenseRequest() = TypesenseSearchRequest(
+    q = textQuery,
+    queryBy = fields.queryBy.joinToString(","),
+    queryByWeights = fields.weights.joinToString(","),
+    vectorQuery = "embedding:([${vectorQuery.joinToString(",")}], k:$limit)",
+    filterBy = filters.entries.joinToString(" && ") { "${it.key}:=${it.value}" }
+        .takeIf { it.isNotEmpty() },
+    perPage = limit,
+    page = 1
+)

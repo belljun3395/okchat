@@ -113,3 +113,22 @@ search:
         content:
             query-by: "metadata.title,content,metadata.keywords"
             weights: "5,3,10"   # Balanced weights
+
+rag:
+    confluence:
+        chunking:
+            strategy: RECURSIVE_CHARACTER  # Options: RECURSIVE_CHARACTER, SEMANTIC, SENTENCE_WINDOW
+            chunk-size: 512
+            chunk-overlap: 50
+            min-chunk-size-chars: 350
+            min-chunk-length-to-embed: 5
+            max-num-chunks: 10000
+            keep-separators: true
+            semantic-similarity-threshold: 0.5
+            sentence-window-size: 3
+
+    rrf:
+        k: 60.0
+        keyword-weight: 1.3
+        title-weight: 1.5
+        content-weight: 0.8

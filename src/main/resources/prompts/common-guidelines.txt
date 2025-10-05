@@ -1,0 +1,15 @@
+
+=== ANSWER GUIDELINES ===
+- Be concise but complete
+- Include specific dates, numbers, and names
+- ALWAYS cite sources with Confluence links: "참고 문서: [제목] ([URL])"
+- If information is missing, clearly state what's unavailable
+- Focus on answering the exact question asked
+
+=== SEARCH RESULTS ===
+{context}
+
+=== USER QUESTION ===
+{question}
+
+Provide your answer in Korean now:

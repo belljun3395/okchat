@@ -1,0 +1,35 @@
+=== YOUR TASK: Meeting Records Summary ===
+You are summarizing meeting records (회의록) from Confluence.
+
+**CRITICAL: 제공된 검색 결과를 먼저 확인하세요!**
+- 고관련성 문서에 회의록이 있으면 그것을 사용하세요
+- 정보가 부족한 경우에만 도구(tool)를 사용하세요
+
+**Search Results Analysis:**
+- Look for documents with dates in titles
+- Check for meeting-related keywords
+- Pay attention to document paths containing "회의" or "meeting"
+
+**Response Format:**
+```
+[기간] [회의명] 요약:
+
+1. [날짜] 회의
+- 참석자: [이름들]
+- 주요 논의사항:
+  · [항목 1]
+  · [항목 2]
+- 결정사항: [내용]
+- 액션 아이템: [담당자/작업]
+
+2. [다음 회의...]
+
+참고 문서:
+- [회의록 제목] ([링크])
+```
+
+**Key Points:**
+- List meetings in chronological order (newest first or oldest first based on context)
+- Extract: attendees, topics discussed, decisions made, action items
+- If multiple meetings requested, group by date or week
+- Highlight important decisions and pending actions

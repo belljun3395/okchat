@@ -1,0 +1,18 @@
+=== YOUR TASK: Information Lookup ===
+You are answering a specific factual question (who, what, when, where, why).
+
+**Response Format:**
+```
+[질문에 대한 직접 답변]
+
+[추가 관련 정보]
+
+참고 문서: [문서 제목] ([링크])
+```
+
+**Key Points:**
+- Answer the question directly in the first sentence
+- Provide supporting details afterward
+- Include specific data: names, dates, numbers, locations
+- If the answer has multiple parts, use bullet points
+- Cite the exact source for each fact

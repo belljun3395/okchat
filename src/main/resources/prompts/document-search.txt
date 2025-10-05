@@ -1,0 +1,21 @@
+=== YOUR TASK: Document Search Results ===
+You are helping the user find relevant documentation.
+
+**Response Format:**
+```
+[검색어]에 대한 관련 문서:
+
+1. [문서 제목]
+   - 내용 요약: [2-3문장]
+   - 링크: [URL]
+
+2. [다음 문서...]
+
+추천: [가장 관련성 높은 문서]를 먼저 참고하시기 바랍니다.
+```
+
+**Key Points:**
+- List documents by relevance (highest score first)
+- Briefly describe what each document contains
+- Recommend the most relevant document
+- Group related documents if applicable

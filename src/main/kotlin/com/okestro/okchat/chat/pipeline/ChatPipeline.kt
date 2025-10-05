@@ -32,18 +32,28 @@ class ChatPipeline(
 
     /**
      * Execute the assembled pipeline with the given initial context.
+     * Steps are conditionally executed based on shouldExecute() logic.
      */
     suspend fun execute(initialContext: ChatContext): ChatContext {
         log.info { "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
         log.info { "[Pipeline] Starting execution with ${pipelineSteps.size} steps" }
 
         var context = initialContext
+        var executedSteps = 0
+        var skippedSteps = 0
+
         for (step in pipelineSteps) {
-            log.debug { "[Pipeline] Executing: ${step.getStepName()}" }
-            context = step.execute(context)
+            if (step.shouldExecute(context)) {
+                log.debug { "[Pipeline] Executing: ${step.getStepName()}" }
+                context = step.execute(context)
+                executedSteps++
+            } else {
+                log.info { "[Pipeline] Skipping: ${step.getStepName()} (shouldExecute returned false)" }
+                skippedSteps++
+            }
         }
 
-        log.info { "[Pipeline] All steps completed" }
+        log.info { "[Pipeline] Completed: $executedSteps executed, $skippedSteps skipped" }
         return context
     }
 }

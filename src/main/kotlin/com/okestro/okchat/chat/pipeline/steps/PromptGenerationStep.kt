@@ -12,9 +12,12 @@ private val log = KotlinLogging.logger {}
 /**
  * Generate prompt for AI
  * Uses dynamic prompt based on query type
+ * Prompts are externalized in resources/prompts/ for easy customization
  */
 @Component
-class PromptGenerationStep : LastChatPipelineStep {
+class PromptGenerationStep(
+    private val dynamicPromptBuilder: DynamicPromptBuilder
+) : LastChatPipelineStep {
 
     override suspend fun execute(context: ChatContext): ChatContext {
         log.info { "[${getStepName()}] Generating prompt" }
@@ -25,8 +28,8 @@ class PromptGenerationStep : LastChatPipelineStep {
         val contextText = context.contextText
             ?: throw IllegalStateException("Context text not available")
 
-        // Build dynamic prompt based on query type
-        val promptTemplate = DynamicPromptBuilder.buildPrompt(queryAnalysis.type)
+        // Build dynamic prompt based on query type (from externalized templates)
+        val promptTemplate = dynamicPromptBuilder.buildPrompt(queryAnalysis.type)
         log.info { "[${getStepName()}] Using ${queryAnalysis.type} specialized prompt" }
 
         // Create prompt with context and question

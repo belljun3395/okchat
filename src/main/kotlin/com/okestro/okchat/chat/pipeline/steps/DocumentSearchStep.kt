@@ -2,68 +2,84 @@ package com.okestro.okchat.chat.pipeline.steps
 
 import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.chat.pipeline.OptionalChatPipelineStep
+import com.okestro.okchat.config.RagProperties
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchScore
 import com.okestro.okchat.search.service.DocumentSearchService
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
 
 private val log = KotlinLogging.logger {}
 
 /**
- * Search for relevant documents
- * Uses multi-strategy search (keyword, title, content) with PARALLEL execution
+ * Search for relevant documents using optimized Typesense multi_search
+ * Executes 3 search strategies (keyword, title, content) in a SINGLE HTTP request
+ * Dramatically reduces network latency: 3 roundtrips → 1 roundtrip
+ * RRF weights are externalized in application.yaml for easy tuning
  */
 @Component
 @Order(1)
 class DocumentSearchStep(
-    private val documentSearchService: DocumentSearchService
+    private val documentSearchService: DocumentSearchService,
+    private val ragProperties: RagProperties
 ) : OptionalChatPipelineStep {
 
     companion object {
         private const val MAX_SEARCH_RESULTS = 50 // Optimized: reduced from 200 to improve performance
-        private const val RRF_K = 60.0 // Standard RRF constant
+    }
 
-        // RRF weights adjusted for Typesense hybrid search
-        // Higher weights = stronger influence in final ranking
-        private const val KEYWORD_WEIGHT = 1.3 // Increased: text search is now more accurate
-        private const val TITLE_WEIGHT = 1.5 // Increased: title matching is critical
-        private const val CONTENT_WEIGHT = 0.8 // Maintained: hybrid search balances this
+    // RRF parameters loaded from externalized configuration
+    // These can be tuned in application.yaml without code changes
+    private val rrfK = ragProperties.rrf.k
+    private val keywordWeight = ragProperties.rrf.keywordWeight
+    private val titleWeight = ragProperties.rrf.titleWeight
+    private val contentWeight = ragProperties.rrf.contentWeight
+
+    init {
+        log.info { "[DocumentSearchStep] RRF configuration loaded: k=$rrfK, keyword=$keywordWeight, title=$titleWeight, content=$contentWeight" }
+    }
+
+    /**
+     * Determine if document search should be executed
+     * Can be extended to skip search for simple queries (e.g., greetings)
+     */
+    override fun shouldExecute(context: ChatContext): Boolean {
+        // Example: Could skip search for certain query types if needed
+        // For now, always execute (default behavior)
+        // Future enhancement: Skip for simple greetings or queries that don't need RAG
+        return true
     }
 
     override suspend fun execute(context: ChatContext): ChatContext {
-        log.info { "[${getStepName()}] Starting multi-strategy search with RRF" }
+        log.info { "[${getStepName()}] Starting optimized multi-search with RRF" }
 
         val allKeywords = context.getAllKeywords()
+        val keywordsString = allKeywords.joinToString(" ")
 
-        // Execute all search strategies in parallel and get ranked results
-        val (keywordResults, titleResults, contentResults) = coroutineScope {
-            val keywordJob = async {
-                searchByKeywords(allKeywords).sortedByDescending { it.score }
-            }
-            val titleJob = async {
-                searchTitlesByQuery(context.userMessage).sortedByDescending { it.score }
-            }
-            val contentJob = async {
-                searchContentByQuery(context.userMessage, allKeywords).sortedByDescending { it.score }
-            }
+        // Execute all 3 search strategies in a SINGLE HTTP request using Typesense multi_search
+        // This dramatically reduces network latency (3 roundtrips → 1 roundtrip)
+        val (keywordResults, titleResults, contentResults) = documentSearchService.multiSearch(
+            query = context.userMessage,
+            keywords = keywordsString,
+            topK = MAX_SEARCH_RESULTS
+        )
 
-            Triple(
-                keywordJob.await(),
-                titleJob.await(),
-                contentJob.await()
-            )
-        }
+        // Sort results by score
+        val sortedKeywordResults = keywordResults.sortedByDescending { it.score }
+        val sortedTitleResults = titleResults.sortedByDescending { it.score }
+        val sortedContentResults = contentResults.sortedByDescending { it.score }
+
+        log.info { "[${getStepName()}] Multi-search completed" }
+        log.info { "  - Keyword results: ${sortedKeywordResults.size}" }
+        log.info { "  - Title results: ${sortedTitleResults.size}" }
+        log.info { "  - Content results: ${sortedContentResults.size}" }
 
         // Apply Reciprocal Rank Fusion to combine rankings
         val combinedResults = applyRRF(
-            keywordResults = keywordResults,
-            titleResults = titleResults,
-            contentResults = contentResults
+            keywordResults = sortedKeywordResults,
+            titleResults = sortedTitleResults,
+            contentResults = sortedContentResults
         ).take(MAX_SEARCH_RESULTS)
 
         log.info { "[${getStepName()}] Found ${combinedResults.size} documents via RRF" }
@@ -76,7 +92,7 @@ class DocumentSearchStep(
      * Apply Reciprocal Rank Fusion (RRF) to combine multiple search result rankings
      *
      * RRF Formula: score(d) = Σ [weight / (rank(d) + k)]
-     * where k = 60 (standard constant), rank starts at 0
+     * where k and weights are configurable via application.yaml
      *
      * Benefits:
      * - No score normalization needed
@@ -95,16 +111,16 @@ class DocumentSearchStep(
         fun addRRFScore(results: List<SearchResult>, weight: Double) {
             results.forEachIndexed { rank, result ->
                 // RRF score: weight / (rank + k)
-                val score = weight / (rank + RRF_K)
+                val score = weight / (rank + rrfK)
                 rrfScores[result.id] = rrfScores.getOrDefault(result.id, 0.0) + score
                 documentMap.putIfAbsent(result.id, result)
             }
         }
 
-        // Apply RRF with different weights for each strategy
-        addRRFScore(keywordResults, KEYWORD_WEIGHT)
-        addRRFScore(titleResults, TITLE_WEIGHT)
-        addRRFScore(contentResults, CONTENT_WEIGHT)
+        // Apply RRF with different weights for each strategy (from config)
+        addRRFScore(keywordResults, keywordWeight)
+        addRRFScore(titleResults, titleWeight)
+        addRRFScore(contentResults, contentWeight)
 
         // Sort by RRF scores and return
         return rrfScores.entries
@@ -114,68 +130,6 @@ class DocumentSearchStep(
                     score = SearchScore.SimilarityScore(rrfScore)
                 )
             }
-    }
-
-    private suspend fun searchByKeywords(
-        keywords: List<String>
-    ): List<SearchResult> {
-        if (keywords.isEmpty()) return emptyList()
-
-        log.info { "  [Keyword Search] Searching ${keywords.size} keywords (parallel)" }
-
-        val results = mutableMapOf<String, SearchResult>()
-        coroutineScope {
-            keywords.chunked(5).map { chunk ->
-                async {
-                    chunk.forEach { keyword ->
-                        val keywordResults = documentSearchService.searchByKeywords(keyword, MAX_SEARCH_RESULTS)
-                        keywordResults.forEach { result ->
-                            val existing = results[result.id]
-                            if (existing == null || result.score > existing.score) {
-                                results[result.id] = result
-                            }
-                        }
-                    }
-                }
-            }.awaitAll()
-        }
-
-        log.info { "    Found ${results.size} unique documents from keyword search" }
-        return results.values.toList()
-    }
-
-    /**
-     * Search titles in parallel
-     */
-    private suspend fun searchTitlesByQuery(
-        query: String
-    ): List<SearchResult> {
-        log.info { "  [Title Search] Searching titles" }
-
-        val titleResults = documentSearchService.searchByTitle(query, MAX_SEARCH_RESULTS)
-
-        log.info { "    Found ${titleResults.size} results from title search" }
-        return titleResults
-    }
-
-    /**
-     * Search content with hybrid search (semantic + keyword)
-     */
-    private suspend fun searchContentByQuery(
-        query: String,
-        keywords: List<String>
-    ): List<SearchResult> {
-        log.info { "  [Content Search] Hybrid search on content" }
-
-        val keywordsString = keywords.joinToString(" ")
-        val contentResults = documentSearchService.searchByContent(
-            query = query,
-            keywords = keywordsString,
-            topK = MAX_SEARCH_RESULTS
-        )
-
-        log.info { "    Found ${contentResults.size} results from hybrid content search" }
-        return contentResults
     }
 
     override fun getStepName(): String = "Document Search"

@@ -61,16 +61,16 @@ class DocumentSearchStep(
 
         // Execute all 3 search strategies in a SINGLE HTTP request using Typesense multi_search
         // This dramatically reduces network latency (3 roundtrips → 1 roundtrip)
-        val (keywordResults, titleResults, contentResults) = documentSearchService.multiSearch(
+        val searchResult = documentSearchService.multiSearch(
             query = context.userMessage,
             keywords = keywordsString,
             topK = MAX_SEARCH_RESULTS
         )
 
         // Sort results by score
-        val sortedKeywordResults = keywordResults.sortedByDescending { it.score }
-        val sortedTitleResults = titleResults.sortedByDescending { it.score }
-        val sortedContentResults = contentResults.sortedByDescending { it.score }
+        val sortedKeywordResults = searchResult.keywordResults.sortedByDescending { it.score }
+        val sortedTitleResults = searchResult.titleResults.sortedByDescending { it.score }
+        val sortedContentResults = searchResult.contentResults.sortedByDescending { it.score }
 
         log.info { "[${getStepName()}] Multi-search completed: keyword=${sortedKeywordResults.size}, title=${sortedTitleResults.size}, content=${sortedContentResults.size}" }
 

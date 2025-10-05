@@ -2,7 +2,7 @@ package com.okestro.okchat.search.service
 
 import com.okestro.okchat.search.client.SearchClient
 import com.okestro.okchat.search.config.SearchFieldWeightConfig
-import com.okestro.okchat.search.model.SearchResult
+import com.okestro.okchat.search.model.MultiSearchResult
 import com.okestro.okchat.search.util.HybridSearchUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.embedding.EmbeddingModel
@@ -23,7 +23,7 @@ class DocumentSearchService(
 
     /**
      * Execute multiple searches in a single request (optimized with Typesense multi_search)
-     * Returns results for [keyword, title, content] searches in that order
+     * Returns results for keyword, title, and content searches
      *
      * This dramatically reduces network latency by batching all searches into one HTTP request
      */
@@ -31,7 +31,7 @@ class DocumentSearchService(
         query: String,
         keywords: String,
         topK: Int = 50
-    ): Triple<List<SearchResult>, List<SearchResult>, List<SearchResult>> {
+    ): MultiSearchResult {
         log.info { "[Multi-Search] Executing optimized multi-search: query='$query', keywords='$keywords', topK=$topK" }
 
         // Generate embedding once (reused for all searches)
@@ -106,6 +106,10 @@ class DocumentSearchService(
             }
         }
 
-        return Triple(keywordResults, titleResults, contentResults)
+        return MultiSearchResult(
+            keywordResults = keywordResults,
+            titleResults = titleResults,
+            contentResults = contentResults
+        )
     }
 }

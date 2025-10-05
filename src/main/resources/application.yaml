@@ -23,6 +23,12 @@ spring:
             table-prefix: TASK_
             single-instance-enabled: true
     ai:
+        retry:
+            max-attempts: 5
+            backoff:
+                initial-interval: 2s
+                multiplier: 2
+                max-interval: 30s
         vectorstore:
             type: typesense
             typesense:
@@ -38,6 +44,9 @@ spring:
             api-key: ${OPENAI_API_KEY}
             embedding:
                 model: text-embedding-3-small
+            chat:
+                options:
+                    model: gpt-4.1-mini
 
 confluence:
     base-url: ${CONFLUENCE_BASE_URL}
@@ -81,3 +90,26 @@ task:
         enabled: false
     email-polling:
         enabled: false
+
+# Hybrid search configuration
+search:
+    hybrid:
+        keyword:
+            text-weight: 0.7    # Favor text matching for keywords
+            vector-weight: 0.3
+        title:
+            text-weight: 0.7    # Favor text matching for titles
+            vector-weight: 0.3
+        content:
+            text-weight: 0.4    # Balance text and semantic for content
+            vector-weight: 0.6
+    fields:
+        keyword:
+            query-by: "metadata.keywords,metadata.title,content"
+            weights: "10,5,1"   # Heavy weight on keywords field
+        title:
+            query-by: "metadata.title,content"
+            weights: "10,1"     # Heavy weight on title field
+        content:
+            query-by: "metadata.title,content,metadata.keywords"
+            weights: "5,3,10"   # Balanced weights

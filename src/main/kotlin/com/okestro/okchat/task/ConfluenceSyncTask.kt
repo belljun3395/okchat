@@ -22,6 +22,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import org.typesense.api.Client
 import org.typesense.model.SearchParameters
+import kotlin.collections.emptyList
 
 /**
  * Spring Cloud Task for syncing Confluence content to Typesense vector store
@@ -45,6 +46,7 @@ class ConfluenceSyncTask(
     private val typesenseClient: Client,
     private val keywordExtractionService: KeywordExtractionService,
     private val chunkingStrategy: ChunkingStrategy,
+    private val embeddingModel: org.springframework.ai.embedding.EmbeddingModel,
     @Value("\${spring.ai.vectorstore.typesense.collection-name}") private val collectionName: String
 ) : CommandLineRunner {
 
@@ -109,6 +111,11 @@ class ConfluenceSyncTask(
 
             // 5. Store/Update in Typesense (batch processing to avoid timeout)
             log.info { "5. Storing/Updating in Typesense (batch processing)..." }
+
+            // Get initial document count
+            val initialDocCount = getTypesenseDocumentCount()
+            log.info { "  Initial Typesense document count: $initialDocCount" }
+
             val batchSize = 10 // Process 10 documents at a time
             val batches = documents.chunked(batchSize)
             var successCount = 0
@@ -117,13 +124,53 @@ class ConfluenceSyncTask(
                 val batchNum = batchIndex + 1
                 try {
                     log.info { "  [Batch $batchNum/${batches.size}] Adding ${batch.size} documents..." }
-                    vectorStore.add(batch)
-                    successCount += batch.size
-                    log.info { "  [Batch $batchNum/${batches.size}] ✓ Successfully added ${batch.size} documents (Total: $successCount/${documents.size})" }
+
+                    // Get count before add
+                    val countBefore = getTypesenseDocumentCount()
+
+                    // Add documents directly to Typesense (bypassing Spring AI VectorStore)
+                    // Spring AI's batching strategy was not persisting documents properly
+                    log.debug { "  [Batch $batchNum/${batches.size}] Persisting ${batch.size} documents directly to Typesense..." }
+
+                    batch.forEach { document ->
+                        try {
+                            val typesenseDoc = convertToTypesenseDocument(document)
+                            // upsert() immediately sends HTTP POST to Typesense (synchronous, no flush needed)
+                            typesenseClient.collections(collectionName).documents().upsert(typesenseDoc)
+                        } catch (e: Exception) {
+                            log.error(e) { "  Failed to upsert document ${document.id}: ${e.message}" }
+                            log.error { "  Document content length: ${document.text?.length ?: 0}" }
+                            throw e
+                        }
+                    }
+
+                    // Verify count increased
+                    val countAfter = getTypesenseDocumentCount()
+                    val actualAdded = countAfter - countBefore
+
+                    if (actualAdded.toInt() == batch.size) {
+                        successCount += batch.size
+                        log.info { "  [Batch $batchNum/${batches.size}] ✓ Successfully added ${batch.size} documents (Verified: $countBefore → $countAfter)" }
+                    } else {
+                        log.warn { "  [Batch $batchNum/${batches.size}] ⚠ Added ${batch.size} but only $actualAdded appeared in Typesense ($countBefore → $countAfter)" }
+                        successCount += actualAdded.toInt()
+                    }
+
+                    log.info { "  [Batch $batchNum/${batches.size}] Progress: $successCount/${documents.size}" }
                 } catch (e: Exception) {
                     log.error(e) { "  [Batch $batchNum/${batches.size}] ✗ Failed to add batch: ${e.message}" }
+                    log.error { "  [Batch $batchNum/${batches.size}] Batch IDs: ${batch.map { it.id }.take(5)}..." }
+                    log.error { "  [Batch $batchNum/${batches.size}] Stack trace: ${e.stackTraceToString()}" }
                     throw e // Rethrow to mark task as failed
                 }
+            }
+
+            // Verify final count
+            val finalDocCount = getTypesenseDocumentCount()
+            log.info { "  Final Typesense document count: $finalDocCount (increased by ${finalDocCount - initialDocCount})" }
+
+            if ((finalDocCount - initialDocCount).toInt() != successCount) {
+                log.error { "  ⚠️ WARNING: Expected to add $successCount documents but Typesense count only increased by ${finalDocCount - initialDocCount}" }
             }
 
             log.info { "✓ Stored/Updated $successCount documents (${currentIds.size - existingIds.size} new, ${existingIds.intersect(currentIds).size} updated)" }
@@ -342,5 +389,61 @@ class ConfluenceSyncTask(
             .firstOrNull { it.startsWith("spaceKey=") }
             ?.substringAfter("spaceKey=")
             ?.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * Get current document count from Typesense directly
+     * This bypasses Spring AI caching to get real-time count
+     */
+    private fun getTypesenseDocumentCount(): Long {
+        return try {
+            val collection = typesenseClient.collections(collectionName).retrieve()
+            collection.numDocuments ?: 0
+        } catch (e: Exception) {
+            log.warn { "Failed to get Typesense document count: ${e.message}" }
+            -1 // Return -1 to indicate failure
+        }
+    }
+
+    /**
+     * Convert Spring AI Document to Typesense document format
+     * * IMPORTANT: Typesense Java Client's upsert() is synchronous and sends HTTP POST immediately.
+     * No flush/commit is needed - the document is persisted as soon as upsert() returns successfully.
+     * * Note: Spring AI Document doesn't store embedding in the Document object itself.
+     * The embedding is generated and added by VectorStore during the add() operation.
+     * We need to generate it here manually using the embeddingModel.
+     */
+    private fun convertToTypesenseDocument(document: org.springframework.ai.document.Document): Map<String, Any> {
+        val metadata = document.metadata
+
+        // Generate embedding for this document
+        val embedding: List<Float> = try {
+            // embed() returns float[] which we convert to List<Float>
+            embeddingModel.embed(document.text ?: "").toList()
+        } catch (e: Exception) {
+            log.error(e) { "Failed to generate embedding for document ${document.id}: ${e.message}" }
+            throw IllegalStateException("Failed to generate embedding for document ${document.id}", e)
+        }
+
+        // Validate embedding dimension
+        if (embedding.isEmpty()) {
+            throw IllegalStateException("Document ${document.id} generated empty embedding")
+        }
+        if (embedding.size != 1536) {
+            throw IllegalStateException("Document ${document.id} has invalid embedding dimension: ${embedding.size} (expected 1536)")
+        }
+
+        log.trace { "Converting document ${document.id}: embedding size=${embedding.size}, content length=${document.text?.length ?: 0}" }
+
+        return mapOf(
+            "id" to document.id,
+            "content" to (document.text ?: ""),
+            "embedding" to embedding,
+            "metadata.title" to (metadata["title"] ?: ""),
+            "metadata.keywords" to (metadata["keywords"] ?: ""),
+            "metadata.type" to (metadata["type"] ?: ""),
+            "metadata.spaceKey" to (metadata["spaceKey"] ?: ""),
+            "metadata.path" to (metadata["path"] ?: "")
+        )
     }
 }

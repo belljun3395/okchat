@@ -6,6 +6,12 @@ package com.okestro.okchat.search.client
  */
 interface SearchClient {
     suspend fun hybridSearch(request: HybridSearchRequest): HybridSearchResponse
+
+    /**
+     * Execute multiple hybrid searches in a single request
+     * Dramatically reduces network latency by batching searches
+     */
+    suspend fun multiHybridSearch(requests: List<HybridSearchRequest>): List<HybridSearchResponse>
 }
 
 data class HybridSearchRequest(

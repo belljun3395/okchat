@@ -69,17 +69,17 @@ class ReRankingStep(
             try {
                 val docEmbedding = embeddingModel.embed(result.content).toList()
                 val semanticSimilarity = cosineSimilarity(queryEmbedding, docEmbedding)
-                
+
                 // Preserve original RRF score (includes date/path boosts)
                 val originalScore = result.score.value
-                
+
                 // Normalize original score to 0-1 range for fair combination
                 // RRF scores are typically in 0.01-0.20 range, so we scale them
                 val normalizedOriginal = minOf(originalScore * 5.0, 1.0)
-                
+
                 // Hybrid score: combine RRF (with boosts) and semantic similarity
                 val hybridScore = (normalizedOriginal * RRF_WEIGHT) + (semanticSimilarity * SEMANTIC_WEIGHT)
-                
+
                 log.debug { "[${getStepName()}] ${result.title}: RRF=$originalScore (norm=${"%.4f".format(normalizedOriginal)}), Semantic=${"%.4f".format(semanticSimilarity)}, Hybrid=${"%.4f".format(hybridScore)}" }
 
                 result.copy(
@@ -97,7 +97,7 @@ class ReRankingStep(
         val finalResults = reranked + remaining
 
         log.info { "[${getStepName()}] Re-ranking completed: ${topK.size} input → ${reranked.size} output" }
-        
+
         // Log top 5 for quick reference, full list in DEBUG
         if (log.isDebugEnabled()) {
             log.debug { "[${getStepName()}] ━━━ All ${reranked.size} re-ranked results ━━━" }

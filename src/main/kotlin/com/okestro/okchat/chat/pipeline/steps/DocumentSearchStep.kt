@@ -85,7 +85,7 @@ class DocumentSearchStep(
         ).take(MAX_SEARCH_RESULTS)
 
         log.info { "[${getStepName()}] Found ${combinedResults.size} documents via RRF (after deduplication)" }
-        
+
         // Log top 5 for quick reference, full list in DEBUG
         if (log.isDebugEnabled()) {
             log.debug { "[${getStepName()}] ━━━ All ${combinedResults.size} RRF results ━━━" }
@@ -94,9 +94,11 @@ class DocumentSearchStep(
             }
             log.debug { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
         } else {
-            log.info { "[${getStepName()}] Top 5: ${
+            log.info {
+                "[${getStepName()}] Top 5: ${
                 combinedResults.take(5).joinToString(", ") { "${it.title}(${"%.4f".format(it.score.value)})" }
-            }" }
+                }"
+            }
         }
 
         return context.copy(searchResults = combinedResults)
@@ -142,59 +144,59 @@ class DocumentSearchStep(
         val boostedScores = mutableMapOf<String, Double>()
         val dateBoostCount = mutableMapOf<String, Int>()
         val pathBoostCount = mutableMapOf<String, Int>()
-        
+
         // Define path patterns that indicate meeting-related documents
         val meetingPathPatterns = listOf("팀회의", "주간회의", "회의록", "미팅", "meeting")
-        
+
         rrfScores.forEach { (id, score) ->
             val document = documentMap[id]
             val title = document?.title ?: ""
             val path = document?.path ?: ""
-            
+
             var boostMultiplier = 1.0
             val boostReasons = mutableListOf<String>()
-            
+
             // 1. Date boost: Check if title contains any date keyword (case-insensitive)
             val matchesDateKeyword = dateKeywords.any { dateKeyword ->
                 title.contains(dateKeyword, ignoreCase = true)
             }
-            
+
             if (matchesDateKeyword && dateKeywords.isNotEmpty()) {
                 boostMultiplier *= dateBoostFactor
                 dateBoostCount[id] = 1
                 boostReasons.add("date:${dateBoostFactor}x")
             }
-            
+
             // 2. Path hierarchy boost: Check if path matches query type
             // Only apply for MEETING_RECORDS queries to avoid false positives
             if (queryType == com.okestro.okchat.ai.support.QueryClassifier.QueryType.MEETING_RECORDS) {
                 val matchesPathPattern = meetingPathPatterns.any { pattern ->
                     path.contains(pattern, ignoreCase = true)
                 }
-                
+
                 if (matchesPathPattern) {
                     boostMultiplier *= pathBoostFactor
                     pathBoostCount[id] = 1
                     boostReasons.add("path:${pathBoostFactor}x")
                 }
             }
-            
+
             boostedScores[id] = score * boostMultiplier
-            
+
             if (boostReasons.isNotEmpty()) {
                 log.debug { "[RRF] Boost applied to '$title' (id: $id): $score → ${boostedScores[id]} [${boostReasons.joinToString(", ")}]" }
             }
         }
-        
+
         // Log boost statistics
         if (dateBoostCount.isNotEmpty() || pathBoostCount.isNotEmpty()) {
             val totalDateBoost = dateBoostCount.size
             val totalPathBoost = pathBoostCount.size
             val bothBoosts = dateBoostCount.keys.intersect(pathBoostCount.keys).size
-            
+
             log.info { "[RRF] Boost statistics: date=$totalDateBoost docs (${dateBoostFactor}x), path=$totalPathBoost docs (${pathBoostFactor}x), both=$bothBoosts docs (${dateBoostFactor * pathBoostFactor}x)" }
         }
-        
+
         // Sort by boosted RRF scores and return
         return boostedScores.entries
             .sortedByDescending { it.value }

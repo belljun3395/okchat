@@ -1,8 +1,8 @@
 package com.okestro.okchat.confluence.util
 
-import com.okestro.okchat.confluence.service.ContentHierarchy
-import com.okestro.okchat.confluence.service.ContentNode
-import com.okestro.okchat.confluence.service.ContentType
+import com.okestro.okchat.confluence.model.ContentHierarchy
+import com.okestro.okchat.confluence.model.ContentNode
+import com.okestro.okchat.confluence.model.ContentType
 
 /**
  * Utility for visualizing Confluence content hierarchy as ASCII tree

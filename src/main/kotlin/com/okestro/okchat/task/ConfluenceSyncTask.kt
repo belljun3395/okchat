@@ -12,6 +12,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.springframework.ai.document.Document
 import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.beans.factory.annotation.Value
@@ -148,7 +150,11 @@ class ConfluenceSyncTask(
 
         log.info { "Converting $totalPages pages to vector store documents..." }
 
-        // Only convert pages (not folders) - Process in parallel
+        // Limit concurrent API calls to prevent timeout/rate limit issues
+        // Max 5 concurrent OpenAI API calls at a time
+        val apiCallSemaphore = Semaphore(5)
+
+        // Only convert pages (not folders) - Process in parallel with concurrency limit
         val allDocuments = coroutineScope {
             allPages.mapIndexed { index, node ->
                 async(Dispatchers.IO) {
@@ -159,14 +165,17 @@ class ConfluenceSyncTask(
                     log.info { "  └─ Path: $path" }
 
                     // Extract keywords FIRST (before building content)
+                    // Use semaphore to limit concurrent API calls
                     log.info { "  └─ Extracting keywords..." }
-                    val keywords = try {
-                        // Build preliminary content for keyword extraction
-                        val preliminaryContent = node.body?.let { stripHtml(it) } ?: ""
-                        keywordExtractionService.extractKeywordsFromContent(preliminaryContent, node.title)
-                    } catch (e: Exception) {
-                        log.warn { "  └─ Failed to extract keywords for '${node.title}': ${e.message}" }
-                        emptyList()
+                    val keywords = apiCallSemaphore.withPermit {
+                        try {
+                            // Build preliminary content for keyword extraction
+                            val preliminaryContent = node.body?.let { stripHtml(it) } ?: ""
+                            keywordExtractionService.extractKeywordsFromContent(preliminaryContent, node.title)
+                        } catch (e: Exception) {
+                            log.warn { "  └─ Failed to extract keywords for '${node.title}': ${e.message}" }
+                            emptyList()
+                        }
                     }
 
                     if (keywords.isNotEmpty()) {

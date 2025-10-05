@@ -38,15 +38,14 @@ class QueryAnalysisStep(
         }
 
         // Extract date keywords
-        // Include all days if query contains "all" or "every" keywords
-        val includeAllDays = Regex("(?i)(모든|전체|모두|전부|all|every)").containsMatchIn(context.userMessage)
+        // Always include strategic day patterns for better date matching (e.g., "250804" in titles)
+        // This ensures month-level queries like "2025년 8월" can match day-specific titles
         val dateKeywords = DateExtractor.extractDateKeywords(
             context.userMessage,
-            includeAllDays = includeAllDays
+            includeAllDays = true // Always include strategic days for YYMMDD title matching
         )
         if (dateKeywords.isNotEmpty()) {
-            val dayLevelInfo = if (includeAllDays) " (day-level expansion)" else ""
-            log.info { "[${getStepName()}] Date keywords: $dateKeywords$dayLevelInfo" }
+            log.info { "[${getStepName()}] Date keywords: $dateKeywords" }
         }
 
         val allKeywords = (keywords + dateKeywords).distinct()

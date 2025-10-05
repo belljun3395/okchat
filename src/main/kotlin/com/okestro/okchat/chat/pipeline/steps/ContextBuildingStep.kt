@@ -22,11 +22,11 @@ class ContextBuildingStep(
 ) : OptionalChatPipelineStep {
 
     companion object {
-        private const val TOP_RESULTS_FOR_CONTEXT = 10 // Optimized: reduced from 30 to fit token limits
-        private const val HIGH_RELEVANCE_THRESHOLD = 1.2 // similarity (0~1) + boost (0.2~2.0) = 0.2~3.0
-        private const val MEDIUM_RELEVANCE_THRESHOLD = 0.8 // 0.8 이상이면 괜찮은 매칭
-        private const val MAX_CONTENT_LENGTH = 1500 // Optimized: reduced from 3000 to save tokens
-        private const val MAX_OTHER_RESULTS_PREVIEW = 5
+        private const val TOP_RESULTS_FOR_CONTEXT = 20 // Increased to capture more meeting records
+        private const val HIGH_RELEVANCE_THRESHOLD = 0.7 // Cosine similarity range: 0-1, 0.7+ is good match
+        private const val MEDIUM_RELEVANCE_THRESHOLD = 0.5 // 0.5+ is decent match
+        private const val MAX_CONTENT_LENGTH = 1000 // Reduced to fit more documents in token limit
+        private const val MAX_OTHER_RESULTS_PREVIEW = 10 // Increased to show more related documents
         private val DATE_PATTERN = Regex("""(\d{6})""")
     }
 
@@ -35,30 +35,54 @@ class ContextBuildingStep(
 
         val searchResults = context.searchResults
         if (searchResults.isNullOrEmpty()) {
-            log.warn { "[${getStepName()}] No search results available" }
-            return context.copy(contextText = "관련 Confluence 페이지를 찾을 수 없습니다.")
+            log.warn { "[${getStepName()}] No search results available - returning empty context" }
+            // Return null contextText so PromptGenerationStep knows to use fallback
+            return context.copy(contextText = null)
         }
 
         val topResults = searchResults.take(TOP_RESULTS_FOR_CONTEXT)
-        log.info { "[${getStepName()}] Using top ${topResults.size} documents" }
+        log.info { "[${getStepName()}] Using top ${topResults.size} documents for context" }
 
-        // Debug: Log top documents for debugging
+        // Log ALL top documents in detail
+        log.info { "[${getStepName()}] ━━━ All ${topResults.size} documents selected for context ━━━" }
         topResults.forEachIndexed { index, result ->
-            log.info { "  [${index + 1}] ${result.title} (score: ${"%.4f".format(result.score.value)}, id: ${result.id})" }
+            log.info { "  [${index + 1}/${topResults.size}] ${result.title}" }
+            log.info { "       Score: ${"%.4f".format(result.score.value)}, ID: ${result.id}" }
+            log.info { "       Content: ${result.content.length} chars" }
+            log.info { "       Preview: ${result.content.take(150).replace("\n", " ")}..." }
         }
+        log.info { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
 
         val contextText = buildContextText(topResults, context.userMessage)
+        log.info { "[${getStepName()}] Built context: ${contextText.length} chars" }
+        log.info {
+            "[${getStepName()}] Context :\n" + contextText
+        }
 
         return context.copy(contextText = contextText)
     }
 
     private fun buildContextText(results: List<SearchResult>, userQuestion: String): String {
-        val highRelevance = results.filter { it.score.value >= HIGH_RELEVANCE_THRESHOLD }
-        val mediumRelevance = results.filter { it.score.value >= MEDIUM_RELEVANCE_THRESHOLD && it.score.value < HIGH_RELEVANCE_THRESHOLD }
-        val otherResults = results.filter { it.score.value < MEDIUM_RELEVANCE_THRESHOLD }
+        // Filter out documents with minimal content (metadata-only chunks)
+        val validResults = results.filter { it.content.length > 100 }
+
+        log.info { "[${getStepName()}] Content filtering: ${results.size} → ${validResults.size} results" }
+        if (results.size > validResults.size) {
+            val filtered = results.filter { it.content.length <= 100 }
+            log.info { "[${getStepName()}] Filtered out ${filtered.size} minimal content documents:" }
+            filtered.take(5).forEach {
+                log.info { "    - ${it.title} (content: ${it.content.length} chars)" }
+            }
+        }
+
+        val highRelevance = validResults.filter { it.score.value >= HIGH_RELEVANCE_THRESHOLD }
+        val mediumRelevance = validResults.filter { it.score.value >= MEDIUM_RELEVANCE_THRESHOLD && it.score.value < HIGH_RELEVANCE_THRESHOLD }
+        val otherResults = validResults.filter { it.score.value < MEDIUM_RELEVANCE_THRESHOLD }
+
+        log.info { "[${getStepName()}] Relevance distribution: High=${highRelevance.size}, Medium=${mediumRelevance.size}, Other=${otherResults.size}" }
 
         return buildString {
-            appendHeader(userQuestion, results.size, highRelevance.size)
+            appendHeader(userQuestion, validResults.size, highRelevance.size)
             appendHighRelevanceDocuments(highRelevance)
             appendMediumRelevanceDocuments(mediumRelevance)
             appendOtherResults(otherResults)
@@ -82,7 +106,8 @@ class ContextBuildingStep(
         append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
         append("🎯 고관련성 문서 (${documents.size}개)\n")
         append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-        append("⚠️ 다음 문서들이 질문과 가장 관련이 높습니다. 우선적으로 참고하세요!\n\n")
+        append("⚠️ 다음 문서들이 질문과 가장 관련이 높습니다.\n")
+        append("⚠️ **중요: 아래 ${documents.size}개 문서를 모두 분석하여 답변하세요!**\n\n")
 
         documents.forEachIndexed { index, result ->
             appendDocumentInfo(index + 1, result, detailed = true)
@@ -116,16 +141,20 @@ class ContextBuildingStep(
     private fun StringBuilder.appendImportantInstruction() {
         append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
         append("⚠️ 중요 지침:\n")
-        append("1. 위의 검색 결과를 **반드시 먼저** 확인하세요\n")
-        append("2. 고관련성 문서에 답이 있으면 그것을 기반으로 답변하세요\n")
-        append("3. 정보가 부족한 경우에만 도구(tool)를 사용하세요\n")
+        append("1. 위의 **모든** 검색 결과를 확인하세요 (하나만 보지 마세요!)\n")
+        append("2. 회의록 요약 시 검색된 모든 회의를 포함하세요\n")
+        append("3. 각 문서의 내용을 빠짐없이 분석하세요\n")
+        append("4. 정보가 충분한 경우 도구(tool)를 사용하지 마세요\n")
         append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
     }
 
     private fun StringBuilder.appendDocumentInfo(index: Int, result: SearchResult, detailed: Boolean) {
         val pageUrl = buildConfluencePageUrl(result.spaceKey, result.id)
 
-        append("$index. ${result.title}\n")
+        append("\n")
+        append("═══════════════════════════════════\n")
+        append("📄 문서 $index: ${result.title}\n")
+        append("═══════════════════════════════════\n")
         append("   링크: $pageUrl\n")
         append("   경로: ${result.path}\n")
         append("   관련도: ${"%.2f".format(result.score.value)}")

@@ -29,6 +29,8 @@ class ReRankingStep(
 
     companion object {
         private const val TOP_K_TO_RERANK = 20 // Re-rank top 20 results
+        private const val RRF_WEIGHT = 0.4 // Weight for original RRF score (40%)
+        private const val SEMANTIC_WEIGHT = 0.6 // Weight for semantic similarity (60%)
     }
 
     /**
@@ -54,22 +56,52 @@ class ReRankingStep(
         // Generate query embedding
         val queryEmbedding = embeddingModel.embed(context.userMessage).toList()
 
-        // Re-score each document based on query-document similarity
-        val reranked = topK.map { result ->
-            val docEmbedding = embeddingModel.embed(result.content).toList()
-            val similarity = cosineSimilarity(queryEmbedding, docEmbedding)
+        // Re-score each document using hybrid approach:
+        // Combine original RRF score (which includes date/path boosts) with semantic similarity
+        // This preserves intelligent boosts while improving ranking quality
+        val reranked = topK.mapNotNull { result ->
+            // Skip documents with empty content (metadata-only chunks)
+            if (result.content.isBlank()) {
+                log.warn { "[${getStepName()}] Skipping document with empty content: ${result.title} (id: ${result.id})" }
+                return@mapNotNull null
+            }
 
-            result.copy(
-                score = SearchScore.SimilarityScore(similarity)
-            )
+            try {
+                val docEmbedding = embeddingModel.embed(result.content).toList()
+                val semanticSimilarity = cosineSimilarity(queryEmbedding, docEmbedding)
+                
+                // Preserve original RRF score (includes date/path boosts)
+                val originalScore = result.score.value
+                
+                // Normalize original score to 0-1 range for fair combination
+                // RRF scores are typically in 0.01-0.20 range, so we scale them
+                val normalizedOriginal = minOf(originalScore * 5.0, 1.0)
+                
+                // Hybrid score: combine RRF (with boosts) and semantic similarity
+                val hybridScore = (normalizedOriginal * RRF_WEIGHT) + (semanticSimilarity * SEMANTIC_WEIGHT)
+                
+                log.debug { "[${getStepName()}] ${result.title}: RRF=$originalScore (norm=${"%.4f".format(normalizedOriginal)}), Semantic=${"%.4f".format(semanticSimilarity)}, Hybrid=${"%.4f".format(hybridScore)}" }
+
+                result.copy(
+                    score = SearchScore.SimilarityScore(hybridScore)
+                )
+            } catch (e: Exception) {
+                log.error(e) { "[${getStepName()}] Failed to re-rank document ${result.id}: ${e.message}" }
+                // Keep original score on error
+                result
+            }
         }.sortedByDescending { it.score }
 
         // Combine re-ranked top K with remaining results
         val remaining = searchResults.drop(TOP_K_TO_RERANK)
         val finalResults = reranked + remaining
 
-        log.info { "[${getStepName()}] Re-ranking completed" }
-        log.info { "[${getStepName()}] Top 5 re-ranked scores: ${reranked.take(5).map { "%.4f".format(it.score.value) }}" }
+        log.info { "[${getStepName()}] Re-ranking completed: ${topK.size} input → ${reranked.size} output" }
+        log.info { "[${getStepName()}] ━━━ All ${reranked.size} re-ranked results ━━━" }
+        reranked.forEachIndexed { index, result ->
+            log.info { "  [${index + 1}] ${result.title} (score: ${"%.4f".format(result.score.value)}, id: ${result.id}, content: ${result.content.length} chars)" }
+        }
+        log.info { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
 
         return context.copy(searchResults = finalResults)
     }

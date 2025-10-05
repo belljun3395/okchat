@@ -35,9 +35,11 @@ class DocumentSearchStep(
     private val keywordWeight = ragProperties.rrf.keywordWeight
     private val titleWeight = ragProperties.rrf.titleWeight
     private val contentWeight = ragProperties.rrf.contentWeight
+    private val dateBoostFactor = ragProperties.rrf.dateBoostFactor
+    private val pathBoostFactor = ragProperties.rrf.pathBoostFactor
 
     init {
-        log.info { "[DocumentSearchStep] RRF configuration loaded: k=$rrfK, keyword=$keywordWeight, title=$titleWeight, content=$contentWeight" }
+        log.info { "[DocumentSearchStep] RRF configuration loaded: k=$rrfK, keyword=$keywordWeight, title=$titleWeight, content=$contentWeight, dateBoost=$dateBoostFactor, pathBoost=$pathBoostFactor" }
     }
 
     /**
@@ -76,19 +78,24 @@ class DocumentSearchStep(
         log.info { "  - Content results: ${sortedContentResults.size}" }
 
         // Apply Reciprocal Rank Fusion to combine rankings
+        // Note: RRF already deduplicates by document ID, keeping highest RRF score
         val combinedResults = applyRRF(
             keywordResults = sortedKeywordResults,
             titleResults = sortedTitleResults,
-            contentResults = sortedContentResults
+            contentResults = sortedContentResults,
+            dateKeywords = context.dateKeywords ?: emptyList(),
+            queryType = context.queryAnalysis?.type
         ).take(MAX_SEARCH_RESULTS)
 
-        log.info { "[${getStepName()}] Found ${combinedResults.size} documents via RRF" }
+        log.info { "[${getStepName()}] Found ${combinedResults.size} documents via RRF (after deduplication)" }
         log.info { "[${getStepName()}] Top 5 RRF scores: ${combinedResults.take(5).map { "%.4f".format(it.score.value) }}" }
 
-        // Debug: Log top 10 RRF results for debugging
-        combinedResults.take(10).forEachIndexed { index, result ->
-            log.info { "  [RRF ${index + 1}] ${result.title} (score: ${"%.4f".format(result.score.value)}, id: ${result.id})" }
+        // Log ALL RRF results (not just top 10)
+        log.info { "[${getStepName()}] ━━━ All ${combinedResults.size} RRF results ━━━" }
+        combinedResults.forEachIndexed { index, result ->
+            log.info { "  [RRF ${index + 1}] ${result.title} (score: ${"%.4f".format(result.score.value)}, id: ${result.id}, content: ${result.content.length} chars)" }
         }
+        log.info { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
 
         return context.copy(searchResults = combinedResults)
     }
@@ -108,7 +115,9 @@ class DocumentSearchStep(
     private fun applyRRF(
         keywordResults: List<SearchResult>,
         titleResults: List<SearchResult>,
-        contentResults: List<SearchResult>
+        contentResults: List<SearchResult>,
+        dateKeywords: List<String>,
+        queryType: com.okestro.okchat.ai.support.QueryClassifier.QueryType?
     ): List<SearchResult> {
         val documentMap = mutableMapOf<String, SearchResult>()
         val rrfScores = mutableMapOf<String, Double>()
@@ -127,8 +136,65 @@ class DocumentSearchStep(
         addRRFScore(titleResults, titleWeight)
         addRRFScore(contentResults, contentWeight)
 
-        // Sort by RRF scores and return
-        return rrfScores.entries
+        // Apply intelligent boosts based on date and path hierarchy
+        val boostedScores = mutableMapOf<String, Double>()
+        val dateBoostCount = mutableMapOf<String, Int>()
+        val pathBoostCount = mutableMapOf<String, Int>()
+        
+        // Define path patterns that indicate meeting-related documents
+        val meetingPathPatterns = listOf("팀회의", "주간회의", "회의록", "미팅", "meeting")
+        
+        rrfScores.forEach { (id, score) ->
+            val document = documentMap[id]
+            val title = document?.title ?: ""
+            val path = document?.path ?: ""
+            
+            var boostMultiplier = 1.0
+            val boostReasons = mutableListOf<String>()
+            
+            // 1. Date boost: Check if title contains any date keyword (case-insensitive)
+            val matchesDateKeyword = dateKeywords.any { dateKeyword ->
+                title.contains(dateKeyword, ignoreCase = true)
+            }
+            
+            if (matchesDateKeyword && dateKeywords.isNotEmpty()) {
+                boostMultiplier *= dateBoostFactor
+                dateBoostCount[id] = 1
+                boostReasons.add("date:${dateBoostFactor}x")
+            }
+            
+            // 2. Path hierarchy boost: Check if path matches query type
+            // Only apply for MEETING_RECORDS queries to avoid false positives
+            if (queryType == com.okestro.okchat.ai.support.QueryClassifier.QueryType.MEETING_RECORDS) {
+                val matchesPathPattern = meetingPathPatterns.any { pattern ->
+                    path.contains(pattern, ignoreCase = true)
+                }
+                
+                if (matchesPathPattern) {
+                    boostMultiplier *= pathBoostFactor
+                    pathBoostCount[id] = 1
+                    boostReasons.add("path:${pathBoostFactor}x")
+                }
+            }
+            
+            boostedScores[id] = score * boostMultiplier
+            
+            if (boostReasons.isNotEmpty()) {
+                log.debug { "[RRF] Boost applied to '$title' (id: $id): $score → ${boostedScores[id]} [${boostReasons.joinToString(", ")}]" }
+            }
+        }
+        
+        // Log boost statistics
+        if (dateBoostCount.isNotEmpty() || pathBoostCount.isNotEmpty()) {
+            val totalDateBoost = dateBoostCount.size
+            val totalPathBoost = pathBoostCount.size
+            val bothBoosts = dateBoostCount.keys.intersect(pathBoostCount.keys).size
+            
+            log.info { "[RRF] Boost statistics: date=$totalDateBoost docs (${dateBoostFactor}x), path=$totalPathBoost docs (${pathBoostFactor}x), both=$bothBoosts docs (${dateBoostFactor * pathBoostFactor}x)" }
+        }
+        
+        // Sort by boosted RRF scores and return
+        return boostedScores.entries
             .sortedByDescending { it.value }
             .mapNotNull { (id, rrfScore) ->
                 documentMap[id]?.copy(

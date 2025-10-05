@@ -23,14 +23,17 @@ class PromptGenerationStep(
         log.info { "[${getStepName()}] Generating prompt" }
 
         val queryAnalysis = context.queryAnalysis
-            ?: throw IllegalStateException("Query analysis not available")
+            ?: throw IllegalStateException("Query analysis not available (FirstChatPipelineStep must run)")
 
-        val contextText = context.contextText
-            ?: throw IllegalStateException("Context text not available")
+        // Context text is optional - may not be available if document search was skipped or found no results
+        val contextText = context.contextText ?: run {
+            log.warn { "[${getStepName()}] No context text available - generating prompt without RAG context" }
+            "검색 결과 없음. 일반적인 지식을 바탕으로 답변해주세요."
+        }
 
         // Build dynamic prompt based on query type (from externalized templates)
         val promptTemplate = dynamicPromptBuilder.buildPrompt(queryAnalysis.type)
-        log.info { "[${getStepName()}] Using ${queryAnalysis.type} specialized prompt" }
+        log.info { "[${getStepName()}] Using ${queryAnalysis.type} specialized prompt (with RAG context: ${context.contextText != null})" }
 
         // Create prompt with context and question
         val template = PromptTemplate(promptTemplate)

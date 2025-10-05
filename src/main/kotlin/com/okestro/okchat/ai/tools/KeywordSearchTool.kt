@@ -1,0 +1,95 @@
+package com.okestro.okchat.ai.tools
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.okestro.okchat.search.strategy.KeywordSearchStrategy
+import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.runBlocking
+import org.springframework.ai.tool.ToolCallback
+import org.springframework.ai.tool.definition.ToolDefinition
+import org.springframework.context.annotation.Description
+import org.springframework.stereotype.Component
+
+@Component("keywordSearchTool")
+@Description("Search documents using keyword-based hybrid search (text + vector)")
+class KeywordSearchTool(
+    private val keywordSearchStrategy: KeywordSearchStrategy,
+    private val objectMapper: ObjectMapper
+) : ToolCallback {
+
+    private val log = KotlinLogging.logger {}
+
+    override fun getToolDefinition(): ToolDefinition {
+        return ToolDefinition.builder()
+            .name("search_by_keyword")
+            .description(
+                """
+                Search documents using keyword-based hybrid search.
+                Combines exact keyword matching with semantic vector search.
+                Best for: Finding documents with specific terms or technical keywords.
+                """.trimIndent()
+            )
+            .inputSchema(
+                """
+                {
+                  "type": "object",
+                  "properties": {
+                    "keywords": {
+                      "type": "string",
+                      "description": "Keywords to search for (space-separated)"
+                    },
+                    "topK": {
+                      "type": "integer",
+                      "description": "Number of results to return (default: 10, max: 50)",
+                      "default": 10
+                    }
+                  },
+                  "required": ["keywords"]
+                }
+                """.trimIndent()
+            )
+            .build()
+    }
+
+    override fun call(toolInput: String): String {
+        return try {
+            val input = objectMapper.readValue(toolInput, Map::class.java)
+            val keywords = input["keywords"] as? String
+                ?: return "Invalid input: keywords parameter is required"
+            val topK = ((input["topK"] as? Number)?.toInt() ?: 10).coerceIn(1, 50)
+
+            log.info { "Keyword search: keywords='$keywords', topK=$topK" }
+
+            val results = runBlocking {
+                keywordSearchStrategy.search(keywords, topK)
+            }
+
+            if (results.isEmpty()) {
+                return "No documents found for keywords: '$keywords'"
+            }
+
+            buildString {
+                append("Found ${results.size} document(s) by keyword search:\n\n")
+
+                results.take(topK).forEachIndexed { index, result ->
+                    append("${index + 1}. ${result.title}\n")
+                    append("   Score: ${"%.4f".format(result.score.value)}\n")
+                    if (result.path.isNotBlank()) {
+                        append("   Path: ${result.path}\n")
+                    }
+                    if (result.spaceKey.isNotBlank()) {
+                        append("   Space: ${result.spaceKey}\n")
+                    }
+                    if (result.keywords.isNotBlank()) {
+                        append("   Keywords: ${result.keywords}\n")
+                    }
+                    append("   Content: ${result.content.take(200)}")
+                    if (result.content.length > 200) append("...")
+                    append("\n\n")
+                }
+            }
+        } catch (e: Exception) {
+            log.error(e) { "Error in keyword search: ${e.message}" }
+            "Error performing keyword search: ${e.message}"
+        }
+    }
+}

@@ -30,23 +30,56 @@ class TypesenseSearchClient(
         .build()
 
     suspend fun search(request: TypesenseSearchRequest): TypesenseSearchResponse {
-        log.debug { "[Typesense] Executing search: q='${request.q}'" }
+        log.debug { "[Typesense] Request: q='${request.q}', queryBy='${request.queryBy}', vectorQuery='${request.vectorQuery?.take(100)}...'" }
 
-        return webClient.post()
-            .uri("/collections/$collectionName/documents/search")
-            .bodyValue(request)
+        val multiSearchRequest = mapOf(
+            "searches" to listOf(
+                mapOf(
+                    "collection" to collectionName,
+                    "q" to request.q,
+                    "query_by" to request.queryBy,
+                    "query_by_weights" to request.queryByWeights,
+                    "vector_query" to request.vectorQuery,
+                    "filter_by" to request.filterBy,
+                    "per_page" to request.perPage,
+                    "page" to request.page
+                ).filterValues { it != null }
+            )
+        )
+
+        val multiSearchResponse = webClient.post()
+            .uri("/multi_search")
+            .bodyValue(multiSearchRequest)
             .retrieve()
             .onStatus({ it.isError }) { clientResponse ->
                 clientResponse.bodyToMono(String::class.java).map { body ->
-                    log.error { "[Typesense] Search error: $body" }
-                    RuntimeException("Typesense search failed: $body")
+                    log.error { "[Typesense] Multi-search error for q='${request.q}': $body" }
+                    RuntimeException("Typesense multi-search failed: $body")
                 }
             }
-            .bodyToMono(TypesenseSearchResponse::class.java)
+            .bodyToMono(Map::class.java)
             .doOnError { error ->
                 log.error(error) { "[Typesense] Request failed: ${error.message}" }
             }
             .awaitSingle()
+
+        @Suppress("UNCHECKED_CAST")
+        val results = multiSearchResponse["results"] as? List<Map<String, Any>> ?: emptyList()
+        val firstResult = results.firstOrNull() ?: emptyMap()
+
+        @Suppress("UNCHECKED_CAST")
+        val hits = (firstResult["hits"] as? List<Map<String, Any>>)?.map { hit ->
+            TypesenseHit(
+                document = hit["document"] as? Map<String, Any>,
+                textMatch = (hit["text_match"] as? Number)?.toLong(),
+                vectorDistance = (hit["vector_distance"] as? Number)?.toDouble()
+            )
+        } ?: emptyList()
+
+        return TypesenseSearchResponse(
+            hits = hits,
+            found = (firstResult["found"] as? Number)?.toInt()
+        )
     }
 }
 

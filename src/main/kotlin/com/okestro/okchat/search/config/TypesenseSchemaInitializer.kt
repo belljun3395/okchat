@@ -47,7 +47,7 @@ class TypesenseSchemaInitializer(
                 if (!hasKoreanSupport) {
                     log.warn {
                         "Collection exists but doesn't have optimal search configuration. " +
-                            "Korean support: $hasKoreanSupport"
+                            "Korean support: ${false}"
                     }
                     log.warn { "To enable improved search (Korean + infix matching):" }
                     log.warn { "  1) Delete collection: curl -X DELETE -H 'X-TYPESENSE-API-KEY: <key>' http://localhost:8108/collections/$collectionName" }
@@ -58,7 +58,7 @@ class TypesenseSchemaInitializer(
                 }
 
                 return
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 log.info { "Collection '$collectionName' does not exist, creating with Korean support..." }
             }
 

@@ -109,6 +109,12 @@ data class RRFConfig(
     var contentWeight: Double = 0.8,
 
     /**
+     * Weight for path-based search in RRF
+     * Higher = path matches have stronger influence
+     */
+    var pathWeight: Double = 3.0,
+
+    /**
      * Date boost multiplier for RRF scores
      * When a document's title matches extracted date keywords (e.g., "250804" matches "2025년 8월"),
      * multiply its RRF score by this factor

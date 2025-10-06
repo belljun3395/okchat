@@ -3,9 +3,12 @@ package com.okestro.okchat.chat.pipeline.steps
 import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.chat.pipeline.OptionalChatPipelineStep
 import com.okestro.okchat.config.RagProperties
+import com.okestro.okchat.search.model.SearchContents
 import com.okestro.okchat.search.model.SearchKeywords
+import com.okestro.okchat.search.model.SearchPaths
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchScore
+import com.okestro.okchat.search.model.SearchTitles
 import com.okestro.okchat.search.service.DocumentSearchService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.core.annotation.Order
@@ -36,6 +39,7 @@ class DocumentSearchStep(
     private val keywordWeight = ragProperties.rrf.keywordWeight
     private val titleWeight = ragProperties.rrf.titleWeight
     private val contentWeight = ragProperties.rrf.contentWeight
+    private val pathWeight = ragProperties.rrf.pathWeight
     private val dateBoostFactor = ragProperties.rrf.dateBoostFactor
     private val pathBoostFactor = ragProperties.rrf.pathBoostFactor
 
@@ -58,13 +62,15 @@ class DocumentSearchStep(
         log.info { "[${getStepName()}] Starting optimized multi-search with RRF" }
 
         val analysis = context.analysis ?: throw IllegalStateException("Analysis not available")
-        val allKeywords = analysis.getAllKeywords()
-        val searchKeywords = SearchKeywords.fromStrings(allKeywords)
+        val searchKeywords = SearchKeywords.fromStrings(analysis.getAllKeywords())
+        val searchTitles = SearchTitles.fromStrings(analysis.extractedTitles)
+        val searchContents = SearchContents.fromStrings(analysis.extractedContents)
+        val searchPaths = SearchPaths.fromStrings(analysis.extractedPaths)
 
-        // Execute all 3 search strategies in a SINGLE HTTP request using Typesense multi_search
-        // This dramatically reduces network latency (3 roundtrips → 1 roundtrip)
         val searchResult = documentSearchService.multiSearch(
-            query = context.input.message,
+            titles = searchTitles,
+            contents = searchContents,
+            paths = searchPaths,
             keywords = searchKeywords,
             topK = MAX_SEARCH_RESULTS
         )
@@ -73,6 +79,7 @@ class DocumentSearchStep(
         val sortedKeywordResults = searchResult.keywordResults.sortedByDescending { it.score }
         val sortedTitleResults = searchResult.titleResults.sortedByDescending { it.score }
         val sortedContentResults = searchResult.contentResults.sortedByDescending { it.score }
+        val sortedPathResults = searchResult.pathResults.sortedByDescending { it.score }
 
         log.info { "[${getStepName()}] Multi-search completed: keyword=${sortedKeywordResults.size}, title=${sortedTitleResults.size}, content=${sortedContentResults.size}" }
 
@@ -82,8 +89,9 @@ class DocumentSearchStep(
             keywordResults = sortedKeywordResults,
             titleResults = sortedTitleResults,
             contentResults = sortedContentResults,
+            pathResults = sortedPathResults,
             dateKeywords = analysis.dateKeywords,
-            queryType = analysis.queryAnalysis.type
+            keyWords = analysis.extractedKeywords
         ).take(MAX_SEARCH_RESULTS)
 
         log.info { "[${getStepName()}] Found ${combinedResults.size} documents via RRF (after deduplication)" }
@@ -124,8 +132,9 @@ class DocumentSearchStep(
         keywordResults: List<SearchResult>,
         titleResults: List<SearchResult>,
         contentResults: List<SearchResult>,
+        pathResults: List<SearchResult>,
         dateKeywords: List<String>,
-        queryType: com.okestro.okchat.ai.support.QueryClassifier.QueryType?
+        keyWords: List<String>
     ): List<SearchResult> {
         val documentMap = mutableMapOf<String, SearchResult>()
         val rrfScores = mutableMapOf<String, Double>()
@@ -143,14 +152,33 @@ class DocumentSearchStep(
         addRRFScore(keywordResults, keywordWeight)
         addRRFScore(titleResults, titleWeight)
         addRRFScore(contentResults, contentWeight)
+        addRRFScore(pathResults, pathWeight)
 
         // Apply intelligent boosts based on date and path hierarchy
+        val boostedScores = applyContextualBoosts(rrfScores, documentMap, dateKeywords, keyWords)
+
+        // Sort by boosted RRF scores and return
+        return boostedScores.entries
+            .sortedByDescending { it.value }
+            .mapNotNull { (id, rrfScore) ->
+                documentMap[id]?.copy(
+                    score = SearchScore.SimilarityScore(rrfScore)
+                )
+            }
+    }
+
+    /**
+     * Apply contextual boosts to RRF scores based on query type and document metadata
+     */
+    private fun applyContextualBoosts(
+        rrfScores: Map<String, Double>,
+        documentMap: Map<String, SearchResult>,
+        dateKeywords: List<String>,
+        keyWords: List<String>
+    ): Map<String, Double> {
         val boostedScores = mutableMapOf<String, Double>()
         val dateBoostCount = mutableMapOf<String, Int>()
         val pathBoostCount = mutableMapOf<String, Int>()
-
-        // Define path patterns that indicate meeting-related documents
-        val meetingPathPatterns = listOf("팀회의", "주간회의", "회의록", "미팅", "meeting")
 
         rrfScores.forEach { (id, score) ->
             val document = documentMap[id]
@@ -172,17 +200,15 @@ class DocumentSearchStep(
             }
 
             // 2. Path hierarchy boost: Check if path matches query type
-            // Only apply for MEETING_RECORDS queries to avoid false positives
-            if (queryType == com.okestro.okchat.ai.support.QueryClassifier.QueryType.MEETING_RECORDS) {
-                val matchesPathPattern = meetingPathPatterns.any { pattern ->
-                    path.contains(pattern, ignoreCase = true)
-                }
+            val parentPath = path.substringBeforeLast(">", "").split(">")
+            val matchesPathPattern = keyWords.any { keyword ->
+                parentPath.contains(keyword)
+            }
 
-                if (matchesPathPattern) {
-                    boostMultiplier *= pathBoostFactor
-                    pathBoostCount[id] = 1
-                    boostReasons.add("path:${pathBoostFactor}x")
-                }
+            if (matchesPathPattern) {
+                boostMultiplier *= pathBoostFactor
+                pathBoostCount[id] = 1
+                boostReasons.add("path:${pathBoostFactor}x")
             }
 
             boostedScores[id] = score * boostMultiplier
@@ -200,15 +226,7 @@ class DocumentSearchStep(
 
             log.info { "[RRF] Boost statistics: date=$totalDateBoost docs (${dateBoostFactor}x), path=$totalPathBoost docs (${pathBoostFactor}x), both=$bothBoosts docs (${dateBoostFactor * pathBoostFactor}x)" }
         }
-
-        // Sort by boosted RRF scores and return
-        return boostedScores.entries
-            .sortedByDescending { it.value }
-            .mapNotNull { (id, rrfScore) ->
-                documentMap[id]?.copy(
-                    score = SearchScore.SimilarityScore(rrfScore)
-                )
-            }
+        return boostedScores
     }
 
     override fun getStepName(): String = "Document Search"

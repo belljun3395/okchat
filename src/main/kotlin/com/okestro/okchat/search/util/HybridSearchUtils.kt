@@ -86,12 +86,7 @@ object HybridSearchUtils {
                     val baseResult = pageResults.maxByOrNull { it.score.value }!!
 
                     val sortedChunks = pageResults.sortedBy { result ->
-                        val id = result.id
-                        if (id.contains("_chunk_")) {
-                            id.substringAfterLast("_chunk_").toIntOrNull() ?: 0
-                        } else {
-                            0
-                        }
+                        result.id
                     }
 
                     val mergedContent = sortedChunks

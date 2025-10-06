@@ -6,7 +6,7 @@ package com.okestro.okchat.search.model
 data class SearchResult(
     val id: String,
     val title: String,
-    val content: String,
+    var content: String,
     val path: String,
     val spaceKey: String,
     val keywords: String = "",
@@ -19,6 +19,10 @@ data class SearchResult(
 
     override fun compareTo(other: SearchResult): Int {
         return score.compareTo(other.score)
+    }
+
+    fun combineContent(other: String) {
+        this.content = this.content + "\n\n" + other
     }
 
     companion object {

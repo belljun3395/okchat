@@ -129,7 +129,8 @@ data class TypesenseSearchRequest(
     val page: Int = 1,
     val prefix: Boolean = true, // Enable prefix matching (e.g., "2508" matches "250804")
     @JsonProperty("num_typos") val numTypos: Int = 2, // Allow fuzzy matching with 2 typos
-    @JsonProperty("typo_tokens_threshold") val typoTokensThreshold: Int = 0 // Apply typos to all tokens
+    @JsonProperty("typo_tokens_threshold") val typoTokensThreshold: Int = 0, // Apply typos to all tokens
+    @JsonProperty("exclude_fields") val excludeFields: String = "embedding" // Exclude large embedding field to optimize bandwidth
 )
 
 /**
@@ -138,6 +139,7 @@ data class TypesenseSearchRequest(
  * - prefix: Boolean → String
  * - numTypos: Int → String
  * - typoTokensThreshold: Int → Integer
+ * - excludeFields: Optimizes bandwidth by excluding large embedding vectors
  */
 fun TypesenseSearchRequest.toSearchParameters(): SearchParameters {
     return SearchParameters()
@@ -151,6 +153,7 @@ fun TypesenseSearchRequest.toSearchParameters(): SearchParameters {
         .prefix(prefix.toString()) // Boolean → String conversion
         .numTypos(numTypos.toString()) // Int → String conversion
         .typoTokensThreshold(typoTokensThreshold) // Int → Integer (auto-boxing)
+        .excludeFields(excludeFields) // Exclude embedding field to save bandwidth
 }
 
 /**
@@ -170,6 +173,7 @@ fun TypesenseSearchRequest.toMultiSearchParameters(collection: String): MultiSea
     params.prefix = prefix.toString() // Boolean → String conversion
     params.numTypos = numTypos.toString() // Int → String conversion
     params.typoTokensThreshold = typoTokensThreshold // Int → Integer (auto-boxing)
+    params.excludeFields = excludeFields // Exclude embedding field to save bandwidth
 
     // Apply optional parameters
     queryByWeights?.let { params.queryByWeights = it }

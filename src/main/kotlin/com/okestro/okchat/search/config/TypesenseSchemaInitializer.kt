@@ -21,7 +21,10 @@ private val log = KotlinLogging.logger {}
 class TypesenseSchemaInitializer(
     private val typesenseClient: Client,
     @Value("\${spring.ai.vectorstore.typesense.collection-name}") private val collectionName: String,
-    @Value("\${spring.ai.vectorstore.typesense.embedding-dimension}") private val embeddingDimension: Int
+    @Value("\${spring.ai.vectorstore.typesense.embedding-dimension}") private val embeddingDimension: Int,
+    @Value("\${spring.ai.vectorstore.typesense.auto-embedding.enabled:false}") private val autoEmbeddingEnabled: Boolean,
+    @Value("\${spring.ai.vectorstore.typesense.auto-embedding.model.name:openai/text-embedding-3-small}") private val embeddingModelName: String,
+    @Value("\${spring.ai.openai.api-key}") private val openaiApiKey: String
 ) {
 
     @EventListener(ApplicationStartedEvent::class)
@@ -91,6 +94,44 @@ class TypesenseSchemaInitializer(
                     name = "embedding"
                     type = FieldTypes.FLOAT_ARRAY
                     numDim = embeddingDimension
+
+                    // Typesense 29.0+: Auto-embedding configuration
+                    // When enabled, Typesense automatically generates embeddings during indexing
+                    if (autoEmbeddingEnabled) {
+                        log.info { "Auto-embedding is ENABLED - Typesense will generate embeddings automatically" }
+                        log.info { "Model: $embeddingModelName" }
+
+                        // Note: The Typesense Java Client (v1.3.0) doesn't have direct support for
+                        // the embed configuration in Field class. This would need to be added via
+                        // API call or wait for client library update.
+                        // For now, we log this information and users can manually configure via API.
+
+                        log.warn { "Auto-embedding requires manual schema configuration via Typesense API" }
+                        log.warn { "Use this curl command to create collection with auto-embedding:" }
+                        log.warn {
+                            """
+                            curl -X POST 'http://localhost:8108/collections' \
+                              -H 'X-TYPESENSE-API-KEY: <key>' \
+                              -H 'Content-Type: application/json' \
+                              -d '{
+                                "name": "$collectionName",
+                                "fields": [
+                                  {"name": "embedding", "type": "float[]", "num_dim": $embeddingDimension,
+                                   "embed": {
+                                     "from": ["content", "metadata.title"],
+                                     "model_config": {
+                                       "model_name": "$embeddingModelName",
+                                       "api_key": "<openai-key>"
+                                     }
+                                   }
+                                  }
+                                ]
+                              }'
+                            """.trimIndent()
+                        }
+                    } else {
+                        log.info { "Auto-embedding is DISABLED - Using Spring AI EmbeddingModel (recommended)" }
+                    }
                 }
             )
 

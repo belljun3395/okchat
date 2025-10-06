@@ -21,12 +21,17 @@ data class HybridSearchRequest(
     val filters: Map<String, String> = emptyMap(),
     val limit: Int = 10,
     /**
-     * Text weight for hybrid search (0.0 to 1.0).
-     * alpha = 1.0: 100% text search
-     * alpha = 0.0: 100% vector search
-     * alpha = 0.6: 60% text, 40% vector
+     * Alpha parameter for hybrid search weighting (0.0 to 1.0).
+     * Typesense default: 0.3 (30% keyword, 70% semantic)
+     *
+     * - alpha = 1.0: 100% keyword search (no semantic)
+     * - alpha = 0.7: 70% keyword, 30% semantic
+     * - alpha = 0.3: 30% keyword, 70% semantic (Typesense recommended)
+     * - alpha = 0.0: 100% semantic search (no keyword)
+     *
+     * Lower values favor semantic similarity, higher values favor keyword matching.
      */
-    val textWeight: Double = 0.5
+    val textWeight: Double = 0.3 // Typesense 29.0 recommended default
 )
 
 data class SearchFields(

@@ -20,21 +20,23 @@ class KeywordExtractionService(
     /**
      * Extract keywords from the message using LLM (in both Korean and English)
      * Optimized for RRF-based hybrid search: quality over quantity
+     * Ordered from most to least important
      */
     suspend fun extractKeywords(message: String): List<String> {
         val keywordPrompt = """
             Extract 5-8 core keywords from the user message for hybrid search (BM25 + semantic).
+            And Order them from most important to least important.
 
             EXTRACT (include both Korean and English):
-            ✅ Core concepts and topics
+            ✅ Core subjects and topics (the 'what', not the 'how')
             ✅ Technical terms and technologies
             ✅ Entities (people, teams, products, projects)
-            ✅ Action verbs (개발, 검색, 분석, search, analyze)
             ✅ For compound terms: full term + meaningful components
                Example: "주간회의록" → "주간회의록, 회의록, 회의" (broader search)
                Example: "개발파트" → "개발파트, 개발" (broader search)
 
             AVOID (these are handled separately or add noise):
+            ❌ Common action verbs or requests (e.g., 알려줘, 찾아줘, 검색해, 요약해, search, find, summarize)
             ❌ Dates and numbers (handled by DateExtractor)
             ❌ Stop words (이, 그, 저, the, a, an, is, are)
             ❌ Morphological variations (개발/개발자/개발팀 - pick one)
@@ -50,14 +52,14 @@ class KeywordExtractionService(
                (6 keywords - good balance, skipped generic "정보")
 
             ✅ Input: "PPP 개발 회의록 문의"
-               Output: "PPP, 개발, development, 회의록, 회의, meeting minutes, 문의, inquiry"
-               (8 keywords - includes entity PPP + bilingual + components)
+               Output: "PPP, 개발, development, 회의록, 회의, meeting minutes"
+               (6 keywords - '문의' is an action/request, so it's excluded)
 
             ❌ Input: "2025년 9월 주간회의록 요약"
                Bad: "2025, 2025년, 9월, September, 09, 250, 주간, 회의록, 회의, 주간회의, meeting, weekly, minutes"
                (13 keywords - too many, includes dates, over-variations)
-               Good: "주간회의록, 회의록, 회의, weekly meeting, meeting minutes, meeting, 요약, summary"
-               (8 keywords - broader coverage with "회의" for general meetings, dates handled separately)
+               Good: "주간회의록, 회의록, 회의, weekly meeting, meeting minutes, meeting"
+               (6 keywords - '요약' is an action, excluded. Dates handled separately)
 
             User message: "$message"
 

@@ -1,90 +1,18 @@
-=== YOUR TASK: Information Lookup & Facts ===
-You are answering specific factual questions (who, what, when, where, why, how many).
+=== YOUR TASK: Information Lookup ===
+You are answering a specific factual question (who, what, when, where, why).
 
-**1. Understand Question Type:**
-- **"누가/Who"** → Identify person(s), roles, responsibilities
-- **"뭐/무엇/What"** → Define, describe, explain the thing
-- **"언제/When"** → Provide dates, timelines, schedules
-- **"어디/Where"** → Specify locations, paths, systems
-- **"왜/Why"** → Explain reasons, causes, rationale
-- **"얼마나/How many"** → Provide counts, metrics, quantities
-
-**2. Information Extraction:**
-
-A. **From Search Results, Look For:**
-   - Specific facts: names, dates, numbers, locations
-   - Definitions and explanations
-   - Relationships and context
-   - Multiple occurrences of the same fact (verify consistency)
-
-B. **Use Tools When Needed:**
-   - If fact is not in search results → Use `search_documents` with specific query
-   - If you need more context → Use `get_page_by_id`
-   - Don't guess or assume - state "정보 없음" if not found
-
-**3. Response Strategies:**
-
-**For Simple Fact:**
+**Response Format:**
 ```
-[직접 답변 한 문장]
+[질문에 대한 직접 답변]
 
-참고: [문서] ([URL])
+[추가 관련 정보]
+
+참고 문서: [문서 제목] ([링크])
 ```
 
-**For Multi-Part Answer:**
-```
-[질문]에 대한 답변:
-
-- **[측면 1]**: [답변]
-- **[측면 2]**: [답변]
-- **[측면 3]**: [답변]
-
-참고: [문서] ([URL])
-```
-
-**For Timeline/Historical:**
-```
-[주제]의 시간순 정리:
-
-- **[날짜 1]**: [사건/변경 사항]
-- **[날짜 2]**: [사건/변경 사항]
-- **현재**: [현황]
-
-참고: [문서들] ([URLs])
-```
-
-**For Comparative:**
-```
-[항목 A] vs [항목 B]:
-
-| 구분 | A | B |
-|------|---|---|
-| [기준 1] | [...] | [...] |
-| [기준 2] | [...] | [...] |
-
-참고: [문서] ([URL])
-```
-
-**For Definition/Explanation:**
-```
-**[용어/개념]**:
-[정의]
-
-**배경/맥락**:
-[추가 설명]
-
-**관련 정보**:
-- [관련 사실 1]
-- [관련 사실 2]
-
-참고: [문서] ([URL])
-```
-
-**4. Key Principles:**
-- **Direct answer first**: Start with the exact answer in the first line
-- **Be specific**: Use exact names, dates, numbers, not approximations
-- **Cite sources**: Always link to where the information came from
-- **Acknowledge gaps**: If information is missing, say so clearly
-- **Context when helpful**: Add background if it aids understanding
-- **Verify facts**: If multiple sources, ensure consistency
-- **No speculation**: Only state what's in the documentation
+**Key Points:**
+- Answer the question directly in the first sentence
+- Provide supporting details afterward
+- Include specific data: names, dates, numbers, locations
+- If the answer has multiple parts, use bullet points
+- Cite the exact source for each fact

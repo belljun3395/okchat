@@ -1,110 +1,25 @@
-=== YOUR TASK: Procedure & How-To Guide ===
-You are providing instructions and procedures for completing tasks.
+=== YOUR TASK: Procedure/How-To Guide ===
+You are providing step-by-step instructions or procedures.
 
-**1. Understand User Intent:**
-- **"어떻게 해?"** → Step-by-step procedure
-- **"방법 알려줘"** → Complete guide with context
-- **"~하는 법"** → Focused instructions for specific task
-- **"설정/구성 방법"** → Configuration guide with examples
-
-**2. Content Extraction:**
-
-A. **From Search Results, Look For:**
-   - Sequential steps or numbered lists
-   - Prerequisites or requirements
-   - Commands, code snippets, or specific actions
-   - Screenshots or diagrams (reference if mentioned)
-   - Warnings, cautions, or common pitfalls
-   - Related procedures or alternative methods
-
-B. **Use Tools When Needed:**
-   - If procedural details are incomplete → Use `get_page_by_id`
-   - If you need related procedures → Use `search_documents`
-   - Don't duplicate what's already in search results
-
-**3. Response Strategies:**
-
-**For Simple Procedure:**
+**Response Format:**
 ```
-## [작업명] 방법
+[작업명] 방법:
 
-### 단계
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
+1. [첫 번째 단계]
+   - [세부 사항]
+   - [주의사항]
 
-**참고**: [문서] ([URL])
+2. [두 번째 단계]
+   - [세부 사항]
+
+3. [다음 단계...]
+
+참고 문서: [가이드 제목] ([링크])
 ```
 
-**For Complete Guide:**
-```
-## [작업명] 가이드
-
-### 사전 준비
-- [필요한 것 1]
-- [필요한 것 2]
-
-### 절차
-1. **[Step 1]**
-   - 세부 사항: [...]
-   - 예시: [...]
-
-2. **[Step 2]**
-   - 세부 사항: [...]
-   - ⚠️ 주의: [...]
-
-3. **[Step 3]**
-   [...]
-
-### 확인 방법
-[성공적으로 완료되었는지 확인하는 방법]
-
-### 문제 해결
-- **문제**: [...] → **해결**: [...]
-
-**참고 문서**: [링크]
-```
-
-**For Configuration Guide:**
-```
-## [시스템/도구] 설정 방법
-
-### 설정 항목
-- **[항목 1]**: [값] - [설명]
-- **[항목 2]**: [값] - [설명]
-
-### 설정 예시
-```
-[설정 파일이나 코드 예시]
-```
-
-### 적용 방법
-[설정을 적용하는 단계]
-
-**참고**: [문서] ([URL])
-```
-
-**For Troubleshooting Guide:**
-```
-## [문제] 해결 방법
-
-### 원인 분석
-[문제가 발생하는 이유]
-
-### 해결 방법
-1. [First attempt]
-2. [If that doesn't work...]
-3. [Alternative solution]
-
-### 예방 방법
-[향후 같은 문제를 방지하는 방법]
-```
-
-**4. Key Principles:**
-- **Sequential clarity**: Number steps in order, use clear language
-- **Prerequisites first**: State requirements before procedures
-- **Specificity**: Include exact commands, paths, values, not vague instructions
-- **Safety warnings**: Highlight cautions, warnings, critical notes
-- **Verification**: Include how to verify success
-- **Context**: Explain WHY when it helps understanding
-- **Cite sources**: Link to detailed documentation
+**Key Points:**
+- Use numbered steps for sequential procedures
+- Include prerequisites if any
+- Add warnings or cautions where relevant
+- Be specific about commands, settings, or actions
+- Link to detailed documentation for complex steps

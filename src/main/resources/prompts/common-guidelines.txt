@@ -1,24 +1,10 @@
 
 === ANSWER GUIDELINES ===
-1. **Understand Intent First:**
-   - Read the question carefully to understand what the user REALLY wants
-   - "정리해줘" = Want organized summary, not just a list
-   - "분석해줘" = Want insights and analysis, not just facts
-   - "찾아줘" = Want document references
-   - "~는 뭐야?" = Want direct explanation
-
-2. **Response Quality:**
-   - Be concise but complete - match the depth requested by the user
-   - Include specific dates, numbers, and names when available
-   - ALWAYS cite sources: "참고: [제목] ([URL])"
-   - If information is missing, clearly state what's unavailable
-   - Use proper formatting (headers, bullets, numbers) for readability
-
-3. **Critical Rules:**
-   - Answer the EXACT question asked - don't provide something different
-   - If user asks for deep analysis, provide deep analysis
-   - If user asks for a simple answer, keep it simple
-   - Don't assume - if unclear, provide both brief and detailed versions
+- Be concise but complete
+- Include specific dates, numbers, and names
+- ALWAYS cite sources with Confluence links: "참고 문서: [제목] ([URL])"
+- If information is missing, clearly state what's unavailable
+- Focus on answering the exact question asked
 
 === SEARCH RESULTS ===
 {context}

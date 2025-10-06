@@ -3,6 +3,18 @@ package com.okestro.okchat.chat.pipeline
 import com.okestro.okchat.ai.support.QueryClassifier
 import com.okestro.okchat.search.model.SearchResult
 
+fun ChatContext.copy(
+    input: ChatContext.UserInput? = this.input,
+    analysis: ChatContext.Analysis? = this.analysis,
+    search: ChatContext.Search? = this.search
+): ChatContext {
+    return ChatContext(
+        input = this.input,
+        analysis = this.analysis,
+        search = this.search
+    )
+}
+
 /**
  * Context object that flows through the chat processing pipeline
  * Each step can read from and write to this context

@@ -2,6 +2,7 @@ package com.okestro.okchat.chat.pipeline.steps
 
 import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.chat.pipeline.OptionalChatPipelineStep
+import com.okestro.okchat.chat.pipeline.copy
 import com.okestro.okchat.config.RagProperties
 import com.okestro.okchat.search.model.SearchContents
 import com.okestro.okchat.search.model.SearchKeywords

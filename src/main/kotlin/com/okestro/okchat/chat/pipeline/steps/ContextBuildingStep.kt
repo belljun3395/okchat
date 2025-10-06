@@ -2,6 +2,7 @@ package com.okestro.okchat.chat.pipeline.steps
 
 import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.chat.pipeline.OptionalChatPipelineStep
+import com.okestro.okchat.chat.pipeline.copy
 import com.okestro.okchat.search.model.SearchResult
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.beans.factory.annotation.Value

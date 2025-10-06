@@ -8,6 +8,7 @@ import com.okestro.okchat.ai.support.QueryClassifier
 import com.okestro.okchat.ai.support.TitleExtractionService
 import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.chat.pipeline.FirstChatPipelineStep
+import com.okestro.okchat.chat.pipeline.copy
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
 

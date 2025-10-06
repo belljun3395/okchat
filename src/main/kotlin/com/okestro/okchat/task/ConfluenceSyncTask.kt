@@ -241,7 +241,7 @@ class ConfluenceSyncTask(
                     log.info { "  └─ Total keywords: ${allKeywords.size} (${keywords.size} content + ${pathKeywords.size} path)" }
 
                     // Build page content WITH keywords included for search
-                    val pageContent = buildPageContent(node, hierarchy, allKeywords)
+                    val pageContent = node.body?.let { stripHtml(it) } ?: ""
                     val contentLength = pageContent.length
 
                     // Create initial document with metadata including ALL keywords (content + path)
@@ -299,38 +299,6 @@ class ConfluenceSyncTask(
         documents.addAll(allDocuments)
 
         return documents
-    }
-
-    /**
-     * Build page content for embedding and search
-     * Includes extracted keywords for better searchability
-     */
-    private fun buildPageContent(
-        node: ContentNode,
-        hierarchy: ContentHierarchy,
-        keywords: List<String> = emptyList()
-    ): String {
-        val path = getPagePath(node, hierarchy)
-        val cleanContent = node.body?.let { stripHtml(it) } ?: ""
-
-        return buildString {
-            append("Title: ${node.title}\n")
-            append("Path: $path\n")
-            append("Page ID: ${node.id}\n")
-
-            // Include keywords for better search matching
-            if (keywords.isNotEmpty()) {
-                append("Keywords: ${keywords.joinToString(", ")}\n")
-            }
-
-            append("\n")
-            if (cleanContent.isNotBlank()) {
-                append("Content:\n")
-                append(cleanContent)
-            } else {
-                append("This page has no content.")
-            }
-        }
     }
 
     /**
@@ -422,7 +390,7 @@ class ConfluenceSyncTask(
      * The embedding is generated and added by VectorStore during the add() operation.
      * We need to generate it here manually using the embeddingModel.
      */
-    private fun convertToTypesenseDocument(document: org.springframework.ai.document.Document): Map<String, Any> {
+    private fun convertToTypesenseDocument(document: Document): Map<String, Any> {
         val metadata = document.metadata
 
         // Generate embedding for this document

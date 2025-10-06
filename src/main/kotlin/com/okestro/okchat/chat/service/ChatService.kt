@@ -47,7 +47,9 @@ class ChatService(
                 ?: throw IllegalStateException("Prompt text not generated")
 
             // Use the rendered prompt directly (no need for PromptTemplate again)
-            Prompt(promptText)
+            Prompt(promptText + """
+                부족한 정보는 TOOL을 사용하여 보완하세요.
+            """.trimIndent())
         }
             .flatMapMany { prompt ->
                 chatClient.prompt(prompt)

@@ -2,6 +2,7 @@ package com.okestro.okchat.chat.pipeline.steps
 
 import com.okestro.okchat.ai.support.DynamicPromptBuilder
 import com.okestro.okchat.chat.pipeline.ChatContext
+import com.okestro.okchat.chat.pipeline.CompleteChatContext
 import com.okestro.okchat.chat.pipeline.LastChatPipelineStep
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.chat.prompt.PromptTemplate
@@ -19,7 +20,7 @@ class PromptGenerationStep(
     private val dynamicPromptBuilder: DynamicPromptBuilder
 ) : LastChatPipelineStep {
 
-    override suspend fun execute(context: ChatContext): ChatContext {
+    override suspend fun execute(context: ChatContext): CompleteChatContext {
         log.info { "[${getStepName()}] Generating prompt" }
 
         val analysis = context.analysis
@@ -44,8 +45,11 @@ class PromptGenerationStep(
             )
         )
 
-        return context.copy(
-            prompt = ChatContext.Prompt(text = prompt.contents)
+        return CompleteChatContext(
+            input = context.input,
+            analysis = context.analysis,
+            search = context.search,
+            prompt = CompleteChatContext.Prompt(prompt.contents)
         )
     }
 

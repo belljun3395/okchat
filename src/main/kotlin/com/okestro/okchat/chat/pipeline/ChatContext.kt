@@ -13,11 +13,10 @@ import com.okestro.okchat.search.model.SearchResult
  * - Search: Optional (OptionalChatPipelineStep)
  * - Prompt: Required at end (LastChatPipelineStep)
  */
-data class ChatContext(
+open class ChatContext(
     val input: UserInput,
     val analysis: Analysis? = null,
-    val search: Search? = null,
-    val prompt: Prompt? = null
+    val search: Search? = null
 ) {
     /**
      * User input data
@@ -49,12 +48,5 @@ data class ChatContext(
     data class Search(
         val results: List<SearchResult>,
         val contextText: String? = null
-    )
-
-    /**
-     * Prompt context (LastChatPipelineStep - always executed at end)
-     */
-    data class Prompt(
-        val text: String
     )
 }

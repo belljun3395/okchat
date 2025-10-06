@@ -34,8 +34,7 @@ class ChatPipeline(
      * Execute the assembled pipeline with the given initial context.
      * Steps are conditionally executed based on shouldExecute() logic.
      */
-    suspend fun execute(initialContext: ChatContext): ChatContext {
-        log.info { "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
+    suspend fun execute(initialContext: ChatContext): CompleteChatContext {
         log.info { "[Pipeline] Starting execution with ${pipelineSteps.size} steps" }
 
         var context = initialContext
@@ -53,7 +52,10 @@ class ChatPipeline(
             }
         }
 
+        val completeChatContext = context as? CompleteChatContext
+            ?: throw IllegalStateException("Final context is not CompleteChatContext. Last step must produce CompleteChatContext.")
+
         log.info { "[Pipeline] Completed: $executedSteps executed, $skippedSteps skipped" }
-        return context
+        return completeChatContext
     }
 }

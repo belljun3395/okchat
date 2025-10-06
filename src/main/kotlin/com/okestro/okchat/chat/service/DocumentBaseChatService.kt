@@ -27,6 +27,7 @@ class DocumentBaseChatService(
      * Process user query and generate AI response
      */
     fun chat(message: String, keywords: List<String>?): Flux<String> {
+        log.info { "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
         return mono {
             // Create initial context with user input
             val initialContext = ChatContext(
@@ -43,8 +44,7 @@ class DocumentBaseChatService(
             log.debug { "Context preview: ${processedContext.search?.contextText?.take(300)}..." }
 
             // Get fully rendered prompt text (already processed by PromptGenerationStep)
-            val promptText = processedContext.prompt?.text
-                ?: throw IllegalStateException("Prompt text not generated")
+            val promptText = processedContext.prompt.text
 
             // Use the rendered prompt directly (no need for PromptTemplate again)
             Prompt(

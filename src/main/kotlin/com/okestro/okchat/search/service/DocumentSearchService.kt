@@ -1,9 +1,14 @@
 package com.okestro.okchat.search.service
 
+import com.okestro.okchat.search.client.HybridSearchRequest
 import com.okestro.okchat.search.client.SearchClient
 import com.okestro.okchat.search.config.SearchFieldWeightConfig
 import com.okestro.okchat.search.model.MultiSearchResult
+import com.okestro.okchat.search.model.SearchContents
 import com.okestro.okchat.search.model.SearchKeywords
+import com.okestro.okchat.search.model.SearchPaths
+import com.okestro.okchat.search.model.SearchResult
+import com.okestro.okchat.search.model.SearchTitles
 import com.okestro.okchat.search.util.HybridSearchUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.embedding.EmbeddingModel
@@ -23,71 +28,132 @@ class DocumentSearchService(
 ) {
 
     /**
-     * Execute multiple searches in a single request (optimized with Typesense multi_search)
-     * Returns results for keyword, title, and content searches
-     *
-     * This dramatically reduces network latency by batching all searches into one HTTP request
+     * Perform multi-search across titles, contents, paths, and keywords
+     * Combines results from different search types and deduplicates
      */
     suspend fun multiSearch(
-        query: String,
-        keywords: SearchKeywords,
+        titles: SearchTitles?,
+        contents: SearchContents?,
+        paths: SearchPaths?,
+        keywords: SearchKeywords?,
         topK: Int = 50
     ): MultiSearchResult {
-        val keywordsQuery = keywords.toOrQuery()
-        log.info { "[Multi-Search] Executing optimized multi-search: query='$query', keywords='$keywordsQuery' (${keywords.terms().size} terms), topK=$topK" }
+        log.info {
+            "[Multi-Search] Starting multi-search with topK=$topK: " +
+                "titles=${titles?.titles?.size ?: 0}, contents=${contents?.contents?.size ?: 0}, " +
+                "paths=${paths?.paths?.size ?: 0}, keywords=${keywords?.keywords?.size ?: 0}"
+        }
 
         // Generate embedding once (reused for all searches)
         log.debug { "[Multi-Search] Generating embedding..." }
-        val embedding = embeddingModel.embed(query).toList()
+        val embedding = embeddingModel.embed(
+            contents?.contents?.joinToString {
+                it.term
+            } ?: ""
+        ).toList()
+        log.debug { "[Multi-Search] Embedding generated with dimension ${embedding.size}" }
 
-        // Build 3 search requests with different field configurations
-        val requests = listOf(
-            // 1. Keyword search - use OR-connected keywords
-            HybridSearchUtils.buildSearchRequest(
-                query = keywordsQuery,
-                embedding = embedding,
-                fields = fieldConfig.keyword,
-                topK = topK
-            ),
-            // 2. Title search - use natural query
-            HybridSearchUtils.buildSearchRequest(
-                query = query,
-                embedding = embedding,
-                fields = fieldConfig.title,
-                topK = topK
-            ),
-            // 3. Content search - use keywords if available, otherwise query
-            HybridSearchUtils.buildSearchRequest(
-                query = if (keywords.isEmpty()) query else keywordsQuery,
-                embedding = embedding,
-                fields = fieldConfig.content,
-                topK = topK
+        val requests = mutableListOf<HybridSearchRequest>()
+        var reqIndex = 0
+        var keyWordReq: Int? = null
+        var titleReq: Int? = null
+        var contentReq: Int? = null
+        var pathReq: Int? = null
+        keywords?.let {
+            requests.add(
+                HybridSearchUtils.buildSearchRequest(
+                    query = it.toOrQuery(),
+                    embedding = embedding,
+                    fields = fieldConfig.keyword,
+                    topK = topK
+                )
             )
-        )
+            keyWordReq = reqIndex
+            reqIndex++
+        }
+
+        titles?.let {
+            requests.add(
+                HybridSearchUtils.buildSearchRequest(
+                    query = it.toOrQuery(),
+                    embedding = embedding,
+                    fields = fieldConfig.title,
+                    topK = topK
+                )
+            )
+            titleReq = reqIndex
+            reqIndex++
+        }
+
+        contents?.let {
+            requests.add(
+                HybridSearchUtils.buildSearchRequest(
+                    query = it.toOrQuery(),
+                    embedding = embedding,
+                    fields = fieldConfig.content,
+                    topK = topK
+                )
+            )
+            contentReq = reqIndex
+            reqIndex++
+        }
+
+        paths?.let {
+            requests.add(
+                HybridSearchUtils.buildSearchRequest(
+                    query = it.toOrQuery(),
+                    embedding = embedding,
+                    fields = fieldConfig.path,
+                    topK = topK
+                )
+            )
+            pathReq = reqIndex
+            reqIndex++
+        }
 
         // Execute all searches in a single HTTP request
         log.debug { "[Multi-Search] Executing batched search..." }
         val responses = searchClient.multiHybridSearch(requests)
 
         // Parse responses into SearchResults and deduplicate
-        log.debug { "[Multi-Search] Parsing keyword results..." }
-        val keywordResults = HybridSearchUtils.deduplicateResults(
-            HybridSearchUtils.parseSearchResults(responses[0])
-        )
+        var keywordResults: List<SearchResult> = emptyList()
+        keyWordReq?.let {
+            log.debug { "[Multi-Search] Parsing keyword results..." }
+            keywordResults = HybridSearchUtils.deduplicateResults(
+                HybridSearchUtils.parseSearchResults(responses[it])
+            )
+        } ?: run {
+            keywordResults = emptyList()
+        }
 
-        log.debug { "[Multi-Search] Parsing title results..." }
-        val titleResults = HybridSearchUtils.deduplicateResults(
-            HybridSearchUtils.parseSearchResults(responses[1])
-        )
+        var titleResults: List<SearchResult> = emptyList()
+        titleReq?.let {
+            log.debug { "[Multi-Search] Parsing title results..." }
+            titleResults = HybridSearchUtils.deduplicateResults(
+                HybridSearchUtils.parseSearchResults(responses[it])
+            )
+        } ?: run {
+            titleResults = emptyList()
+        }
 
-        log.debug { "[Multi-Search] Parsing content results..." }
-        val contentResults = HybridSearchUtils.deduplicateResults(
-            HybridSearchUtils.parseSearchResults(responses[2])
-        )
+        var contentResults: List<SearchResult> = emptyList()
+        contentReq?.let {
+            log.debug { "[Multi-Search] Parsing content results..." }
+            contentResults = HybridSearchUtils.deduplicateResults(
+                HybridSearchUtils.parseSearchResults(responses[it])
+            )
+        } ?: run {
+            contentResults = emptyList()
+        }
 
-        log.info {
-            "[Multi-Search] Completed: keyword=${keywordResults.size}, " +
-                "title=${titleResults.size}, content=${contentResults.size}"
+        var pathResults: List<SearchResult> = emptyList()
+        pathReq?.let {
+            log.debug { "[Multi-Search] Parsing path results..." }
+            pathResults = HybridSearchUtils.deduplicateResults(
+                HybridSearchUtils.parseSearchResults(responses[it])
+            )
+        } ?: run {
+            pathResults = emptyList()
         }
 
         // Log top results from each search type (DEBUG only)
@@ -106,12 +172,19 @@ class DocumentSearchService(
             contentResults.take(5).forEachIndexed { i, r ->
                 log.debug { "  [C${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
             }
+
+            log.debug { "[Multi-Search] ━━━ Path search top 5 ━━━" }
+            pathResults.take(5).forEachIndexed { i, r ->
+                log.debug { "  [P${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
+            }
+            log.debug { "[Multi-Search] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
         }
 
         return MultiSearchResult(
             keywordResults = keywordResults,
             titleResults = titleResults,
-            contentResults = contentResults
+            contentResults = contentResults,
+            pathResults = pathResults
         )
     }
 }

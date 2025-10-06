@@ -40,6 +40,10 @@ data class SearchFieldWeightConfig(
     var content: FieldWeights = FieldWeights(
         queryBy = "content,metadata.title,metadata.keywords",
         weights = "10,5,3"
+    ),
+    var path: FieldWeights = FieldWeights(
+        queryBy = "metadata.path",
+        weights = "10"
     )
 ) {
     data class FieldWeights(

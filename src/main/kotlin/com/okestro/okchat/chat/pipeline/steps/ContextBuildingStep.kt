@@ -100,7 +100,7 @@ class ContextBuildingStep(
         append("Question: $question\n")
         append("Total $totalCount documents found")
         if (highCount > 0) {
-            append(" (High relevance: ${highCount})")
+            append(" (High relevance: $highCount)")
         }
         append("\n\n")
     }

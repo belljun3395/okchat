@@ -31,10 +31,10 @@ class LoggingConfig {
         return WebFilter { exchange: ServerWebExchange, chain: WebFilterChain ->
             val requestId = exchange.request.headers.getFirst("X-Request-ID")
                 ?: UUID.randomUUID().toString()
-            
+
             // Add request ID to response header
             exchange.response.headers.add("X-Request-ID", requestId)
-            
+
             // Store in reactor context for reactive flows
             chain.filter(exchange)
                 .contextWrite { context: Context ->

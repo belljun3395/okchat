@@ -2,96 +2,119 @@ package com.okestro.okchat.search.client
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.reactor.awaitSingle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.retry.support.RetryTemplate
 import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.client.WebClient
+import org.typesense.api.Client
+import org.typesense.api.exceptions.TypesenseError
+import org.typesense.model.MultiSearchCollectionParameters
+import org.typesense.model.MultiSearchResult
+import org.typesense.model.MultiSearchSearchesParameter
+import org.typesense.model.SearchParameters
 
 private val log = KotlinLogging.logger {}
 
 /**
- * Typesense HTTP client.
+ * Typesense search client using official Java Client with RetryTemplate for resilience.
+ * Provides type-safe API with full access to Typesense search features.
  */
 @Component
 class TypesenseSearchClient(
-    @Value("\${spring.ai.vectorstore.typesense.client.protocol}") protocol: String,
-    @Value("\${spring.ai.vectorstore.typesense.client.host}") host: String,
-    @Value("\${spring.ai.vectorstore.typesense.client.port}") port: Int,
-    @Value("\${spring.ai.vectorstore.typesense.client.apiKey}") apiKey: String,
+    private val typesenseClient: Client,
+    private val retryTemplate: RetryTemplate,
     @Value("\${spring.ai.vectorstore.typesense.collection-name}") private val collectionName: String
 ) {
-    private val webClient = WebClient.builder()
-        .baseUrl("$protocol://$host:$port")
-        .defaultHeader("X-TYPESENSE-API-KEY", apiKey)
-        .defaultHeader("Content-Type", "application/json")
-        .codecs { configurer ->
-            configurer.defaultCodecs().maxInMemorySize(16 * 1024 * 1024)
-        }
-        .build()
 
     suspend fun search(request: TypesenseSearchRequest): TypesenseSearchResponse {
         log.debug { "[Typesense] Request: q='${request.q}', queryBy='${request.queryBy}', vectorQuery='${request.vectorQuery?.take(100)}...'" }
 
-        val searchQuery = request.toSearchQuery(collectionName)
-        val multiSearchRequest = TypesenseMultiSearchRequest(searches = listOf(searchQuery))
+        return withContext(Dispatchers.IO) {
+            try {
+                retryTemplate.execute<TypesenseSearchResponse, TypesenseError> { context ->
+                    if (context.retryCount > 0) {
+                        log.warn { "[Typesense] Retry attempt ${context.retryCount} for query: ${request.q}" }
+                    }
 
-        val multiSearchResponse = webClient.post()
-            .uri("/multi_search")
-            .bodyValue(multiSearchRequest)
-            .retrieve()
-            .onStatus({ it.isError }) { clientResponse ->
-                clientResponse.bodyToMono(String::class.java).map { body ->
-                    log.error { "[Typesense] Multi-search error for q='${request.q}': $body" }
-                    RuntimeException("Typesense multi-search failed: $body")
+                    val searchParams = request.toSearchParameters()
+                    val searchResult = typesenseClient.collections(collectionName)
+                        .documents()
+                        .search(searchParams)
+
+                    TypesenseSearchResponse(
+                        hits = searchResult.hits?.map { hit ->
+                            TypesenseHit(
+                                document = hit.document,
+                                textMatch = hit.textMatch,
+                                vectorDistance = hit.vectorDistance?.toDouble()
+                            )
+                        } ?: emptyList(),
+                        found = searchResult.found
+                    )
                 }
+            } catch (e: TypesenseError) {
+                log.error(e) { "[Typesense] Search failed for q='${request.q}': ${e.message}" }
+                throw RuntimeException("Typesense search failed: ${e.message}", e)
+            } catch (e: Exception) {
+                log.error(e) { "[Typesense] Unexpected error: ${e.message}" }
+                throw e
             }
-            .bodyToMono(TypesenseMultiSearchResponse::class.java)
-            .doOnError { error ->
-                log.error(error) { "[Typesense] Request failed: ${error.message}" }
-            }
-            .awaitSingle()
-
-        val firstResult = multiSearchResponse.results.firstOrNull()
-
-        return TypesenseSearchResponse(
-            hits = firstResult?.hits ?: emptyList(),
-            found = firstResult?.found
-        )
+        }
     }
 
     /**
-     * Execute multiple searches in a single HTTP request
-     * This is the REAL multi-search - dramatically reduces network latency
+     * Execute multiple searches in a single HTTP request using official multi-search API.
+     * This dramatically reduces network latency compared to sequential searches.
      */
     suspend fun multiSearch(requests: List<TypesenseSearchRequest>): List<TypesenseSearchResponse> {
         if (requests.isEmpty()) return emptyList()
 
         log.debug { "[Typesense] Multi-search with ${requests.size} queries" }
 
-        val searchQueries = requests.map { it.toSearchQuery(collectionName) }
-        val multiSearchRequest = TypesenseMultiSearchRequest(searches = searchQueries)
+        return withContext(Dispatchers.IO) {
+            try {
+                retryTemplate.execute<List<TypesenseSearchResponse>, TypesenseError> { context ->
+                    if (context.retryCount > 0) {
+                        log.warn { "[Typesense] Multi-search retry attempt ${context.retryCount}" }
+                    }
 
-        val multiSearchResponse = webClient.post()
-            .uri("/multi_search")
-            .bodyValue(multiSearchRequest)
-            .retrieve()
-            .onStatus({ it.isError }) { clientResponse ->
-                clientResponse.bodyToMono(String::class.java).map { body ->
-                    log.error { "[Typesense] Multi-search error: $body" }
-                    RuntimeException("Typesense multi-search failed: $body")
+                    val searchesParam = requests.map { request ->
+                        // Create MultiSearchCollectionParameters for each request
+                        request.toMultiSearchParameters(collectionName)
+                    }.let {
+                        // Wrap in MultiSearchSearchesParameter
+                        MultiSearchSearchesParameter()
+                            .searches(it)
+                    }
+
+                    // Execute multi-search
+                    val multiSearchResult: MultiSearchResult = typesenseClient.multiSearch.perform(
+                        searchesParam,
+                        HashMap()
+                    )
+
+                    // Convert results
+                    multiSearchResult.results?.map { result ->
+                        TypesenseSearchResponse(
+                            hits = result.hits?.map { hit ->
+                                TypesenseHit(
+                                    document = hit.document,
+                                    textMatch = hit.textMatch,
+                                    vectorDistance = hit.vectorDistance?.toDouble()
+                                )
+                            } ?: emptyList(),
+                            found = result.found
+                        )
+                    } ?: emptyList()
                 }
+            } catch (e: TypesenseError) {
+                log.error(e) { "[Typesense] Multi-search failed: ${e.message}" }
+                throw RuntimeException("Typesense multi-search failed: ${e.message}", e)
+            } catch (e: Exception) {
+                log.error(e) { "[Typesense] Multi-search unexpected error: ${e.message}" }
+                throw e
             }
-            .bodyToMono(TypesenseMultiSearchResponse::class.java)
-            .doOnError { error ->
-                log.error(error) { "[Typesense] Multi-search request failed: ${error.message}" }
-            }
-            .awaitSingle()
-
-        return multiSearchResponse.results.map { result ->
-            TypesenseSearchResponse(
-                hits = result.hits ?: emptyList(),
-                found = result.found
-            )
         }
     }
 }
@@ -107,20 +130,53 @@ data class TypesenseSearchRequest(
     val prefix: Boolean = true, // Enable prefix matching (e.g., "2508" matches "250804")
     @JsonProperty("num_typos") val numTypos: Int = 2, // Allow fuzzy matching with 2 typos
     @JsonProperty("typo_tokens_threshold") val typoTokensThreshold: Int = 0 // Apply typos to all tokens
-) {
-    fun toSearchQuery(collection: String) = TypesenseSearchQuery(
-        collection = collection,
-        q = q,
-        queryBy = queryBy,
-        queryByWeights = queryByWeights,
-        vectorQuery = vectorQuery,
-        filterBy = filterBy,
-        perPage = perPage,
-        page = page,
-        prefix = prefix,
-        numTypos = numTypos,
-        typoTokensThreshold = typoTokensThreshold
-    )
+)
+
+/**
+ * Convert to official Typesense SearchParameters for single search.
+ * Note: Type conversions applied for API compatibility:
+ * - prefix: Boolean → String
+ * - numTypos: Int → String
+ * - typoTokensThreshold: Int → Integer
+ */
+fun TypesenseSearchRequest.toSearchParameters(): SearchParameters {
+    return SearchParameters()
+        .q(q)
+        .queryBy(queryBy)
+        .apply { queryByWeights?.let { queryByWeights(it) } }
+        .apply { vectorQuery?.let { vectorQuery(it) } }
+        .apply { filterBy?.let { filterBy(it) } }
+        .perPage(perPage)
+        .page(page)
+        .prefix(prefix.toString()) // Boolean → String conversion
+        .numTypos(numTypos.toString()) // Int → String conversion
+        .typoTokensThreshold(typoTokensThreshold) // Int → Integer (auto-boxing)
+}
+
+/**
+ * Convert to MultiSearchCollectionParameters for multi-search.
+ * Extends MultiSearchParameters with collection specification.
+ *
+ * Note: Using setters due to builder pattern returning parent type
+ */
+fun TypesenseSearchRequest.toMultiSearchParameters(collection: String): MultiSearchCollectionParameters {
+    val params = MultiSearchCollectionParameters()
+
+    params.collection = collection
+    params.q = q
+    params.queryBy = queryBy
+    params.perPage = perPage
+    params.page = page
+    params.prefix = prefix.toString() // Boolean → String conversion
+    params.numTypos = numTypos.toString() // Int → String conversion
+    params.typoTokensThreshold = typoTokensThreshold // Int → Integer (auto-boxing)
+
+    // Apply optional parameters
+    queryByWeights?.let { params.queryByWeights = it }
+    vectorQuery?.let { params.vectorQuery = it }
+    filterBy?.let { params.filterBy = it }
+
+    return params
 }
 
 data class TypesenseSearchResponse(
@@ -132,43 +188,4 @@ data class TypesenseHit(
     val document: Map<String, Any>? = null,
     @JsonProperty("text_match") val textMatch: Long? = null,
     @JsonProperty("vector_distance") val vectorDistance: Double? = null
-)
-
-/**
- * Individual search query within a multi-search request
- */
-data class TypesenseSearchQuery(
-    val collection: String,
-    val q: String,
-    @JsonProperty("query_by") val queryBy: String,
-    @JsonProperty("query_by_weights") val queryByWeights: String? = null,
-    @JsonProperty("vector_query") val vectorQuery: String? = null,
-    @JsonProperty("filter_by") val filterBy: String? = null,
-    @JsonProperty("per_page") val perPage: Int = 10,
-    val page: Int = 1,
-    val prefix: Boolean = true,
-    @JsonProperty("num_typos") val numTypos: Int = 2,
-    @JsonProperty("typo_tokens_threshold") val typoTokensThreshold: Int = 0
-)
-
-/**
- * Multi-search request wrapper
- */
-data class TypesenseMultiSearchRequest(
-    val searches: List<TypesenseSearchQuery>
-)
-
-/**
- * Individual search result within a multi-search response
- */
-data class TypesenseSearchResult(
-    val hits: List<TypesenseHit>? = null,
-    val found: Int? = null
-)
-
-/**
- * Multi-search response wrapper
- */
-data class TypesenseMultiSearchResponse(
-    val results: List<TypesenseSearchResult>
 )

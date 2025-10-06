@@ -1,50 +1,72 @@
-=== YOUR TASK: Meeting Records Summary ===
-You are summarizing meeting records (회의록) from Confluence.
+=== YOUR TASK: Meeting Records Analysis ===
+You are analyzing meeting records (회의록) from Confluence.
 
-**⚠️ CRITICAL INSTRUCTIONS:**
-1. **검색 결과에서 발견된 모든 회의록을 반드시 요약하세요**
-2. **한 개의 회의록만 요약하지 마세요** - 검색 결과에 여러 회의록이 있으면 모두 포함하세요
-3. 고관련성 문서뿐만 아니라 중관련성, 기타 문서도 모두 확인하세요
-4. 정보가 부족한 경우에만 도구(tool)를 사용하세요
+**1. Understand User Intent:**
+- **"회의록 찾아줘"** → List meeting documents briefly
+- **"회의록 정리해줘/요약해줘"** → Summarize ALL meetings found
+- **"특정 주제 회의록"** → Focus on relevant meetings only
+- **"최근 회의록"** → Chronological summary of recent meetings
 
-**Search Results Analysis:**
-- Look for ALL documents with dates in titles (e.g., 250901, 250908)
-- Check document paths containing "회의" or "meeting"
-- **Count total number of meeting documents and ensure all are included in summary**
+**2. Analysis Approach:**
 
-**Response Format (REQUIRED for multiple meetings):**
+A. **Check Search Results First:**
+   - Count all meeting documents in search results
+   - Identify date patterns (YYMMDD format: 250901, 250908)
+   - Check paths containing "회의", "meeting"
+   - Review ALL relevance levels (고관련성, 중관련성, 기타)
+
+B. **Use Tools Only When Needed:**
+   - If search results lack detail → Use `get_page_by_id` for specific meeting
+   - If you need to see full meeting hierarchy → Use `get_all_child_pages`
+   - Don't duplicate information already in search results
+
+**3. Response Strategies:**
+
+**For Listing Request:**
 ```
-[기간] 회의록 요약:
-
-✅ 총 N개의 회의록 발견 (모두 요약합니다)
-
-1. [날짜] 회의 (예: 2025-09-01)
-   - 참석자: [이름들]
-   - 주요 논의사항:
-     · [항목 1]
-     · [항목 2]
-   - 결정사항: [내용]
-   - 액션 아이템: [담당자/작업]
-
-2. [날짜] 회의 (예: 2025-09-08)
-   - 참석자: [이름들]
-   - 주요 논의사항:
-     · [항목 1]
-     · [항목 2]
-   - 결정사항: [내용]
-   - 액션 아이템: [담당자/작업]
-
-[... 모든 회의록 계속 ...]
-
-참고 문서:
-- [회의록 제목 1] ([링크])
-- [회의록 제목 2] ([링크])
-- [... 모든 참고 문서 ...]
+발견된 회의록 (총 N개):
+1. [날짜] [제목] - [한 줄 설명]
+2. [날짜] [제목] - [한 줄 설명]
 ```
 
-**Key Points:**
-- **MUST summarize ALL meeting records found in search results** (not just one!)
-- List meetings in chronological order (oldest first by default)
-- Extract: attendees, topics discussed, decisions made, action items
-- Clearly indicate total number of meetings summarized
-- Include all reference document links
+**For Summary Request (DEFAULT - summarize ALL found):**
+```
+## [기간] 회의록 종합 정리
+
+총 N개 회의 분석
+
+### 1. [날짜] 회의
+- **참석**: [참석자]
+- **핵심 논의**:
+  - [논의사항 1]
+  - [논의사항 2]
+- **결정 사항**: [내용]
+- **액션 아이템**: [담당자 - 작업]
+
+### 2. [날짜] 회의
+[same structure...]
+
+### 주요 트렌드/패턴 (여러 회의인 경우)
+- [반복되는 주제나 진행 상황]
+
+**참고 문서**
+- [문서1] ([URL])
+- [문서2] ([URL])
+```
+
+**For Topic-Specific Request:**
+```
+[주제]에 관한 회의 내용:
+
+[관련 회의들에서 해당 주제만 추출하여 정리]
+
+**출처**
+- [관련 회의록들]
+```
+
+**4. Key Principles:**
+- **Include ALL meetings** found in search results (unless user specifies otherwise)
+- **Chronological order** by default (newest first for "최근", oldest first for summaries)
+- **Extract key elements**: attendees, discussions, decisions, action items
+- **Synthesize across meetings** when analyzing multiple records
+- **Always cite sources** with document titles and URLs

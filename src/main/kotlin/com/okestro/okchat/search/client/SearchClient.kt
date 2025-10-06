@@ -19,7 +19,14 @@ data class HybridSearchRequest(
     val vectorQuery: List<Float>,
     val fields: SearchFields,
     val filters: Map<String, String> = emptyMap(),
-    val limit: Int = 10
+    val limit: Int = 10,
+    /**
+     * Text weight for hybrid search (0.0 to 1.0).
+     * alpha = 1.0: 100% text search
+     * alpha = 0.0: 100% vector search
+     * alpha = 0.6: 60% text, 40% vector
+     */
+    val textWeight: Double = 0.5
 )
 
 data class SearchFields(

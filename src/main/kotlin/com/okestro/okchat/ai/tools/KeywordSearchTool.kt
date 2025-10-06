@@ -33,6 +33,10 @@ class KeywordSearchTool(
                 {
                   "type": "object",
                   "properties": {
+                    "thought": {
+                      "type": "string",
+                      "description": "The reasoning for using this tool in this specific context."
+                    },
                     "keywords": {
                       "type": "string",
                       "description": "Keywords to search for (space-separated)"
@@ -43,7 +47,7 @@ class KeywordSearchTool(
                       "default": 10
                     }
                   },
-                  "required": ["keywords"]
+                  "required": ["thought", "keywords"]
                 }
                 """.trimIndent()
             )
@@ -53,6 +57,7 @@ class KeywordSearchTool(
     override fun call(toolInput: String): String {
         return try {
             val input = objectMapper.readValue(toolInput, Map::class.java)
+            val thought = input["thought"] as? String ?: "No thought provided."
             val keywords = input["keywords"] as? String
                 ?: return "Invalid input: keywords parameter is required"
             val topK = ((input["topK"] as? Number)?.toInt() ?: 10).coerceIn(1, 50)
@@ -63,33 +68,35 @@ class KeywordSearchTool(
                 keywordSearchStrategy.search(keywords, topK)
             }
 
-            if (results.isEmpty()) {
-                return "No documents found for keywords: '$keywords'"
-            }
+            val answer = if (results.isEmpty()) {
+                "No documents found for keywords: '$keywords'"
+            } else {
+                buildString {
+                    append("Found ${results.size} document(s) by keyword search:\n\n")
 
-            buildString {
-                append("Found ${results.size} document(s) by keyword search:\n\n")
-
-                results.take(topK).forEachIndexed { index, result ->
-                    append("${index + 1}. ${result.title}\n")
-                    append("   Score: ${"%.4f".format(result.score.value)}\n")
-                    if (result.path.isNotBlank()) {
-                        append("   Path: ${result.path}\n")
+                    results.take(topK).forEachIndexed { index, result ->
+                        append("${index + 1}. ${result.title}\n")
+                        append("   Score: ${"%.4f".format(result.score.value)}\n")
+                        if (result.path.isNotBlank()) {
+                            append("   Path: ${result.path}\n")
+                        }
+                        if (result.spaceKey.isNotBlank()) {
+                            append("   Space: ${result.spaceKey}\n")
+                        }
+                        if (result.keywords.isNotBlank()) {
+                            append("   Keywords: ${result.keywords}\n")
+                        }
+                        append("   Content: ${result.content.take(200)}")
+                        if (result.content.length > 200) append("...")
+                        append("\n\n")
                     }
-                    if (result.spaceKey.isNotBlank()) {
-                        append("   Space: ${result.spaceKey}\n")
-                    }
-                    if (result.keywords.isNotBlank()) {
-                        append("   Keywords: ${result.keywords}\n")
-                    }
-                    append("   Content: ${result.content.take(200)}")
-                    if (result.content.length > 200) append("...")
-                    append("\n\n")
                 }
             }
+
+            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
         } catch (e: Exception) {
             log.error(e) { "Error in keyword search: ${e.message}" }
-            "Error performing keyword search: ${e.message}"
+            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred during the keyword search.", "answer" to "Error performing keyword search: ${e.message}"))
         }
     }
 }

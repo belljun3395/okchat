@@ -46,6 +46,10 @@ class GetAllChildPagesConfluenceTool(
                 {
                   "type": "object",
                   "properties": {
+                    "thought": {
+                      "type": "string",
+                      "description": "The reasoning for using this tool in this specific context."
+                    },
                     "pageId": {
                       "type": "string",
                       "description": "The parent page/folder ID to get ALL descendants from"
@@ -56,7 +60,7 @@ class GetAllChildPagesConfluenceTool(
                       "default": 10
                     }
                   },
-                  "required": ["pageId"]
+                  "required": ["thought", "pageId"]
                 }
                 """.trimIndent()
             )
@@ -66,6 +70,7 @@ class GetAllChildPagesConfluenceTool(
     override fun call(toolInput: String): String {
         return try {
             val input = objectMapper.readValue(toolInput, Map::class.java)
+            val thought = input["thought"] as? String ?: "No thought provided."
             val pageId = input["pageId"] as? String
                 ?: return "Invalid input: pageId parameter is required"
             val maxDepth = ((input["maxDepth"] as? Number)?.toInt() ?: 10).coerceIn(1, 20)
@@ -100,7 +105,7 @@ class GetAllChildPagesConfluenceTool(
 
             allPages.forEach { calculateDepth(it.id) }
 
-            buildString {
+            val answer = buildString {
                 append("=== 📂 ${parentPage.title} - 전체 계층 구조 및 내용 ===\n\n")
                 append("⚠️ 중요: 이 결과는 모든 하위 페이지를 재귀적으로 조회한 것입니다.\n")
                 append("총 ${allPages.size}개의 페이지(최상위 페이지 포함, 모든 깊이의 하위 페이지 포함)\n\n")
@@ -156,9 +161,11 @@ class GetAllChildPagesConfluenceTool(
                 append("각 페이지의 '페이지 내용' 섹션을 반드시 읽고 분석하여 전체적인 작업 상황과 현황을 종합적으로 정리해주세요.\n")
                 append("단순히 페이지 제목만 나열하지 말고, 각 페이지에서 다루는 주요 내용, 완료된 작업, 진행 중인 작업 등을 추출하여 답변하세요.")
             }
+
+            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
         } catch (e: Exception) {
             log.error(e) { "Error getting child pages: ${e.message}" }
-            "Error retrieving child pages: ${e.message}"
+            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred while getting child pages.", "answer" to "Error retrieving child pages: ${e.message}"))
         }
     }
 

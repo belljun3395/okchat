@@ -27,8 +27,13 @@ class GetDocumentSchemaInfoTool(
                 """
                 {
                   "type": "object",
-                  "properties": {},
-                  "required": []
+                  "properties": {
+                    "thought": {
+                      "type": "string",
+                      "description": "The reasoning for using this tool in this specific context."
+                    }
+                  },
+                  "required": ["thought"]
                 }
                 """.trimIndent()
             )
@@ -37,12 +42,15 @@ class GetDocumentSchemaInfoTool(
 
     override fun call(toolInput: String): String {
         return try {
+            val input = objectMapper.readValue(toolInput, Map::class.java)
+            val thought = input["thought"] as? String ?: "No thought provided."
+
             log.info { "Retrieving schema for collection: $collectionName" }
 
             // Get collection schema
             val collection = typesenseClient.collections(collectionName).retrieve()
 
-            buildString {
+            val answer = buildString {
                 append("Collection: ${collection.name}\n")
                 append("Number of documents: ${collection.numDocuments}\n\n")
                 append("Schema Fields:\n")
@@ -84,9 +92,11 @@ class GetDocumentSchemaInfoTool(
                     append("No documents in collection.")
                 }
             }
+
+            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
         } catch (e: Exception) {
             log.error(e) { "Error retrieving schema: ${e.message}" }
-            "Error retrieving schema information: ${e.message}"
+            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred while retrieving the schema.", "answer" to "Error retrieving schema information: ${e.message}"))
         }
     }
 }

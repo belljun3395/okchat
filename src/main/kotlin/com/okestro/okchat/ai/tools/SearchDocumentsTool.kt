@@ -29,6 +29,10 @@ class SearchDocumentsTool(
                 {
                   "type": "object",
                   "properties": {
+                    "thought": {
+                      "type": "string",
+                      "description": "The reasoning for using this tool in this specific context."
+                    },
                     "query": {
                       "type": "string",
                       "description": "Search query keywords"
@@ -43,7 +47,7 @@ class SearchDocumentsTool(
                       "description": "Optional: Filter by Confluence space key (e.g., 'CBSPPP2411')"
                     }
                   },
-                  "required": ["query"]
+                  "required": ["thought", "query"]
                 }
                 """.trimIndent()
             )
@@ -53,6 +57,7 @@ class SearchDocumentsTool(
     override fun call(toolInput: String): String {
         return try {
             val input = objectMapper.readValue(toolInput, Map::class.java)
+            val thought = input["thought"] as? String ?: "No thought provided."
             val query = input["query"] as? String
                 ?: return "Invalid input: query parameter is required"
             val limit = ((input["limit"] as? Number)?.toInt() ?: 5).coerceIn(1, 20)
@@ -77,40 +82,42 @@ class SearchDocumentsTool(
 
             val hits = searchResult.hits ?: emptyList()
 
-            if (hits.isEmpty()) {
-                return "No documents found for query: '$query'"
-            }
+            val answer = if (hits.isEmpty()) {
+                "No documents found for query: '$query'"
+            } else {
+                buildString {
+                    append("Found ${hits.size} document(s):\n\n")
 
-            buildString {
-                append("Found ${hits.size} document(s):\n\n")
+                    hits.forEachIndexed { index, hit ->
+                        val doc = hit.document ?: return@forEachIndexed
 
-                hits.forEachIndexed { index, hit ->
-                    val doc = hit.document ?: return@forEachIndexed
+                        // Extract metadata (Spring AI stores it as a nested object)
+                        val metadata = doc["metadata"] as? Map<*, *>
+                        val title = metadata?.get("title")?.toString() ?: "Untitled"
+                        val path = metadata?.get("path")?.toString() ?: ""
+                        val spaceKey = metadata?.get("spaceKey")?.toString() ?: ""
+                        val pageId = metadata?.get("id")?.toString() ?: doc["id"]?.toString() ?: ""
+                        val content = doc["content"]?.toString() ?: ""
 
-                    // Extract metadata (Spring AI stores it as a nested object)
-                    val metadata = doc["metadata"] as? Map<*, *>
-                    val title = metadata?.get("title")?.toString() ?: "Untitled"
-                    val path = metadata?.get("path")?.toString() ?: ""
-                    val spaceKey = metadata?.get("spaceKey")?.toString() ?: ""
-                    val pageId = metadata?.get("id")?.toString() ?: doc["id"]?.toString() ?: ""
-                    val content = doc["content"]?.toString() ?: ""
-
-                    append("${index + 1}. $title\n")
-                    if (path.isNotBlank()) {
-                        append("   Path: $path\n")
+                        append("${index + 1}. $title\n")
+                        if (path.isNotBlank()) {
+                            append("   Path: $path\n")
+                        }
+                        if (spaceKey.isNotBlank() && pageId.isNotBlank()) {
+                            append("   Page ID: $pageId\n")
+                            append("   Space: $spaceKey\n")
+                        }
+                        append("   Content Preview: ${content.take(200)}")
+                        if (content.length > 200) append("...")
+                        append("\n\n")
                     }
-                    if (spaceKey.isNotBlank() && pageId.isNotBlank()) {
-                        append("   Page ID: $pageId\n")
-                        append("   Space: $spaceKey\n")
-                    }
-                    append("   Content Preview: ${content.take(200)}")
-                    if (content.length > 200) append("...")
-                    append("\n\n")
                 }
             }
+
+            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
         } catch (e: Exception) {
             log.error(e) { "Error searching : ${e.message}" }
-            "Error searching documents: ${e.message}"
+            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred during the document search.", "answer" to "Error searching documents: ${e.message}"))
         }
     }
 }

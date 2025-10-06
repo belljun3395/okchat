@@ -22,6 +22,10 @@ class GetPagesBySpaceIdConfluenceTool(
                 {
                   "type": "object",
                   "properties": {
+                    "thought": {
+                      "type": "string",
+                      "description": "The reasoning for using this tool in this specific context."
+                    },
                     "spaceId": {
                       "type": "string",
                       "description": "The Confluence space ID"
@@ -32,7 +36,7 @@ class GetPagesBySpaceIdConfluenceTool(
                       "default": 20
                     }
                   },
-                  "required": ["spaceId"]
+                  "required": ["thought", "spaceId"]
                 }
                 """.trimIndent()
             )
@@ -42,6 +46,7 @@ class GetPagesBySpaceIdConfluenceTool(
     override fun call(toolInput: String): String {
         return try {
             val input = objectMapper.readValue(toolInput, Map::class.java)
+            val thought = input["thought"] as? String ?: "No thought provided."
             val spaceId = input["spaceId"] as? String
                 ?: return "Invalid input: spaceId parameter is required"
             val limit = (input["limit"] as? Number)?.toInt() ?: 20
@@ -49,7 +54,7 @@ class GetPagesBySpaceIdConfluenceTool(
             val allPages = contentCollector.collectAllContent(spaceId)
             val limitedPages = allPages.take(limit)
 
-            if (limitedPages.isEmpty()) {
+            val answer = if (limitedPages.isEmpty()) {
                 "No pages found in space with ID: $spaceId"
             } else {
                 buildString {
@@ -63,8 +68,10 @@ class GetPagesBySpaceIdConfluenceTool(
                     }
                 }
             }
+
+            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
         } catch (e: Exception) {
-            "Error retrieving pages: ${e.message}"
+            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred while retrieving pages from the space.", "answer" to "Error retrieving pages: ${e.message}"))
         }
     }
 }

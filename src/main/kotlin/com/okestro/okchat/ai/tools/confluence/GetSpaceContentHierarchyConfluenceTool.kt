@@ -23,6 +23,10 @@ class GetSpaceContentHierarchyConfluenceTool(
                 {
                   "type": "object",
                   "properties": {
+                    "thought": {
+                      "type": "string",
+                      "description": "The reasoning for using this tool in this specific context."
+                    },
                     "spaceId": {
                       "type": "string",
                       "description": "The Confluence space ID"
@@ -33,7 +37,7 @@ class GetSpaceContentHierarchyConfluenceTool(
                       "default": 3
                     }
                   },
-                  "required": ["spaceId"]
+                  "required": ["thought", "spaceId"]
                 }
                 """.trimIndent()
             )
@@ -43,13 +47,14 @@ class GetSpaceContentHierarchyConfluenceTool(
     override fun call(toolInput: String): String {
         return try {
             val input = objectMapper.readValue(toolInput, Map::class.java)
+            val thought = input["thought"] as? String ?: "No thought provided."
             val spaceId = input["spaceId"] as? String
                 ?: return "Invalid input: spaceId parameter is required"
             val maxDepth = (input["maxDepth"] as? Number)?.toInt() ?: 3
 
             val hierarchy = confluenceService.getSpaceContentHierarchy(spaceId)
 
-            buildString {
+            val answer = buildString {
                 append("Content Hierarchy for Space $spaceId:\n")
                 append("Total Items: ${hierarchy.getTotalCount()} ")
                 append("(Folders: ${hierarchy.getAllFolders().size}, Pages: ${hierarchy.getAllPages().size})\n")
@@ -59,8 +64,10 @@ class GetSpaceContentHierarchyConfluenceTool(
                     appendNodeTree(node, "", true, 0, maxDepth)
                 }
             }
+
+            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
         } catch (e: Exception) {
-            "Error retrieving space hierarchy: ${e.message}"
+            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred while retrieving the space hierarchy.", "answer" to "Error retrieving space hierarchy: ${e.message}"))
         }
     }
 

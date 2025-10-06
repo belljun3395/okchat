@@ -22,12 +22,16 @@ class GetSpaceByKeyConfluenceTool(
                 {
                   "type": "object",
                   "properties": {
+                    "thought": {
+                      "type": "string",
+                      "description": "The reasoning for using this tool in this specific context."
+                    },
                     "spaceKey": {
                       "type": "string",
                       "description": "The Confluence space key (e.g., 'CBSPPP2411')"
                     }
                   },
-                  "required": ["spaceKey"]
+                  "required": ["thought", "spaceKey"]
                 }
                 """.trimIndent()
             )
@@ -37,15 +41,18 @@ class GetSpaceByKeyConfluenceTool(
     override fun call(toolInput: String): String {
         return try {
             val input = objectMapper.readValue(toolInput, Map::class.java)
+            val thought = input["thought"] as? String ?: "No thought provided."
             val spaceKey = input["spaceKey"] as? String
                 ?: return "Invalid input: spaceKey parameter is required"
 
             val spaceId = confluenceService.getSpaceIdByKey(spaceKey)
-            "Successfully found space with key '$spaceKey'. Space ID: $spaceId"
+            val answer = "Successfully found space with key '$spaceKey'. Space ID: $spaceId"
+
+            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
         } catch (e: IllegalArgumentException) {
-            "Error: ${e.message}"
+            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred: the space key was not found.", "answer" to "Error: ${e.message}"))
         } catch (e: Exception) {
-            "Error retrieving space: ${e.message}"
+            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred while retrieving the space.", "answer" to "Error retrieving space: ${e.message}"))
         }
     }
 }

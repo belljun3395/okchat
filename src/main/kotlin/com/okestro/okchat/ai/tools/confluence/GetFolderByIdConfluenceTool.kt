@@ -22,12 +22,16 @@ class GetFolderByIdConfluenceTool(
                 {
                   "type": "object",
                   "properties": {
+                    "thought": {
+                      "type": "string",
+                      "description": "The reasoning for using this tool in this specific context."
+                    },
                     "folderId": {
                       "type": "string",
                       "description": "The Confluence folder ID"
                     }
                   },
-                  "required": ["folderId"]
+                  "required": ["thought", "folderId"]
                 }
                 """.trimIndent()
             )
@@ -37,11 +41,12 @@ class GetFolderByIdConfluenceTool(
     override fun call(toolInput: String): String {
         return try {
             val input = objectMapper.readValue(toolInput, Map::class.java)
+            val thought = input["thought"] as? String ?: "No thought provided."
             val folderId = input["folderId"] as? String
                 ?: return "Invalid input: folderId parameter is required"
 
             val folder = confluenceClient.getFolderById(folderId)
-            buildString {
+            val answer = buildString {
                 append("Folder Information:\n")
                 append("- Title: ${folder.title}\n")
                 append("- ID: ${folder.id}\n")
@@ -51,8 +56,10 @@ class GetFolderByIdConfluenceTool(
                 }
                 append("- Version: ${folder.version?.number ?: "N/A"}\n")
             }
+
+            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
         } catch (e: Exception) {
-            "Error retrieving folder: ${e.message}"
+            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred while retrieving the folder.", "answer" to "Error retrieving folder: ${e.message}"))
         }
     }
 }

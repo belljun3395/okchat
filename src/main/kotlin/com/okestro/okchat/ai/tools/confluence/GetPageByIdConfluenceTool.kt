@@ -22,12 +22,16 @@ class GetPageByIdConfluenceTool(
                 {
                   "type": "object",
                   "properties": {
+                    "thought": {
+                      "type": "string",
+                      "description": "The reasoning for using this tool in this specific context."
+                    },
                     "pageId": {
                       "type": "string",
                       "description": "The Confluence page ID"
                     }
                   },
-                  "required": ["pageId"]
+                  "required": ["thought", "pageId"]
                 }
                 """.trimIndent()
             )
@@ -37,12 +41,13 @@ class GetPageByIdConfluenceTool(
     override fun call(toolInput: String): String {
         return try {
             val input = objectMapper.readValue(toolInput, Map::class.java)
+            val thought = input["thought"] as? String ?: "No thought provided."
             val pageId = input["pageId"] as? String
                 ?: return "Invalid input: pageId parameter is required"
 
             val page = confluenceClient.getPageById(pageId)
 
-            buildString {
+            val answer = buildString {
                 append("=== Page Information ===\n\n")
                 append("Title: ${page.title}\n")
                 append("ID: ${page.id}\n")
@@ -75,8 +80,10 @@ class GetPageByIdConfluenceTool(
                     append("This page has no content.")
                 }
             }
+
+            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
         } catch (e: Exception) {
-            "Error retrieving page: ${e.message}"
+            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred while retrieving the page.", "answer" to "Error retrieving page: ${e.message}"))
         }
     }
 }

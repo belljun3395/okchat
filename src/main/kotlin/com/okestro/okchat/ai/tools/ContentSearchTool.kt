@@ -33,6 +33,10 @@ class ContentSearchTool(
                 {
                   "type": "object",
                   "properties": {
+                    "thought": {
+                      "type": "string",
+                      "description": "The reasoning for using this tool in this specific context."
+                    },
                     "query": {
                       "type": "string",
                       "description": "Content query (question or description of what you're looking for)"
@@ -43,7 +47,7 @@ class ContentSearchTool(
                       "default": 10
                     }
                   },
-                  "required": ["query"]
+                  "required": ["thought", "query"]
                 }
                 """.trimIndent()
             )
@@ -53,6 +57,7 @@ class ContentSearchTool(
     override fun call(toolInput: String): String {
         return try {
             val input = objectMapper.readValue(toolInput, Map::class.java)
+            val thought = input["thought"] as? String ?: "No thought provided."
             val query = input["query"] as? String
                 ?: return "Invalid input: query parameter is required"
             val topK = ((input["topK"] as? Number)?.toInt() ?: 10).coerceIn(1, 50)
@@ -63,30 +68,32 @@ class ContentSearchTool(
                 contentSearchStrategy.search(query, topK)
             }
 
-            if (results.isEmpty()) {
-                return "No documents found with content matching: '$query'"
-            }
+            val answer = if (results.isEmpty()) {
+                "No documents found with content matching: '$query'"
+            } else {
+                buildString {
+                    append("Found ${results.size} document(s) by content search:\n\n")
 
-            buildString {
-                append("Found ${results.size} document(s) by content search:\n\n")
-
-                results.take(topK).forEachIndexed { index, result ->
-                    append("${index + 1}. ${result.title}\n")
-                    append("   Score: ${"%.4f".format(result.score.value)}\n")
-                    if (result.path.isNotBlank()) {
-                        append("   Path: ${result.path}\n")
+                    results.take(topK).forEachIndexed { index, result ->
+                        append("${index + 1}. ${result.title}\n")
+                        append("   Score: ${"%.4f".format(result.score.value)}\n")
+                        if (result.path.isNotBlank()) {
+                            append("   Path: ${result.path}\n")
+                        }
+                        if (result.spaceKey.isNotBlank()) {
+                            append("   Space: ${result.spaceKey}\n")
+                        }
+                        append("   Content: ${result.content.take(200)}")
+                        if (result.content.length > 200) append("...")
+                        append("\n\n")
                     }
-                    if (result.spaceKey.isNotBlank()) {
-                        append("   Space: ${result.spaceKey}\n")
-                    }
-                    append("   Content: ${result.content.take(200)}")
-                    if (result.content.length > 200) append("...")
-                    append("\n\n")
                 }
             }
+
+            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
         } catch (e: Exception) {
             log.error(e) { "Error in content search: ${e.message}" }
-            "Error performing content search: ${e.message}"
+            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred during the content search.", "answer" to "Error performing content search: ${e.message}"))
         }
     }
 }

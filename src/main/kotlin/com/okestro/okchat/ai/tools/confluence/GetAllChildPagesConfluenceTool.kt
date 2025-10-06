@@ -75,7 +75,7 @@ class GetAllChildPagesConfluenceTool(
                 ?: return "Invalid input: pageId parameter is required"
             val maxDepth = ((input["maxDepth"] as? Number)?.toInt() ?: 10).coerceIn(1, 20)
 
-            log.info { "Getting all child pages for page ID: $pageId (maxDepth: $maxDepth)" }
+            log.info { "[ConfluenceTool] Getting all child pages: page_id=$pageId, max_depth=$maxDepth" }
 
             // Get parent page info first
             val parentPage = confluenceClient.getPageById(pageId)
@@ -85,7 +85,7 @@ class GetAllChildPagesConfluenceTool(
             allPages.add(parentPage)
             collectChildrenRecursively(pageId, allPages, 0, maxDepth)
 
-            log.info { "Found ${allPages.size} pages total (including parent)" }
+            log.info { "[ConfluenceTool] Found pages: total_count=${allPages.size}, including_parent=true" }
 
             // Build hierarchy map for depth calculation
             val pageMap = allPages.associateBy { it.id }
@@ -106,35 +106,35 @@ class GetAllChildPagesConfluenceTool(
             allPages.forEach { calculateDepth(it.id) }
 
             val answer = buildString {
-                append("=== 📂 ${parentPage.title} - 전체 계층 구조 및 내용 ===\n\n")
-                append("⚠️ 중요: 이 결과는 모든 하위 페이지를 재귀적으로 조회한 것입니다.\n")
-                append("총 ${allPages.size}개의 페이지(최상위 페이지 포함, 모든 깊이의 하위 페이지 포함)\n\n")
+                append("=== ${parentPage.title} - Complete Hierarchy and Content ===\n\n")
+                append("IMPORTANT: This result includes all child pages retrieved recursively.\n")
+                append("Total ${allPages.size} pages (including top-level page, all depths of child pages)\n\n")
 
-                // 계층별 페이지 수 통계
+                // Pages count by depth statistics
                 val depthStats = depthMap.values.groupingBy { it }.eachCount()
-                append("📊 깊이별 페이지 수:\n")
+                append("Pages by depth level:\n")
                 depthStats.toSortedMap().forEach { (depth, count) ->
-                    append("  - Level $depth: ${count}개\n")
+                    append("  - Level $depth: $count pages\n")
                 }
-                append("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
+                append("\n========================================\n\n")
 
                 allPages.sortedBy { depthMap[it.id] ?: 0 }.forEachIndexed { index, page ->
                     val depth = depthMap[page.id] ?: 0
                     val indent = "  ".repeat(depth)
 
                     append("## ${index + 1}. ${indent}${"└─ ".repeat(minOf(depth, 1))}${page.title}\n")
-                    append("$indent- **페이지 ID**: ${page.id}\n")
-                    append("$indent- **계층 깊이**: Level $depth\n")
+                    append("$indent- **Page ID**: ${page.id}\n")
+                    append("$indent- **Depth Level**: Level $depth\n")
                     if (page.parentId != null) {
                         val parentTitle = pageMap[page.parentId]?.title ?: "Unknown"
-                        append("$indent- **부모 페이지**: $parentTitle (ID: ${page.parentId})\n")
+                        append("$indent- **Parent Page**: $parentTitle (ID: ${page.parentId})\n")
                     }
-                    append("$indent- **상태**: ${page.status ?: "N/A"}\n")
+                    append("$indent- **Status**: ${page.status ?: "N/A"}\n")
                     if (page.version != null) {
-                        append("$indent- **버전**: ${page.version.number}\n")
+                        append("$indent- **Version**: ${page.version.number}\n")
                     }
 
-                    append("\n$indent### 📄 페이지 내용:\n")
+                    append("\n$indent### Page Content:\n")
                     val content = page.body?.storage?.value
                     if (content != null) {
                         val cleanContent = stripHtml(content)
@@ -144,22 +144,22 @@ class GetAllChildPagesConfluenceTool(
                                 append("${indent}$line\n")
                             }
                             if (cleanContent.length > 3000) {
-                                append("\n$indent... (내용이 길어 3000자로 제한됨)\n")
+                                append("\n$indent... (Content truncated to 3000 characters)\n")
                             }
                         } else {
-                            append("$indent(내용 없음)\n")
+                            append("$indent(No content)\n")
                         }
                     } else {
-                        append("$indent(내용 없음)\n")
+                        append("$indent(No content)\n")
                     }
                     append("\n")
-                    append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
+                    append("========================================\n\n")
                 }
 
-                append("\n✅ 총 ${allPages.size}개의 페이지 내용을 모두 확인했습니다.\n")
-                append("⚠️ 이것은 단순한 목록이 아닙니다. 위의 모든 페이지의 실제 내용이 포함되어 있습니다.\n")
-                append("각 페이지의 '페이지 내용' 섹션을 반드시 읽고 분석하여 전체적인 작업 상황과 현황을 종합적으로 정리해주세요.\n")
-                append("단순히 페이지 제목만 나열하지 말고, 각 페이지에서 다루는 주요 내용, 완료된 작업, 진행 중인 작업 등을 추출하여 답변하세요.")
+                append("\nVerified all ${allPages.size} pages content.\n")
+                append("IMPORTANT: This is not just a simple list. The actual content of all pages above is included.\n")
+                append("Please be sure to read and analyze the 'Page Content' section of each page to comprehensively summarize the overall work status and current situation.\n")
+                append("Don't just list page titles, but extract and answer the main content covered on each page, completed tasks, ongoing tasks, etc.")
             }
 
             objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
@@ -176,12 +176,12 @@ class GetAllChildPagesConfluenceTool(
         maxDepth: Int
     ) {
         if (currentDepth >= maxDepth) {
-            log.warn { "⚠️ Reached max depth $maxDepth for page $pageId" }
+            log.warn { "[ConfluenceTool] Reached max depth: depth=$maxDepth, page_id=$pageId" }
             return
         }
 
         try {
-            log.debug { "📂 Collecting children at depth $currentDepth for page $pageId" }
+            log.debug { "[ConfluenceTool] Collecting children: depth=$currentDepth, page_id=$pageId" }
             var cursor: String? = null
             var totalChildren = 0
 
@@ -197,16 +197,16 @@ class GetAllChildPagesConfluenceTool(
                 // Recursively get children of each child - THIS IS KEY!
                 // Each child page might have its own children, so we need to check all of them
                 response.results.forEach { childPage ->
-                    log.debug { "  🔄 Recursively checking children of: ${childPage.title} (ID: ${childPage.id})" }
+                    log.debug { "[ConfluenceTool] Recursively checking children: title='${childPage.title}', id=${childPage.id}" }
                     collectChildrenRecursively(childPage.id, allPages, currentDepth + 1, maxDepth)
                 }
 
                 cursor = response._links?.next?.substringAfter("cursor=")?.substringBefore("&")
             } while (cursor != null)
 
-            log.debug { "✅ Completed depth $currentDepth for page $pageId: found $totalChildren direct children" }
+            log.debug { "[ConfluenceTool] Completed depth traversal: depth=$currentDepth, page_id=$pageId, children_count=$totalChildren" }
         } catch (e: Exception) {
-            log.warn(e) { "❌ Failed to get children for page $pageId at depth $currentDepth: ${e.message}" }
+            log.warn(e) { "[ConfluenceTool] Failed to get children: page_id=$pageId, depth=$currentDepth, error=${e.message}" }
         }
     }
 

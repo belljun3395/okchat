@@ -17,21 +17,21 @@ class EmailChatService(
 ) {
 
     companion object {
-        private const val EMAIL_HEADER = """안녕하세요. 이 메일은 AI 시스템이 자동으로 생성한 답변입니다.
+        private const val EMAIL_HEADER = """Hello. This email is an automatically generated response from the AI system.
 
 """
 
         private const val EMAIL_FOOTER = """
 
 ===
-위 내용은 Confluence 문서를 기반으로 AI가 자동 생성한 답변입니다.
-추가 문의사항이 있으시면 언제든 연락 주시기 바랍니다."""
+The above content is an automatically generated response by AI based on Confluence documents.
+If you have any additional questions, please feel free to contact us anytime."""
     }
 
     /**
      * Process email question and generate email-optimized response
      *
-     * @param emailSubject The subject of the email (may be "(제목 없음)" if empty)
+     * @param emailSubject The subject of the email (may be "(No subject)" if empty)
      * @param emailContent The content of the email (already cleaned by AbstractEmailProvider)
      * @return Flux of response strings with email header and footer
      */
@@ -43,12 +43,12 @@ class EmailChatService(
         // Additional validation - should not happen due to upstream validation
         if (emailSubject.isBlank() && emailContent.isBlank()) {
             log.error { "Both subject and content are blank - this should not happen" }
-            return Flux.just("죄송합니다. 이메일 내용을 읽을 수 없어 답변을 생성할 수 없습니다.")
+            return Flux.just("Sorry. Cannot read email content and therefore cannot generate a response.")
         }
 
         // Build question - simple concatenation, let ChatService handle the rest
         val question = buildString {
-            if (emailSubject.isNotBlank() && emailSubject != "(제목 없음)") {
+            if (emailSubject.isNotBlank() && emailSubject != "(No subject)") {
                 append(emailSubject)
                 append(" ")
             }

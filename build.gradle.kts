@@ -56,6 +56,7 @@ dependencies {
 
     /** logger */
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.0")
+    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
 
     /** feign */
     implementation("io.github.openfeign:feign-core:13.5")

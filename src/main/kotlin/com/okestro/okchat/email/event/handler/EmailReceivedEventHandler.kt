@@ -75,23 +75,23 @@ class EmailReceivedEventHandler(
         val hasContent = message.content.isNotBlank()
 
         if (!hasSubject && !hasContent) {
-            logger.warn { "Email has no subject and no content, skipping auto-reply: from ${message.from}" }
+            logger.warn { "[EmailHandler] Email has no content: from=${message.from}, skip_reply=true" }
             // Send a polite error response
             val errorResponse = buildString {
-                appendLine("안녕하세요.")
+                appendLine("Hello.")
                 appendLine()
-                appendLine("귀하의 이메일을 받았으나, 제목과 내용이 비어있어 답변을 생성할 수 없습니다.")
-                appendLine("질문 내용을 포함하여 다시 보내주시면 감사하겠습니다.")
+                appendLine("We received your email, but both the subject and content are empty, so we cannot generate a response.")
+                appendLine("Please resend with your question content, and we'll be happy to help.")
                 appendLine()
-                appendLine("감사합니다.")
+                appendLine("Thank you.")
             }
             emailReplyService.sendReply(message, errorResponse, event.providerType)
-            logger.info { "Empty content error response sent to: ${message.from}" }
+            logger.info { "[EmailHandler] Empty content error response sent: to=${message.from}" }
             return
         }
 
         // Use subject as content if content is empty
-        val effectiveSubject = if (hasSubject) message.subject else "(제목 없음)"
+        val effectiveSubject = if (hasSubject) message.subject else "(No subject)"
         val effectiveContent = if (hasContent) message.content else message.subject
 
         logger.info { "Effective subject: $effectiveSubject, has content: $hasContent" }
@@ -114,7 +114,7 @@ class EmailReceivedEventHandler(
             // Build reply content
             val replyContent = emailReplyService.buildReplyContent(
                 answer = aiResponse.toString(),
-                originalContent = message.content.ifBlank { "(내용 없음)" }
+                originalContent = message.content.ifBlank { "(No content)" }
             )
 
             // Send reply email with provider type

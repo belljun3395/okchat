@@ -160,7 +160,7 @@ class EmailReplyService(
             appendLine(answer)
             appendLine()
             appendLine("===")
-            appendLine("원본 메시지:")
+            appendLine("Original message:")
             appendLine(truncatedOriginal)
         }
     }

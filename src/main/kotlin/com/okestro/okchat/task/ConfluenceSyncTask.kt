@@ -53,7 +53,7 @@ class ConfluenceSyncTask(
     private val log = KotlinLogging.logger {}
 
     override fun run(vararg args: String?) {
-        log.info { "========== Start Confluence Sync Task ==========" }
+        log.info { "[ConfluenceSync] Starting Confluence sync task" }
 
         try {
             // Parse command line arguments
@@ -71,9 +71,7 @@ class ConfluenceSyncTask(
                 log.info { "Content Hierarchy:\n${ContentHierarchyVisualizer.visualize(this)}" }
             }
 
-            log.info { "✓ Retrieved ${hierarchy.getTotalCount()} contents" }
-            log.info { "  - Folders: ${hierarchy.getAllFolders().size}" }
-            log.info { "  - Pages: ${hierarchy.getAllPages().size}" }
+            log.info { "[ConfluenceSync] Retrieved contents: total=${hierarchy.getTotalCount()}, folders=${hierarchy.getAllFolders().size}, pages=${hierarchy.getAllPages().size}" }
 
             // 2. Get existing document IDs for this space
             log.info { "2. Fetching existing documents for space: $spaceKey..." }
@@ -83,7 +81,7 @@ class ConfluenceSyncTask(
                 log.warn { "Failed to fetch existing documents (might be first sync): ${e.message}" }
                 emptySet()
             }
-            log.info { "✓ Found ${existingIds.size} existing documents" }
+            log.info { "[ConfluenceSync] Found existing documents: count=${existingIds.size}" }
 
             // 3. Convert to vector store documents (parallel processing)
             log.info { "3. Converting to vector store documents (parallel processing)..." }
@@ -91,7 +89,7 @@ class ConfluenceSyncTask(
                 convertToDocuments(hierarchy, spaceKey)
             }
             val currentIds = documents.map { it.id }.toSet()
-            log.info { "✓ Converted ${documents.size} documents" }
+            log.info { "[ConfluenceSync] Converted documents: count=${documents.size}" }
 
             // 4. Delete removed documents
             val deletedIds = existingIds - currentIds
@@ -101,7 +99,7 @@ class ConfluenceSyncTask(
                     deletedIds.forEach { id ->
                         vectorStore.delete(listOf(id))
                     }
-                    log.info { "✓ Deleted removed documents" }
+                    log.info { "[ConfluenceSync] Deleted removed documents: count=${deletedIds.size}" }
                 } catch (e: Exception) {
                     log.warn { "Failed to delete some documents: ${e.message}" }
                 }
@@ -150,9 +148,9 @@ class ConfluenceSyncTask(
 
                     if (actualAdded.toInt() == batch.size) {
                         successCount += batch.size
-                        log.info { "  [Batch $batchNum/${batches.size}] ✓ Successfully added ${batch.size} documents (Verified: $countBefore → $countAfter)" }
+                        log.info { "  [ConfluenceSync][Batch $batchNum/${batches.size}] Successfully added documents: batch_size=${batch.size}, count_before=$countBefore, count_after=$countAfter" }
                     } else {
-                        log.warn { "  [Batch $batchNum/${batches.size}] ⚠ Added ${batch.size} but only $actualAdded appeared in Typesense ($countBefore → $countAfter)" }
+                        log.warn { "  [ConfluenceSync][Batch $batchNum/${batches.size}] Document count mismatch: expected=${batch.size}, actual=$actualAdded, count_before=$countBefore, count_after=$countAfter" }
                         successCount += actualAdded.toInt()
                     }
 
@@ -170,15 +168,13 @@ class ConfluenceSyncTask(
             log.info { "  Final Typesense document count: $finalDocCount (increased by ${finalDocCount - initialDocCount})" }
 
             if ((finalDocCount - initialDocCount).toInt() != successCount) {
-                log.error { "  ⚠️ WARNING: Expected to add $successCount documents but Typesense count only increased by ${finalDocCount - initialDocCount}" }
+                log.error { "  [ConfluenceSync] Document count mismatch: expected_added=$successCount, actual_increase=${finalDocCount - initialDocCount}" }
             }
 
-            log.info { "✓ Stored/Updated $successCount documents (${currentIds.size - existingIds.size} new, ${existingIds.intersect(currentIds).size} updated)" }
+            log.info { "[ConfluenceSync] Stored/updated documents: total=$successCount, new=${currentIds.size - existingIds.size}, updated=${existingIds.intersect(currentIds).size}" }
 
             // 5. Summary
-            log.info { "========== Sync Completed ==========" }
-            log.info { "Space: $spaceKey" }
-            log.info { "Processed pages: ${documents.size}" }
+            log.info { "[ConfluenceSync] Sync completed: space_key=$spaceKey, processed_pages=${documents.size}" }
         } catch (e: Exception) {
             log.error(e) { "Error occurred during Confluence sync: ${e.message}" }
             throw e // Rethrow to mark task as failed
@@ -208,19 +204,18 @@ class ConfluenceSyncTask(
                     val pageNum = index + 1
                     val path = getPagePath(node, hierarchy)
 
-                    log.info { "[$pageNum/$totalPages] Processing: '${node.title}' (ID: ${node.id})" }
-                    log.info { "  └─ Path: $path" }
+                    log.info { "[ConfluenceSync][$pageNum/$totalPages] Processing page: title='${node.title}', id=${node.id}, path=$path" }
 
                     // Extract keywords FIRST (before building content)
                     // Use semaphore to limit concurrent API calls
-                    log.info { "  └─ Extracting keywords..." }
+                    log.debug { "[ConfluenceSync] Extracting keywords for page: id=${node.id}" }
                     val keywords = apiCallSemaphore.withPermit {
                         try {
                             // Build preliminary content for keyword extraction
                             val preliminaryContent = node.body?.let { stripHtml(it) } ?: ""
                             keywordExtractionService.extractKeywordsFromContentAndTitle(preliminaryContent, node.title)
                         } catch (e: Exception) {
-                            log.warn { "  └─ Failed to extract keywords for '${node.title}': ${e.message}" }
+                            log.warn { "[ConfluenceSync] Failed to extract keywords: page_title='${node.title}', error=${e.message}" }
                             emptyList()
                         }
                     }
@@ -233,12 +228,12 @@ class ConfluenceSyncTask(
                     val allKeywords = (keywords + pathKeywords).distinct()
 
                     if (keywords.isNotEmpty()) {
-                        log.info { "  └─ Content keywords: ${keywords.joinToString(", ")}" }
+                        log.debug { "[ConfluenceSync] Content keywords: count=${keywords.size}, keywords=${keywords.joinToString(", ")}" }
                     } else {
-                        log.info { "  └─ No content keywords extracted" }
+                        log.debug { "[ConfluenceSync] No content keywords extracted for page: id=${node.id}" }
                     }
-                    log.info { "  └─ Path keywords: ${pathKeywords.joinToString(", ")}" }
-                    log.info { "  └─ Total keywords: ${allKeywords.size} (${keywords.size} content + ${pathKeywords.size} path)" }
+                    log.debug { "[ConfluenceSync] Path keywords: count=${pathKeywords.size}, keywords=${pathKeywords.joinToString(", ")}" }
+                    log.info { "[ConfluenceSync] Total keywords extracted: total=${allKeywords.size}, content=${keywords.size}, path=${pathKeywords.size}" }
 
                     // Build page content WITH keywords included for search
                     val pageContent = node.body?.let { stripHtml(it) } ?: ""
@@ -259,21 +254,21 @@ class ConfluenceSyncTask(
                     )
 
                     // Split document into chunks if too large
-                    log.info { "  └─ Content length: $contentLength chars, splitting if needed..." }
+                    log.debug { "[ConfluenceSync] Content length: chars=$contentLength, page_id=${node.id}" }
                     val chunks = try {
                         chunkingStrategy.chunk(baseDocument)
                     } catch (e: Exception) {
-                        log.warn { "  └─ Failed to chunk '${node.title}': ${e.message}. Using original document." }
+                        log.warn { "[ConfluenceSync] Failed to chunk document: page_title='${node.title}', error=${e.message}, using_original=true" }
                         listOf(baseDocument)
                     }
 
                     // If single chunk, use original page ID
                     // If multiple chunks, append chunk index to ID
                     val resultDocuments = if (chunks.size == 1) {
-                        log.info { "  └─ ✓ Document created (single chunk)" }
+                        log.debug { "[ConfluenceSync] Document created as single chunk: page_id=${node.id}" }
                         chunks
                     } else {
-                        log.info { "  └─ ✓ Document split into ${chunks.size} chunks" }
+                        log.info { "[ConfluenceSync] Document split into chunks: page_id=${node.id}, chunk_count=${chunks.size}" }
                         chunks.mapIndexed { chunkIndex, chunk ->
                             Document(
                                 "${node.id}_chunk_$chunkIndex",
@@ -288,8 +283,7 @@ class ConfluenceSyncTask(
                         }
                     }
 
-                    log.info { "  └─ Progress: $pageNum/$totalPages (${String.format("%.1f", (pageNum.toDouble() / totalPages) * 100)}%)" }
-                    log.info { "" } // Empty line for readability
+                    log.info { "[ConfluenceSync] Progress: current=$pageNum, total=$totalPages, percent=${String.format("%.1f", (pageNum.toDouble() / totalPages) * 100)}%" }
 
                     resultDocuments
                 }

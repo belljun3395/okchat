@@ -96,11 +96,11 @@ class ContextBuildingStep(
     }
 
     private fun StringBuilder.appendHeader(question: String, totalCount: Int, highCount: Int) {
-        append("=== 🎯 검색 결과 분석 ===\n")
-        append("질문: $question\n")
-        append("총 ${totalCount}개 문서 발견")
+        append("=== Search Results Analysis ===\n")
+        append("Question: $question\n")
+        append("Total $totalCount documents found")
         if (highCount > 0) {
-            append(" (고관련성: ${highCount}개)")
+            append(" (High relevance: ${highCount})")
         }
         append("\n\n")
     }
@@ -108,11 +108,11 @@ class ContextBuildingStep(
     private fun StringBuilder.appendHighRelevanceDocuments(documents: List<SearchResult>) {
         if (documents.isEmpty()) return
 
-        append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-        append("🎯 고관련성 문서 (${documents.size}개)\n")
-        append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-        append("⚠️ 다음 문서들이 질문과 가장 관련이 높습니다.\n")
-        append("⚠️ **중요: 아래 ${documents.size}개 문서를 모두 분석하여 답변하세요!**\n\n")
+        append("========================================\n")
+        append("High Relevance Documents (${documents.size})\n")
+        append("========================================\n")
+        append("IMPORTANT: These documents are most relevant to the question.\n")
+        append("IMPORTANT: **Analyze all ${documents.size} documents below to provide your answer!**\n\n")
 
         documents.forEachIndexed { index, result ->
             appendDocumentInfo(index + 1, result, detailed = true)
@@ -123,7 +123,7 @@ class ContextBuildingStep(
     private fun StringBuilder.appendMediumRelevanceDocuments(documents: List<SearchResult>) {
         if (documents.isEmpty()) return
 
-        append("📌 중관련성 문서 (${documents.size}개):\n\n")
+        append("Medium Relevance Documents (${documents.size}):\n\n")
         documents.forEachIndexed { index, result ->
             appendDocumentInfo(index + 1, result, detailed = true)
         }
@@ -133,12 +133,12 @@ class ContextBuildingStep(
     private fun StringBuilder.appendOtherResults(documents: List<SearchResult>) {
         if (documents.isEmpty()) return
 
-        append("📄 기타 관련 문서 (${documents.size}개):\n")
+        append("Other Related Documents (${documents.size}):\n")
         documents.take(MAX_OTHER_RESULTS_PREVIEW).forEach { result ->
-            append("- ${result.title} (점수: ${"%.2f".format(result.score.value)})\n")
+            append("- ${result.title} (score: ${"%.2f".format(result.score.value)})\n")
         }
         if (documents.size > MAX_OTHER_RESULTS_PREVIEW) {
-            append("... 외 ${documents.size - MAX_OTHER_RESULTS_PREVIEW}개\n")
+            append("... and ${documents.size - MAX_OTHER_RESULTS_PREVIEW} more\n")
         }
         append("\n")
     }
@@ -147,18 +147,18 @@ class ContextBuildingStep(
         val pageUrl = buildConfluencePageUrl(result.spaceKey, result.id)
 
         append("\n")
-        append("═══════════════════════════════════\n")
-        append("📄 문서 $index: ${result.title}\n")
-        append("═══════════════════════════════════\n")
-        append("   링크: $pageUrl\n")
-        append("   경로: ${result.path}\n")
-        append("   관련도: ${"%.2f".format(result.score.value)}")
+        append("===================================\n")
+        append("Document $index: ${result.title}\n")
+        append("===================================\n")
+        append("   Link: $pageUrl\n")
+        append("   Path: ${result.path}\n")
+        append("   Relevance: ${"%.2f".format(result.score.value)}")
 
         extractAndAppendDate(result.title)
         append("\n")
 
         if (result.keywords.isNotBlank()) {
-            append("   키워드: ${result.keywords}\n")
+            append("   Keywords: ${result.keywords}\n")
         }
 
         if (detailed) {
@@ -175,11 +175,11 @@ class ContextBuildingStep(
         val year = "20${dateStr.substring(0, 2)}"
         val month = dateStr.substring(2, 4)
         val day = dateStr.substring(4, 6)
-        append(" | 날짜: $year-$month-$day")
+        append(" | Date: $year-$month-$day")
     }
 
     private fun StringBuilder.appendContent(content: String) {
-        append("   내용:\n")
+        append("   Content:\n")
         append("   ${content.replace("\n", "\n   ")}\n")
     }
 

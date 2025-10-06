@@ -18,7 +18,7 @@ class OAuth2AuthController(
     private val oauth2TokenService: OAuth2TokenService
 ) {
     /**
-     * OAuth2 인증 시작
+     * Start OAuth2 authentication
      * @see <a href="http://localhost:8080/api/email/oauth2/authenticate?username=your@email.com"> Start Authentication </a>
      */
     @GetMapping("/api/email/oauth2/authenticate")
@@ -35,7 +35,7 @@ class OAuth2AuthController(
     }
 
     /**
-     * OAuth2 콜백
+     * OAuth2 callback endpoint
      * GET /oauth2/callback?code=xxx
      */
     @GetMapping("/callback", "/oauth2/callback")
@@ -71,7 +71,7 @@ class OAuth2AuthController(
     }
 
     /**
-     * 저장된 토큰 확인
+     * Check stored token
      * @see <a href="http://localhost:8080/api/email/oauth2/token?username=your@email.com> Check Token </a>
      */
     @GetMapping("/api/email/oauth2/token")
@@ -97,7 +97,7 @@ class OAuth2AuthController(
             )
 
     /**
-     * 토큰 삭제
+     * Delete token
      * @see <a href="http://localhost:8080 /api/email/oauth2/token?username=your@email.com"> Clear Token </a>
      */
     @GetMapping("/api/email/oauth2/clear")

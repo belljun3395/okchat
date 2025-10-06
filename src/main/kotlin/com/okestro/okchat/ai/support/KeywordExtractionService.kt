@@ -28,38 +28,38 @@ class KeywordExtractionService(
             And Order them from most important to least important.
 
             EXTRACT (include both Korean and English):
-            ✅ Core subjects and topics (the 'what', not the 'how')
-            ✅ Technical terms and technologies
-            ✅ Entities (people, teams, products, projects)
-            ✅ For compound terms: full term + meaningful components
+            - Core subjects and topics (the 'what', not the 'how')
+            - Technical terms and technologies
+            - Entities (people, teams, products, projects)
+            - For compound terms: full term + meaningful components
                Example: "주간회의록" → "주간회의록, 회의록, 회의" (broader search)
                Example: "개발파트" → "개발파트, 개발" (broader search)
 
             AVOID (these are handled separately or add noise):
-            ❌ Common action verbs or requests (e.g., 알려줘, 찾아줘, 검색해, 요약해, search, find, summarize)
-            ❌ Dates and numbers (handled by DateExtractor)
-            ❌ Stop words (이, 그, 저, the, a, an, is, are)
-            ❌ Morphological variations (개발/개발자/개발팀 - pick one)
-            ❌ Overly generic terms alone ("문서", "정보", "내용")
-            ❌ Ambiguous short forms (<2 characters)
+            - Common action verbs or requests (e.g., 알려줘, 찾아줘, 검색해, 요약해, search, find, summarize)
+            - Dates and numbers (handled by DateExtractor)
+            - Stop words (이, 그, 저, the, a, an, is, are)
+            - Morphological variations (개발/개발자/개발팀 - pick one)
+            - Overly generic terms alone ("문서", "정보", "내용")
+            - Ambiguous short forms (<2 characters)
 
             FORMAT: Comma-separated list only, no explanation
             TARGET: 7-10 keywords for broader coverage (max 12)
 
             EXAMPLES:
-            ✅ Input: "백엔드 개발 레포 정보"
-               Output: "백엔드, backend, 개발, development, 레포, repository"
-               (6 keywords - good balance, skipped generic "정보")
+            - Input: "백엔드 개발 레포 정보"
+              Output: "백엔드, backend, 개발, development, 레포, repository"
+              (6 keywords - good balance, skipped generic "정보")
 
-            ✅ Input: "PPP 개발 회의록 문의"
-               Output: "PPP, 개발, development, 회의록, 회의, meeting minutes"
-               (6 keywords - '문의' is an action/request, so it's excluded)
+            - Input: "PPP 개발 회의록 문의"
+              Output: "PPP, 개발, development, 회의록, 회의, meeting minutes"
+              (6 keywords - '문의' is an action/request, so it's excluded)
 
-            ❌ Input: "2025년 9월 주간회의록 요약"
-               Bad: "2025, 2025년, 9월, September, 09, 250, 주간, 회의록, 회의, 주간회의, meeting, weekly, minutes"
-               (13 keywords - too many, includes dates, over-variations)
-               Good: "주간회의록, 회의록, 회의, weekly meeting, meeting minutes, meeting"
-               (6 keywords - '요약' is an action, excluded. Dates handled separately)
+            - Input: "2025년 9월 주간회의록 요약"
+              Bad: "2025, 2025년, 9월, September, 09, 250, 주간, 회의록, 회의, 주간회의, meeting, weekly, minutes"
+              (13 keywords - too many, includes dates, over-variations)
+              Good: "주간회의록, 회의록, 회의, weekly meeting, meeting minutes, meeting"
+              (6 keywords - '요약' is an action, excluded. Dates handled separately)
 
             User message: "$message"
 

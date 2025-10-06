@@ -157,7 +157,7 @@ object EmailContentCleaner {
     fun truncateForReply(content: String, maxLines: Int = 10): String {
         val lines = content.lines()
         return if (lines.size > maxLines) {
-            lines.take(maxLines).joinToString("\n") + "\n\n[... 원본 메시지 일부 생략 ...]"
+            lines.take(maxLines).joinToString("\n") + "\n\n[... Original message partially omitted ...]"
         } else {
             content
         }

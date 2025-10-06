@@ -14,7 +14,7 @@ object ContentHierarchyVisualizer {
      */
     fun visualize(hierarchy: ContentHierarchy): String {
         return buildString {
-            appendLine("📚 Content Hierarchy")
+            appendLine("Content Hierarchy")
             appendLine("=".repeat(80))
             appendLine()
 
@@ -52,7 +52,7 @@ object ContentHierarchyVisualizer {
         prefix: String,
         isLast: Boolean
     ) {
-        val icon = if (node.type == ContentType.FOLDER) "📁" else "📄"
+        val icon = if (node.type == ContentType.FOLDER) "[Folder]" else "[Page]"
         val connector = if (isLast) "└── " else "├── "
         val idInfo = " [ID: ${node.id}]"
         val childInfo = if (node.children.isNotEmpty()) " (${node.children.size})" else ""
@@ -68,7 +68,7 @@ object ContentHierarchyVisualizer {
 
     private fun StringBuilder.visualizeNodeMarkdown(node: ContentNode, depth: Int) {
         val indent = "  ".repeat(depth)
-        val icon = if (node.type == ContentType.FOLDER) "📁" else "📄"
+        val icon = if (node.type == ContentType.FOLDER) "[Folder]" else "[Page]"
         val childInfo = if (node.children.isNotEmpty()) " *(${node.children.size} items)*" else ""
 
         appendLine("$indent- $icon **${node.title}**$childInfo")
@@ -90,12 +90,12 @@ object ContentHierarchyVisualizer {
     }
 
     private fun StringBuilder.appendStats(stats: HierarchyStats) {
-        appendLine("📊 Statistics:")
-        appendLine("  • Total Nodes: ${stats.totalNodes}")
-        appendLine("  • Folders: ${stats.folderCount} 📁")
-        appendLine("  • Pages: ${stats.pageCount} 📄")
-        appendLine("  • Max Depth: ${stats.maxDepth}")
-        appendLine("  • Avg Children/Node: ${"%.1f".format(stats.avgChildrenPerNode)}")
+        appendLine("Statistics:")
+        appendLine("  - Total Nodes: ${stats.totalNodes}")
+        appendLine("  - Folders: ${stats.folderCount}")
+        appendLine("  - Pages: ${stats.pageCount}")
+        appendLine("  - Max Depth: ${stats.maxDepth}")
+        appendLine("  - Avg Children/Node: ${"%.1f".format(stats.avgChildrenPerNode)}")
     }
 
     private fun StringBuilder.appendSummary(stats: HierarchyStats) {

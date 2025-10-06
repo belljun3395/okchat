@@ -1,6 +1,6 @@
 package com.okestro.okchat.email.service
 
-import com.okestro.okchat.chat.service.ChatService
+import com.okestro.okchat.chat.service.DocumentBaseChatService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -13,7 +13,7 @@ private val log = KotlinLogging.logger {}
  */
 @Service
 class EmailChatService(
-    private val chatService: ChatService
+    private val documentBaseChatService: DocumentBaseChatService
 ) {
 
     companion object {
@@ -61,7 +61,7 @@ class EmailChatService(
         // Get response from ChatService and add email wrapper
         var headerSent = false
 
-        return chatService.chat(question, null)
+        return documentBaseChatService.chat(question, null)
             .map { chunk ->
                 if (!headerSent) {
                     headerSent = true

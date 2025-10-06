@@ -17,7 +17,7 @@ private val log = KotlinLogging.logger {}
  * Uses a pipeline-based architecture for extensibility
  */
 @Service
-class ChatService(
+class DocumentBaseChatService(
     private val chatClient: ChatClient,
     private val chatPipeline: ChatPipeline,
     private val toolCallbacks: List<ToolCallback>

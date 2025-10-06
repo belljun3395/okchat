@@ -1,7 +1,7 @@
 
 package com.okestro.okchat.chat.controller
 
-import com.okestro.okchat.chat.service.ChatService
+import com.okestro.okchat.chat.service.DocumentBaseChatService
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -12,12 +12,12 @@ import reactor.core.publisher.Flux
 @RestController
 @RequestMapping("/api/chat")
 class ChatController(
-    private val chatService: ChatService
+    private val documentBaseChatService: DocumentBaseChatService
 ) {
 
     @PostMapping(produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
     fun chat(@RequestBody chatRequest: ChatRequest): Flux<String> {
-        return chatService.chat(chatRequest.message, chatRequest.keywords)
+        return documentBaseChatService.chat(chatRequest.message, chatRequest.keywords)
     }
 }
 

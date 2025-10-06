@@ -9,9 +9,9 @@ fun ChatContext.copy(
     search: ChatContext.Search? = this.search
 ): ChatContext {
     return ChatContext(
-        input = this.input,
-        analysis = this.analysis,
-        search = this.search
+        input = input ?: this.input,
+        analysis = analysis ?: this.analysis,
+        search = search ?: this.search
     )
 }
 

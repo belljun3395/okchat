@@ -6,7 +6,9 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.reactor.mono
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.prompt.Prompt
+import org.springframework.ai.mcp.SyncMcpToolCallbackProvider
 import org.springframework.ai.tool.ToolCallback
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 
@@ -20,8 +22,19 @@ private val log = KotlinLogging.logger {}
 class DocumentBaseChatService(
     private val chatClient: ChatClient,
     private val documentChatPipeline: DocumentChatPipeline,
-    private val toolCallbacks: List<ToolCallback>
+    private val toolCallbacks: List<ToolCallback>,
+    @Autowired(required = false)
+    private val mcpToolCallbackProvider: SyncMcpToolCallbackProvider?
 ) {
+
+    private val allToolCallbacks: List<ToolCallback> by lazy {
+        val mcpTools = mcpToolCallbackProvider?.toolCallbacks?.toList() ?: emptyList()
+        log.info { "Loaded ${toolCallbacks.size} regular tools and ${mcpTools.size} MCP tools" }
+        mcpTools.map {
+            log.info { "MCP Tool: ${it.toolDefinition.name()}" }
+        }
+        toolCallbacks + mcpTools
+    }
 
     /**
      * Process user query and generate AI response
@@ -55,7 +68,7 @@ class DocumentBaseChatService(
         }
             .flatMapMany { prompt ->
                 chatClient.prompt(prompt)
-                    .toolCallbacks(toolCallbacks)
+                    .toolCallbacks(allToolCallbacks)
                     .stream()
                     .content()
                     .doOnComplete {

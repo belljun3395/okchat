@@ -64,6 +64,20 @@ spring:
             chat:
                 options:
                     model: gpt-4.1-mini
+        mcp:
+            client:
+                stdio:
+                    connections:
+                        sequential-thinking:
+                            command: npx
+                            args:
+                                - "-y"
+                                - "@modelcontextprotocol/server-sequential-thinking"
+                        memory:
+                            command: npx
+                            args:
+                                - "-y"
+                                - "@modelcontextprotocol/server-memory"
 
 confluence:
     base-url: ${CONFLUENCE_BASE_URL}

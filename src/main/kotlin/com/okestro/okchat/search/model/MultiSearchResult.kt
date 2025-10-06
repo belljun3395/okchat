@@ -7,7 +7,8 @@ package com.okestro.okchat.search.model
 data class MultiSearchResult(
     val keywordResults: List<SearchResult>,
     val titleResults: List<SearchResult>,
-    val contentResults: List<SearchResult>
+    val contentResults: List<SearchResult>,
+    val pathResults: List<SearchResult>
 ) {
     /**
      * Get all results combined (useful for displaying all search results)

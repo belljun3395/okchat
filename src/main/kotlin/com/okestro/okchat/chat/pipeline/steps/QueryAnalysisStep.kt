@@ -1,8 +1,11 @@
 package com.okestro.okchat.chat.pipeline.steps
 
+import com.okestro.okchat.ai.support.ContentExtractionService
 import com.okestro.okchat.ai.support.DateExtractor
 import com.okestro.okchat.ai.support.KeywordExtractionService
+import com.okestro.okchat.ai.support.LocationExtractionService
 import com.okestro.okchat.ai.support.QueryClassifier
+import com.okestro.okchat.ai.support.TitleExtractionService
 import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.chat.pipeline.FirstChatPipelineStep
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -19,7 +22,10 @@ private val log = KotlinLogging.logger {}
 @Component
 class QueryAnalysisStep(
     private val queryClassifier: QueryClassifier,
-    private val keywordExtractionService: KeywordExtractionService
+    private val keywordExtractionService: KeywordExtractionService,
+    private val contentExtractionService: ContentExtractionService,
+    private val locationExtractionService: LocationExtractionService,
+    private val titleExtractionService: TitleExtractionService
 ) : FirstChatPipelineStep {
 
     override suspend fun execute(context: ChatContext): ChatContext {
@@ -29,6 +35,15 @@ class QueryAnalysisStep(
         // Classify query type using AI
         val queryAnalysis = queryClassifier.classify(userMessage)
         log.info { "[${getStepName()}] Type: ${queryAnalysis.type}, Confidence: ${"%.2f".format(queryAnalysis.confidence)}" }
+
+        // Extract title using AI
+        val titles = titleExtractionService.extractTitleKeywords(userMessage)
+
+        // Extract content keywords using AI
+        val contents = contentExtractionService.extractContentKeywords(userMessage)
+
+        // Extract location using AI
+        val paths = locationExtractionService.extractLocationKeywords(userMessage)
 
         // Extract keywords using AI (if not provided)
         val providedKeywords = context.input.providedKeywords
@@ -58,6 +73,9 @@ class QueryAnalysisStep(
         return context.copy(
             analysis = ChatContext.Analysis(
                 queryAnalysis = queryAnalysis,
+                extractedTitles = titles,
+                extractedContents = contents,
+                extractedPaths = paths,
                 extractedKeywords = keywords,
                 dateKeywords = dateKeywords
             )

@@ -32,6 +32,9 @@ data class ChatContext(
      */
     data class Analysis(
         val queryAnalysis: QueryClassifier.QueryAnalysis,
+        val extractedTitles: List<String>,
+        val extractedContents: List<String>,
+        val extractedPaths: List<String>,
         val extractedKeywords: List<String>,
         val dateKeywords: List<String>
     ) {

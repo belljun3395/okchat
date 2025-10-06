@@ -130,7 +130,9 @@ search:
         content:
             query-by: "content,metadata.title,metadata.keywords"
             weights: "10,5,3"   # Heavy weight on content field, title and keywords as supporting context
-
+        path:
+            query-by: "metadata.path,metadata.title,content"
+            weights: "10,5,1"  # Heavy weight on path field
 rag:
     confluence:
         chunking:

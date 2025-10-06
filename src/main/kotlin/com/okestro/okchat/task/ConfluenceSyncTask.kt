@@ -218,7 +218,7 @@ class ConfluenceSyncTask(
                         try {
                             // Build preliminary content for keyword extraction
                             val preliminaryContent = node.body?.let { stripHtml(it) } ?: ""
-                            keywordExtractionService.extractKeywordsFromContent(preliminaryContent, node.title)
+                            keywordExtractionService.extractKeywordsFromContentAndTitle(preliminaryContent, node.title)
                         } catch (e: Exception) {
                             log.warn { "  └─ Failed to extract keywords for '${node.title}': ${e.message}" }
                             emptyList()

@@ -95,7 +95,7 @@ class KeywordExtractionService(
      * Extract keywords from document content for indexing
      * This method is optimized for document content rather than user queries
      */
-    suspend fun extractKeywordsFromContent(content: String, title: String? = null): List<String> {
+    suspend fun extractKeywordsFromContentAndTitle(content: String, title: String? = null): List<String> {
         val contentPrompt = """
             Extract important keywords from the following document content for search indexing.
 

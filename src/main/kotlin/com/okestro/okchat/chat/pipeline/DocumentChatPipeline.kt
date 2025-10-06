@@ -12,14 +12,14 @@ private val log = KotlinLogging.logger {}
  * This structure ensures key operations are always performed while allowing for flexible extension.
  */
 @Component
-class ChatPipeline(
+class DocumentChatPipeline(
     firstStep: FirstChatPipelineStep,
     lastStep: LastChatPipelineStep,
-    optionalSteps: List<OptionalChatPipelineStep> = emptyList()
+    documentChatPipelineSteps: List<DocumentChatPipelineStep> = emptyList()
 ) {
     private val pipelineSteps: List<ChatPipelineStep> = buildList {
         add(firstStep)
-        addAll(optionalSteps)
+        addAll(documentChatPipelineSteps)
         add(lastStep)
     }
 

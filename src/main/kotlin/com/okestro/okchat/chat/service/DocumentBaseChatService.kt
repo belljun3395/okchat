@@ -1,7 +1,7 @@
 package com.okestro.okchat.chat.service
 
 import com.okestro.okchat.chat.pipeline.ChatContext
-import com.okestro.okchat.chat.pipeline.ChatPipeline
+import com.okestro.okchat.chat.pipeline.DocumentChatPipeline
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.reactor.mono
 import org.springframework.ai.chat.client.ChatClient
@@ -19,7 +19,7 @@ private val log = KotlinLogging.logger {}
 @Service
 class DocumentBaseChatService(
     private val chatClient: ChatClient,
-    private val chatPipeline: ChatPipeline,
+    private val documentChatPipeline: DocumentChatPipeline,
     private val toolCallbacks: List<ToolCallback>
 ) {
 
@@ -38,7 +38,7 @@ class DocumentBaseChatService(
             )
 
             // Execute pipeline to process query and prepare prompt
-            val processedContext = chatPipeline.execute(initialContext)
+            val processedContext = documentChatPipeline.execute(initialContext)
 
             log.info { "[AI Processing] Starting AI chat" }
             log.debug { "Context preview: ${processedContext.search?.contextText?.take(300)}..." }

@@ -1,7 +1,7 @@
 package com.okestro.okchat.chat.pipeline.steps
 
 import com.okestro.okchat.chat.pipeline.ChatContext
-import com.okestro.okchat.chat.pipeline.OptionalChatPipelineStep
+import com.okestro.okchat.chat.pipeline.DocumentChatPipelineStep
 import com.okestro.okchat.chat.pipeline.copy
 import com.okestro.okchat.search.model.SearchScore
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -26,7 +26,7 @@ private val log = KotlinLogging.logger {}
 @Order(2)
 class ReRankingStep(
     private val embeddingModel: EmbeddingModel
-) : OptionalChatPipelineStep {
+) : DocumentChatPipelineStep {
 
     companion object {
         private const val TOP_K_TO_RERANK = 20 // Re-rank top 20 results

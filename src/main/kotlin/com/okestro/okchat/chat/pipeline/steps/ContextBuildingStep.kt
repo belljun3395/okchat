@@ -1,7 +1,7 @@
 package com.okestro.okchat.chat.pipeline.steps
 
 import com.okestro.okchat.chat.pipeline.ChatContext
-import com.okestro.okchat.chat.pipeline.OptionalChatPipelineStep
+import com.okestro.okchat.chat.pipeline.DocumentChatPipelineStep
 import com.okestro.okchat.chat.pipeline.copy
 import com.okestro.okchat.search.model.SearchResult
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -20,7 +20,7 @@ private val log = KotlinLogging.logger {}
 @Order(3) // After ReRankingStep (@Order(2))
 class ContextBuildingStep(
     @Value("\${confluence.base-url}") private val confluenceBaseUrl: String
-) : OptionalChatPipelineStep {
+) : DocumentChatPipelineStep {
 
     companion object {
         private const val TOP_RESULTS_FOR_CONTEXT = 20 // Increased to capture more meeting records

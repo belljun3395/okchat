@@ -1,7 +1,7 @@
 package com.okestro.okchat.chat.pipeline.steps
 
 import com.okestro.okchat.chat.pipeline.ChatContext
-import com.okestro.okchat.chat.pipeline.OptionalChatPipelineStep
+import com.okestro.okchat.chat.pipeline.DocumentChatPipelineStep
 import com.okestro.okchat.chat.pipeline.copy
 import com.okestro.okchat.config.RagProperties
 import com.okestro.okchat.search.model.SearchContents
@@ -28,7 +28,7 @@ private val log = KotlinLogging.logger {}
 class DocumentSearchStep(
     private val documentSearchService: DocumentSearchService,
     private val ragProperties: RagProperties
-) : OptionalChatPipelineStep {
+) : DocumentChatPipelineStep {
 
     companion object {
         private const val MAX_SEARCH_RESULTS = 50 // Optimized: reduced from 200 to improve performance

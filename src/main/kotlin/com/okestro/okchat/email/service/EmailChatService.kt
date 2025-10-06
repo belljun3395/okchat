@@ -59,9 +59,10 @@ If you have any additional questions, please feel free to contact us anytime."""
         log.info { "[Query Preview] ${question.take(200)}..." }
 
         // Get response from ChatService and add email wrapper
+        // Note: Email-based chats don't maintain session history
         var headerSent = false
 
-        return documentBaseChatService.chat(question, null)
+        return documentBaseChatService.chat(question)
             .map { chunk ->
                 if (!headerSent) {
                     headerSent = true

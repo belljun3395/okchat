@@ -2,14 +2,17 @@ package com.okestro.okchat.chat.pipeline
 
 import com.okestro.okchat.ai.support.QueryClassifier
 import com.okestro.okchat.search.model.SearchResult
+import java.time.Instant
 
 fun ChatContext.copy(
     input: ChatContext.UserInput? = this.input,
+    conversationHistory: ChatContext.ConversationHistory? = this.conversationHistory,
     analysis: ChatContext.Analysis? = this.analysis,
     search: ChatContext.Search? = this.search
 ): ChatContext {
     return ChatContext(
         input = input ?: this.input,
+        conversationHistory = conversationHistory ?: this.conversationHistory,
         analysis = analysis ?: this.analysis,
         search = search ?: this.search
     )
@@ -21,12 +24,14 @@ fun ChatContext.copy(
  *
  * Design principles:
  * - UserInput: Always required (from user)
+ * - ConversationHistory: Optional (for multi-turn conversations)
  * - Analysis: Always required (FirstChatPipelineStep)
  * - Search: Optional (OptionalChatPipelineStep)
  * - Prompt: Required at end (LastChatPipelineStep)
  */
 open class ChatContext(
     val input: UserInput,
+    val conversationHistory: ConversationHistory? = null,
     val analysis: Analysis? = null,
     val search: Search? = null
 ) {
@@ -35,7 +40,26 @@ open class ChatContext(
      */
     data class UserInput(
         val message: String,
-        val providedKeywords: List<String> = emptyList()
+        val providedKeywords: List<String> = emptyList(),
+        val sessionId: String? = null
+    )
+
+    /**
+     * Conversation history for multi-turn conversations
+     */
+    data class ConversationHistory(
+        val sessionId: String,
+        val messages: List<Message>,
+        val summary: String? = null
+    )
+
+    /**
+     * Individual message in conversation history
+     */
+    data class Message(
+        val role: String,
+        val content: String,
+        val timestamp: Instant
     )
 
     /**

@@ -1,12 +1,14 @@
 package com.okestro.okchat.chat.pipeline
 
 class CompleteChatContext(
-    input: ChatContext.UserInput,
-    analysis: ChatContext.Analysis,
-    search: ChatContext.Search?,
+    input: UserInput,
+    conversationHistory: ConversationHistory?,
+    analysis: Analysis,
+    search: Search?,
     val prompt: Prompt
 ) : ChatContext(
     input = input,
+    conversationHistory = conversationHistory,
     analysis = analysis,
     search = search
 ) {

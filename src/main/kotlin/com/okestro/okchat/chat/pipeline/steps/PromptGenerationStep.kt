@@ -47,6 +47,7 @@ class PromptGenerationStep(
 
         return CompleteChatContext(
             input = context.input,
+            conversationHistory = context.conversationHistory,
             analysis = context.analysis,
             search = context.search,
             prompt = CompleteChatContext.Prompt(prompt.contents)

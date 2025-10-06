@@ -17,11 +17,16 @@ class ChatController(
 
     @PostMapping(produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
     fun chat(@RequestBody chatRequest: ChatRequest): Flux<String> {
-        return documentBaseChatService.chat(chatRequest.message, chatRequest.keywords)
+        return documentBaseChatService.chat(
+            message = chatRequest.message,
+            keywords = chatRequest.keywords,
+            sessionId = chatRequest.sessionId
+        )
     }
 }
 
 data class ChatRequest(
     val message: String,
-    val keywords: List<String>? = null
+    val keywords: List<String>? = null,
+    val sessionId: String? = null
 )

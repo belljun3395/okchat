@@ -91,7 +91,6 @@ class ContextBuildingStep(
             appendHighRelevanceDocuments(highRelevance)
             appendMediumRelevanceDocuments(mediumRelevance)
             appendOtherResults(otherResults)
-            appendImportantInstruction()
         }
     }
 
@@ -143,16 +142,6 @@ class ContextBuildingStep(
         append("\n")
     }
 
-    private fun StringBuilder.appendImportantInstruction() {
-        append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-        append("⚠️ 중요 지침:\n")
-        append("1. 위의 **모든** 검색 결과를 확인하세요 (하나만 보지 마세요!)\n")
-        append("2. 회의록 요약 시 검색된 모든 회의를 포함하세요\n")
-        append("3. 각 문서의 내용을 빠짐없이 분석하세요\n")
-        append("4. 정보가 충분한 경우 도구(tool)를 사용하지 마세요\n")
-        append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
-    }
-
     private fun StringBuilder.appendDocumentInfo(index: Int, result: SearchResult, detailed: Boolean) {
         val pageUrl = buildConfluencePageUrl(result.spaceKey, result.id)
 
@@ -189,13 +178,8 @@ class ContextBuildingStep(
     }
 
     private fun StringBuilder.appendContent(content: String) {
-        val contentPreview = if (content.length > MAX_CONTENT_LENGTH) {
-            content.take(MAX_CONTENT_LENGTH) + "\n   [... 내용 생략 ...]"
-        } else {
-            content
-        }
         append("   내용:\n")
-        append("   ${contentPreview.replace("\n", "\n   ")}\n")
+        append("   ${content.replace("\n", "\n   ")}\n")
     }
 
     private fun buildConfluencePageUrl(spaceKey: String, pageId: String): String {

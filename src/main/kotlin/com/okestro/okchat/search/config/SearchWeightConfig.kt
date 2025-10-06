@@ -34,12 +34,12 @@ data class SearchFieldWeightConfig(
         weights = "10,5,1"
     ),
     var title: FieldWeights = FieldWeights(
-        queryBy = "metadata.title,content",
-        weights = "10,1"
+        queryBy = "metadata.title,content,metadata.keywords",
+        weights = "10,3,1"
     ),
     var content: FieldWeights = FieldWeights(
-        queryBy = "metadata.title,content,metadata.keywords",
-        weights = "5,3,10"
+        queryBy = "content,metadata.title,metadata.keywords",
+        weights = "10,5,3"
     )
 ) {
     data class FieldWeights(

@@ -30,33 +30,14 @@ spring:
                 multiplier: 2
                 max-interval: 30s
         vectorstore:
-            type: typesense
-            typesense:
-                collection-name: vector_store
+            opensearch:
+                host: localhost
+                port: 9200
+                scheme: http
+                username: ''  # Leave empty for local development (security disabled)
+                password: ''  # Leave empty for local development (security disabled)
+                index-name: vector_store
                 embedding-dimension: 1536
-                client:
-                    protocol: http
-                    host: localhost
-                    port: 8108
-                    apiKey: Hu52dwsas2AdxdE
-                # Typesense 29.0+ features
-                search:
-                    # Enable embedding query caching for better performance
-                    cache-embedding-queries: true
-                    # Cache TTL in seconds (default: 60)
-                    cache-ttl: 300
-                # Auto-embedding configuration (Typesense 29.0+)
-                # When enabled, Typesense automatically generates embeddings during indexing and search
-                auto-embedding:
-                    enabled: false  # Set to true to use Typesense's built-in embedding generation
-                    # If enabled, embeddings are auto-generated from these fields
-                    source-fields:
-                        - content
-                        - metadata.title
-                    # Model configuration (only used if auto-embedding is enabled)
-                    model:
-                        name: openai/text-embedding-3-small
-                        # API key is inherited from spring.ai.openai.api-key if not specified
         openai:
             api-key: ${OPENAI_API_KEY}
             embedding:

@@ -56,20 +56,21 @@ spring:
             chat:
                 options:
                     model: ${SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL:gpt-4.1-mini}
-        mcp:
-            client:
-                stdio:
-                    connections:
-                        sequential-thinking:
-                            command: npx
-                            args:
-                                - "-y"
-                                - "@modelcontextprotocol/server-sequential-thinking"
-                        memory:
-                            command: npx
-                            args:
-                                - "-y"
-                                - "@modelcontextprotocol/server-memory"
+        # MCP client disabled for Kubernetes deployment (requires Node.js/npx)
+        # mcp:
+        #     client:
+        #         stdio:
+        #             connections:
+        #                 sequential-thinking:
+        #                     command: npx
+        #                     args:
+        #                         - "-y"
+        #                         - "@modelcontextprotocol/server-sequential-thinking"
+        #                 memory:
+        #                     command: npx
+        #                     args:
+        #                         - "-y"
+        #                         - "@modelcontextprotocol/server-memory"
 
 # Spring Boot Actuator for Kubernetes health checks
 management:

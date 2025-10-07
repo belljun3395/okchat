@@ -54,8 +54,17 @@ object HybridSearchUtils {
                 rawId
             }
 
+            // Extract metadata - support both flat (metadata.title) and nested (metadata.title) structure
+            @Suppress("UNCHECKED_CAST")
+            val metadata = document["metadata"] as? Map<String, Any> ?: emptyMap()
+
+            // Try flat structure first (metadata.title), fallback to nested (metadata.title)
+            val title = document["metadata.title"]?.toString() ?: metadata["title"]?.toString() ?: "Untitled"
+            val path = document["metadata.path"]?.toString() ?: metadata["path"]?.toString() ?: ""
+            val spaceKey = document["metadata.spaceKey"]?.toString() ?: metadata["spaceKey"]?.toString() ?: ""
+            val keywords = document["metadata.keywords"]?.toString() ?: metadata["keywords"]?.toString() ?: ""
+
             val combinedScore = scoresCombiner(hit.textScore, hit.vectorScore)
-            val title = document["metadata.title"]?.toString() ?: "Untitled"
 
             log.trace { "[Parse] id=$actualPageId, title=$title, textScore=${hit.textScore}, vectorScore=${hit.vectorScore}, combined=$combinedScore" }
 
@@ -63,9 +72,9 @@ object HybridSearchUtils {
                 id = actualPageId,
                 title = title,
                 content = document["content"]?.toString() ?: "",
-                path = document["metadata.path"]?.toString() ?: "",
-                spaceKey = document["metadata.spaceKey"]?.toString() ?: "",
-                keywords = document["metadata.keywords"]?.toString() ?: "",
+                path = path,
+                spaceKey = spaceKey,
+                keywords = keywords,
                 similarity = SearchScore.SimilarityScore(combinedScore)
             )
         }.sortedByDescending { it.score.value }

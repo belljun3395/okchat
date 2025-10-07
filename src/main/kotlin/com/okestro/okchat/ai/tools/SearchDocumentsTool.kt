@@ -2,20 +2,19 @@ package com.okestro.okchat.ai.tools
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.opensearch.client.opensearch.OpenSearchClient
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Description
 import org.springframework.stereotype.Component
-import org.typesense.api.Client
-import org.typesense.model.SearchParameters
 
 @Component("searchDocumentsTool")
-@Description("Search documents in  vector store using keyword search")
+@Description("Search documents in OpenSearch vector store using keyword search")
 class SearchDocumentsTool(
-    private val typesenseClient: Client,
+    private val openSearchClient: OpenSearchClient,
     private val objectMapper: ObjectMapper,
-    @Value("\${spring.ai.vectorstore.typesense.collection-name}") private val collectionName: String
+    @Value("\${spring.ai.vectorstore.opensearch.index-name}") private val indexName: String
 ) : ToolCallback {
 
     private val log = KotlinLogging.logger {}
@@ -23,7 +22,7 @@ class SearchDocumentsTool(
     override fun getToolDefinition(): ToolDefinition {
         return ToolDefinition.builder()
             .name("search_documents")
-            .description("Search documents in using keyword-based full-text search. Use this to find Confluence pages by specific keywords or terms.")
+            .description("Search documents using keyword-based full-text search. Use this to find Confluence pages by specific keywords or terms.")
             .inputSchema(
                 """
                 {
@@ -56,31 +55,47 @@ class SearchDocumentsTool(
 
     override fun call(toolInput: String): String {
         return try {
-            val input = objectMapper.readValue(toolInput, Map::class.java)
+            @Suppress("UNCHECKED_CAST")
+            val input = objectMapper.readValue(toolInput, Map::class.java) as Map<String, Any>
             val thought = input["thought"] as? String ?: "No thought provided."
             val query = input["query"] as? String
                 ?: return "Invalid input: query parameter is required"
             val limit = ((input["limit"] as? Number)?.toInt() ?: 5).coerceIn(1, 20)
             val filterBySpace = input["filterBySpace"] as? String
 
-            log.info { "Searching : query='$query', limit=$limit, space=$filterBySpace" }
+            log.info { "Searching OpenSearch: query='$query', limit=$limit, space=$filterBySpace" }
 
-            val searchParameters = SearchParameters()
-                .q(query)
-                .queryBy("content,metadata.title") // Search in both content and title
-                .perPage(limit)
-                .page(1)
+            val searchResponse = openSearchClient.search({ s ->
+                s.index(indexName)
+                    .size(limit)
+                    .query { q ->
+                        if (!filterBySpace.isNullOrBlank()) {
+                            // Add space filter
+                            q.bool { b ->
+                                b.must { m ->
+                                    m.multiMatch { mm ->
+                                        mm.query(query)
+                                            .fields(listOf("content", "metadata.title"))
+                                    }
+                                }
+                                    .filter { f ->
+                                        f.term { t ->
+                                            t.field("metadata.spaceKey")
+                                                .value(org.opensearch.client.opensearch._types.FieldValue.of(filterBySpace))
+                                        }
+                                    }
+                            }
+                        } else {
+                            // No filter
+                            q.multiMatch { mm ->
+                                mm.query(query)
+                                    .fields(listOf("content", "metadata.title"))
+                            }
+                        }
+                    }
+            }, Map::class.java)
 
-            // Add space filter if provided
-            if (!filterBySpace.isNullOrBlank()) {
-                searchParameters.filterBy("metadata.spaceKey:=$filterBySpace")
-            }
-
-            val searchResult = typesenseClient.collections(collectionName)
-                .documents()
-                .search(searchParameters)
-
-            val hits = searchResult.hits ?: emptyList()
+            val hits = searchResponse.hits().hits()
 
             val answer = if (hits.isEmpty()) {
                 "No documents found for query: '$query'"
@@ -89,14 +104,16 @@ class SearchDocumentsTool(
                     append("Found ${hits.size} document(s):\n\n")
 
                     hits.forEachIndexed { index, hit ->
-                        val doc = hit.document ?: return@forEachIndexed
+                        val doc = hit.source() ?: return@forEachIndexed
 
-                        // Extract metadata (Spring AI stores it as a nested object)
-                        val metadata = doc["metadata"] as? Map<*, *>
-                        val title = metadata?.get("title")?.toString() ?: "Untitled"
-                        val path = metadata?.get("path")?.toString() ?: ""
-                        val spaceKey = metadata?.get("spaceKey")?.toString() ?: ""
-                        val pageId = metadata?.get("id")?.toString() ?: doc["id"]?.toString() ?: ""
+                        // Extract metadata - support both flat and nested structure
+                        @Suppress("UNCHECKED_CAST")
+                        val metadata = doc["metadata"] as? Map<String, Any> ?: emptyMap()
+
+                        val title = doc["metadata.title"]?.toString() ?: metadata["title"]?.toString() ?: "Untitled"
+                        val path = doc["metadata.path"]?.toString() ?: metadata["path"]?.toString() ?: ""
+                        val spaceKey = doc["metadata.spaceKey"]?.toString() ?: metadata["spaceKey"]?.toString() ?: ""
+                        val pageId = doc["metadata.id"]?.toString() ?: metadata["id"]?.toString() ?: doc["id"]?.toString() ?: ""
                         val content = doc["content"]?.toString() ?: ""
 
                         append("${index + 1}. $title\n")
@@ -116,7 +133,7 @@ class SearchDocumentsTool(
 
             objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
         } catch (e: Exception) {
-            log.error(e) { "Error searching : ${e.message}" }
+            log.error(e) { "Error searching OpenSearch: ${e.message}" }
             objectMapper.writeValueAsString(mapOf("thought" to "An error occurred during the document search.", "answer" to "Error searching documents: ${e.message}"))
         }
     }

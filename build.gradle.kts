@@ -51,8 +51,14 @@ dependencies {
     implementation("org.springframework.ai:spring-ai-starter-model-openai")
     implementation("org.springframework.ai:spring-ai-starter-mcp-client-webflux")
     implementation("org.springframework.ai:spring-ai-starter-model-chat-memory")
-    implementation("org.springframework.ai:spring-ai-starter-vector-store-typesense")
     developmentOnly("org.springframework.ai:spring-ai-spring-boot-docker-compose")
+
+    /** opensearch */
+    implementation("org.opensearch.client:spring-data-opensearch:1.5.1")
+    implementation("org.opensearch.client:opensearch-rest-high-level-client:2.18.0")
+    implementation("org.opensearch.client:opensearch-java:2.18.0")
+    implementation("jakarta.json:jakarta.json-api:2.1.1")
+    implementation("org.glassfish:jakarta.json:2.0.1")
 
     /** logger */
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.0")

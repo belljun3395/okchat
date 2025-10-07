@@ -14,18 +14,16 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import org.opensearch.client.opensearch.OpenSearchClient
 import org.springframework.ai.document.Document
 import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
-import org.typesense.api.Client
-import org.typesense.model.SearchParameters
-import kotlin.collections.emptyList
 
 /**
- * Spring Cloud Task for syncing Confluence content to Typesense vector store
+ * Spring Cloud Task for syncing Confluence content to OpenSearch vector store
  *
  * This task can be run as:
  * 1. Standalone application
@@ -43,11 +41,10 @@ import kotlin.collections.emptyList
 class ConfluenceSyncTask(
     private val confluenceService: ConfluenceService,
     private val vectorStore: VectorStore,
-    private val typesenseClient: Client,
+    private val openSearchClient: OpenSearchClient,
     private val keywordExtractionService: KeywordExtractionService,
     private val chunkingStrategy: ChunkingStrategy,
-    private val embeddingModel: org.springframework.ai.embedding.EmbeddingModel,
-    @Value("\${spring.ai.vectorstore.typesense.collection-name}") private val collectionName: String
+    @Value("\${spring.ai.vectorstore.opensearch.index-name}") private val indexName: String
 ) : CommandLineRunner {
 
     private val log = KotlinLogging.logger {}
@@ -96,9 +93,7 @@ class ConfluenceSyncTask(
             if (deletedIds.isNotEmpty()) {
                 log.info { "4. Deleting ${deletedIds.size} removed documents..." }
                 try {
-                    deletedIds.forEach { id ->
-                        vectorStore.delete(listOf(id))
-                    }
+                    vectorStore.delete(deletedIds.toList())
                     log.info { "[ConfluenceSync] Deleted removed documents: count=${deletedIds.size}" }
                 } catch (e: Exception) {
                     log.warn { "Failed to delete some documents: ${e.message}" }
@@ -107,12 +102,12 @@ class ConfluenceSyncTask(
                 log.info { "4. No documents to delete" }
             }
 
-            // 5. Store/Update in Typesense (batch processing to avoid timeout)
-            log.info { "5. Storing/Updating in Typesense (batch processing)..." }
+            // 5. Store/Update in OpenSearch (batch processing to avoid timeout)
+            log.info { "5. Storing/Updating in OpenSearch (batch processing)..." }
 
             // Get initial document count
-            val initialDocCount = getTypesenseDocumentCount()
-            log.info { "  Initial Typesense document count: $initialDocCount" }
+            val initialDocCount = getOpenSearchDocumentCount()
+            log.info { "  Initial OpenSearch document count: $initialDocCount" }
 
             val batchSize = 10 // Process 10 documents at a time
             val batches = documents.chunked(batchSize)
@@ -124,26 +119,13 @@ class ConfluenceSyncTask(
                     log.info { "  [Batch $batchNum/${batches.size}] Adding ${batch.size} documents..." }
 
                     // Get count before add
-                    val countBefore = getTypesenseDocumentCount()
+                    val countBefore = getOpenSearchDocumentCount()
 
-                    // Add documents directly to Typesense (bypassing Spring AI VectorStore)
-                    // Spring AI's batching strategy was not persisting documents properly
-                    log.debug { "  [Batch $batchNum/${batches.size}] Persisting ${batch.size} documents directly to Typesense..." }
-
-                    batch.forEach { document ->
-                        try {
-                            val typesenseDoc = convertToTypesenseDocument(document)
-                            // upsert() immediately sends HTTP POST to Typesense (synchronous, no flush needed)
-                            typesenseClient.collections(collectionName).documents().upsert(typesenseDoc)
-                        } catch (e: Exception) {
-                            log.error(e) { "  Failed to upsert document ${document.id}: ${e.message}" }
-                            log.error { "  Document content length: ${document.text?.length ?: 0}" }
-                            throw e
-                        }
-                    }
+                    // Add documents via VectorStore
+                    vectorStore.add(batch)
 
                     // Verify count increased
-                    val countAfter = getTypesenseDocumentCount()
+                    val countAfter = getOpenSearchDocumentCount()
                     val actualAdded = countAfter - countBefore
 
                     if (actualAdded.toInt() == batch.size) {
@@ -164,8 +146,8 @@ class ConfluenceSyncTask(
             }
 
             // Verify final count
-            val finalDocCount = getTypesenseDocumentCount()
-            log.info { "  Final Typesense document count: $finalDocCount (increased by ${finalDocCount - initialDocCount})" }
+            val finalDocCount = getOpenSearchDocumentCount()
+            log.info { "  Final OpenSearch document count: $finalDocCount (increased by ${finalDocCount - initialDocCount})" }
 
             if ((finalDocCount - initialDocCount).toInt() != successCount) {
                 log.error { "  [ConfluenceSync] Document count mismatch: expected_added=$successCount, actual_increase=${finalDocCount - initialDocCount}" }
@@ -173,7 +155,7 @@ class ConfluenceSyncTask(
 
             log.info { "[ConfluenceSync] Stored/updated documents: total=$successCount, new=${currentIds.size - existingIds.size}, updated=${existingIds.intersect(currentIds).size}" }
 
-            // 5. Summary
+            // 6. Summary
             log.info { "[ConfluenceSync] Sync completed: space_key=$spaceKey, processed_pages=${documents.size}" }
         } catch (e: Exception) {
             log.error(e) { "Error occurred during Confluence sync: ${e.message}" }
@@ -204,6 +186,19 @@ class ConfluenceSyncTask(
                     val pageNum = index + 1
                     val path = getPagePath(node, hierarchy)
 
+                    // 제목이 없거나 비어있는 페이지 필터링
+                    if (node.title.isBlank() || node.title.equals("Untitled", ignoreCase = true)) {
+                        log.warn { "[ConfluenceSync][$pageNum/$totalPages] Skipping page with invalid title: id=${node.id}, title='${node.title}'" }
+                        return@async emptyList()
+                    }
+
+                    // 본문이 비어있는 페이지 필터링
+                    val pageContent = node.body?.let { stripHtml(it) } ?: ""
+                    if (pageContent.isBlank()) {
+                        log.warn { "[ConfluenceSync][$pageNum/$totalPages] Skipping page with empty content: id=${node.id}, title='${node.title}'" }
+                        return@async emptyList()
+                    }
+
                     log.info { "[ConfluenceSync][$pageNum/$totalPages] Processing page: title='${node.title}', id=${node.id}, path=$path" }
 
                     // Extract keywords FIRST (before building content)
@@ -211,9 +206,7 @@ class ConfluenceSyncTask(
                     log.debug { "[ConfluenceSync] Extracting keywords for page: id=${node.id}" }
                     val keywords = apiCallSemaphore.withPermit {
                         try {
-                            // Build preliminary content for keyword extraction
-                            val preliminaryContent = node.body?.let { stripHtml(it) } ?: ""
-                            keywordExtractionService.extractKeywordsFromContentAndTitle(preliminaryContent, node.title)
+                            keywordExtractionService.extractKeywordsFromContentAndTitle(pageContent, node.title)
                         } catch (e: Exception) {
                             log.warn { "[ConfluenceSync] Failed to extract keywords: page_title='${node.title}', error=${e.message}" }
                             emptyList()
@@ -221,7 +214,6 @@ class ConfluenceSyncTask(
                     }
 
                     // Extract path keywords (each level of hierarchy becomes a keyword)
-                    // Example: "PPP 개발 Repositories > Backend > API" → ["PPP 개발 Repositories", "Backend", "API"]
                     val pathKeywords = path.split(" > ").map { it.trim() }.filter { it.isNotBlank() }
 
                     // Combine content keywords + path keywords for better hierarchical search
@@ -235,8 +227,7 @@ class ConfluenceSyncTask(
                     log.debug { "[ConfluenceSync] Path keywords: count=${pathKeywords.size}, keywords=${pathKeywords.joinToString(", ")}" }
                     log.info { "[ConfluenceSync] Total keywords extracted: total=${allKeywords.size}, content=${keywords.size}, path=${pathKeywords.size}" }
 
-                    // Build page content WITH keywords included for search
-                    val pageContent = node.body?.let { stripHtml(it) } ?: ""
+                    // Note: pageContent already extracted above for validation
                     val contentLength = pageContent.length
 
                     // Create initial document with metadata including ALL keywords (content + path)
@@ -314,38 +305,46 @@ class ConfluenceSyncTask(
     }
 
     /**
-     * Get existing document IDs for a specific space from vector store
-     * Uses Typesense client directly to avoid embedding API calls
+     * Get existing document IDs for a specific space from OpenSearch
      */
     private fun getExistingDocumentIds(spaceKey: String): Set<String> {
-        val searchParameters = SearchParameters()
-            .q("*") // Match all documents
-            .queryBy("id") // Query by id field
-            .filterBy("spaceKey:=$spaceKey") // Filter by spaceKey
-            .perPage(250) // Max per page
-
         val documentIds = mutableSetOf<String>()
-        var page = 1
 
-        // Paginate through all results
-        while (true) {
-            searchParameters.page(page)
-            val searchResult = typesenseClient.collections(collectionName).documents().search(searchParameters)
+        try {
+            // Search with filter for spaceKey, paginate through all results
+            var from = 0
+            val size = 250
 
-            val hits = searchResult.hits ?: break
-            if (hits.isEmpty()) break
+            while (true) {
+                val searchResponse = openSearchClient.search({ s ->
+                    s.index(indexName)
+                        .from(from)
+                        .size(size)
+                        .query { q ->
+                            q.term { t ->
+                                t.field("metadata.spaceKey")
+                                    .value(org.opensearch.client.opensearch._types.FieldValue.of(spaceKey))
+                            }
+                        }
+                        .source { src -> src.filter { f -> f.includes(listOf("id")) } }
+                }, Map::class.java)
 
-            // Extract document IDs
-            hits.forEach { hit ->
-                val doc = hit.document
-                if (doc != null && doc.containsKey("id")) {
-                    documentIds.add(doc["id"].toString())
+                val hits = searchResponse.hits().hits()
+                if (hits.isEmpty()) break
+
+                // Extract document IDs
+                hits.forEach { hit ->
+                    val source = hit.source()
+                    val id = source?.get("id")?.toString() ?: hit.id()
+                    id?.let { documentIds.add(it) }
                 }
-            }
 
-            // Check if there are more pages
-            if (hits.size < 250) break
-            page++
+                // Check if there are more pages
+                if (hits.size < size) break
+                from += size
+            }
+        } catch (e: Exception) {
+            log.error(e) { "Failed to fetch existing document IDs: ${e.message}" }
         }
 
         return documentIds
@@ -363,58 +362,17 @@ class ConfluenceSyncTask(
     }
 
     /**
-     * Get current document count from Typesense directly
-     * This bypasses Spring AI caching to get real-time count
+     * Get current document count from OpenSearch directly
      */
-    private fun getTypesenseDocumentCount(): Long {
+    private fun getOpenSearchDocumentCount(): Long {
         return try {
-            val collection = typesenseClient.collections(collectionName).retrieve()
-            collection.numDocuments ?: 0
+            val countResponse = openSearchClient.count { c ->
+                c.index(indexName)
+            }
+            countResponse.count()
         } catch (e: Exception) {
-            log.warn { "Failed to get Typesense document count: ${e.message}" }
+            log.warn { "Failed to get OpenSearch document count: ${e.message}" }
             -1 // Return -1 to indicate failure
         }
-    }
-
-    /**
-     * Convert Spring AI Document to Typesense document format
-     * * IMPORTANT: Typesense Java Client's upsert() is synchronous and sends HTTP POST immediately.
-     * No flush/commit is needed - the document is persisted as soon as upsert() returns successfully.
-     * * Note: Spring AI Document doesn't store embedding in the Document object itself.
-     * The embedding is generated and added by VectorStore during the add() operation.
-     * We need to generate it here manually using the embeddingModel.
-     */
-    private fun convertToTypesenseDocument(document: Document): Map<String, Any> {
-        val metadata = document.metadata
-
-        // Generate embedding for this document
-        val embedding: List<Float> = try {
-            // embed() returns float[] which we convert to List<Float>
-            embeddingModel.embed(document.text ?: "").toList()
-        } catch (e: Exception) {
-            log.error(e) { "Failed to generate embedding for document ${document.id}: ${e.message}" }
-            throw IllegalStateException("Failed to generate embedding for document ${document.id}", e)
-        }
-
-        // Validate embedding dimension
-        if (embedding.isEmpty()) {
-            throw IllegalStateException("Document ${document.id} generated empty embedding")
-        }
-        if (embedding.size != 1536) {
-            throw IllegalStateException("Document ${document.id} has invalid embedding dimension: ${embedding.size} (expected 1536)")
-        }
-
-        log.trace { "Converting document ${document.id}: embedding size=${embedding.size}, content length=${document.text?.length ?: 0}" }
-
-        return mapOf(
-            "id" to document.id,
-            "content" to (document.text ?: ""),
-            "embedding" to embedding,
-            "metadata.title" to (metadata["title"] ?: ""),
-            "metadata.keywords" to (metadata["keywords"] ?: ""),
-            "metadata.type" to (metadata["type"] ?: ""),
-            "metadata.spaceKey" to (metadata["spaceKey"] ?: ""),
-            "metadata.path" to (metadata["path"] ?: "")
-        )
     }
 }

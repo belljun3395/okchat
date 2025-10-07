@@ -2,19 +2,19 @@ package com.okestro.okchat.ai.tools
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.opensearch.client.opensearch.OpenSearchClient
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Description
 import org.springframework.stereotype.Component
-import org.typesense.api.Client
 
 @Component("getSchemaInfoTool")
-@Description("Get information about the  collection schema and document structure")
+@Description("Get information about the OpenSearch collection schema and document structure")
 class GetDocumentSchemaInfoTool(
-    private val typesenseClient: Client,
+    private val openSearchClient: OpenSearchClient,
     private val objectMapper: ObjectMapper,
-    @Value("\${spring.ai.vectorstore.typesense.collection-name}") private val collectionName: String
+    @Value("\${spring.ai.vectorstore.opensearch.index-name}") private val indexName: String
 ) : ToolCallback {
 
     private val log = KotlinLogging.logger {}
@@ -22,7 +22,7 @@ class GetDocumentSchemaInfoTool(
     override fun getToolDefinition(): ToolDefinition {
         return ToolDefinition.builder()
             .name("get_document_schema_info")
-            .description("Get schema information about the  collection including field names and types. Useful for debugging and understanding the data structure.")
+            .description("Get schema information about the OpenSearch collection including field names and types. Useful for debugging and understanding the data structure.")
             .inputSchema(
                 """
                 {
@@ -42,54 +42,62 @@ class GetDocumentSchemaInfoTool(
 
     override fun call(toolInput: String): String {
         return try {
-            val input = objectMapper.readValue(toolInput, Map::class.java)
+            @Suppress("UNCHECKED_CAST")
+            val input = objectMapper.readValue(toolInput, Map::class.java) as Map<String, Any>
             val thought = input["thought"] as? String ?: "No thought provided."
 
-            log.info { "Retrieving schema for collection: $collectionName" }
+            log.info { "Retrieving schema for index: $indexName" }
 
-            // Get collection schema
-            val collection = typesenseClient.collections(collectionName).retrieve()
+            // Get index mapping
+            val indexResponse = openSearchClient.indices().get { g ->
+                g.index(indexName)
+            }
+
+            val index = indexResponse.get(indexName)
+            val mappings = index?.mappings()
 
             val answer = buildString {
-                append("Collection: ${collection.name}\n")
-                append("Number of documents: ${collection.numDocuments}\n\n")
-                append("Schema Fields:\n")
+                append("Index: $indexName\n")
 
-                collection.fields?.forEach { field ->
-                    append("- ${field.name}: ${field.type}\n")
+                // Get document count
+                try {
+                    val stats = openSearchClient.indices().stats { s ->
+                        s.index(indexName)
+                    }
+                    val docCount = stats.indices()?.get(indexName)?.primaries()?.docs()?.count() ?: 0
+                    append("Number of documents: $docCount\n\n")
+                } catch (_: Exception) {
+                    append("Number of documents: Unknown\n\n")
                 }
 
-                // Get a sample document to show actual structure
-                append("\nSample Document Structure:\n")
-                if (collection.numDocuments > 0) {
-                    try {
-                        // Export documents (limited to first few lines)
-                        val exportResult = typesenseClient.collections(collectionName)
-                            .documents()
-                            .export()
+                append("Schema Fields:\n")
+                mappings?.properties()?.forEach { (name, property) ->
+                    append("- $name: ${property._kind()}\n")
+                }
 
-                        if (exportResult.isNotBlank()) {
-                            // Parse the first line (JSONL format - each line is a JSON document)
-                            val firstLine = exportResult.lines().firstOrNull { it.isNotBlank() }
-                            if (firstLine != null) {
-                                val sampleDoc = objectMapper.readValue(firstLine, Map::class.java)
-                                append(
-                                    objectMapper.writerWithDefaultPrettyPrinter()
-                                        .writeValueAsString(sampleDoc)
-                                )
-                            } else {
-                                append("No documents found in collection.")
-                            }
-                        } else {
-                            append("No documents found in collection.")
-                        }
-                    } catch (e: Exception) {
-                        log.warn(e) { "Could not retrieve sample document: ${e.message}" }
-                        append("Could not retrieve sample document.\n")
-                        append("Error: ${e.message}")
+                // Get a sample document
+                append("\nSample Document Structure:\n")
+                try {
+                    val searchResponse = openSearchClient.search({ s ->
+                        s.index(indexName)
+                            .size(1)
+                            .query { q -> q.matchAll { it } }
+                    }, Map::class.java)
+
+                    val hits = searchResponse.hits().hits()
+                    if (hits.isNotEmpty()) {
+                        val sampleDoc = hits.first().source()
+                        append(
+                            objectMapper.writerWithDefaultPrettyPrinter()
+                                .writeValueAsString(sampleDoc)
+                        )
+                    } else {
+                        append("No documents found in index.")
                     }
-                } else {
-                    append("No documents in collection.")
+                } catch (e: Exception) {
+                    log.warn(e) { "Could not retrieve sample document: ${e.message}" }
+                    append("Could not retrieve sample document.\n")
+                    append("Error: ${e.message}")
                 }
             }
 

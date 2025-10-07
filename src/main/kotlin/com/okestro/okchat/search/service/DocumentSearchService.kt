@@ -1,14 +1,20 @@
 package com.okestro.okchat.search.service
 
 import com.okestro.okchat.search.client.HybridSearchRequest
+import com.okestro.okchat.search.client.HybridSearchResponse
 import com.okestro.okchat.search.client.SearchClient
 import com.okestro.okchat.search.config.SearchFieldWeightConfig
+import com.okestro.okchat.search.model.ContentSearchResults
+import com.okestro.okchat.search.model.KeywordSearchResults
 import com.okestro.okchat.search.model.MultiSearchResult
+import com.okestro.okchat.search.model.PathSearchResults
 import com.okestro.okchat.search.model.SearchContents
 import com.okestro.okchat.search.model.SearchKeywords
 import com.okestro.okchat.search.model.SearchPaths
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchTitles
+import com.okestro.okchat.search.model.SearchType
+import com.okestro.okchat.search.model.TitleSearchResults
 import com.okestro.okchat.search.util.HybridSearchUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.embedding.EmbeddingModel
@@ -17,8 +23,9 @@ import org.springframework.stereotype.Service
 private val log = KotlinLogging.logger {}
 
 /**
- * Document search service optimized for multi-search performance
- * Uses HybridSearchUtils for common search logic
+ * Document search service optimized for multi-search performance.
+ * Uses HybridSearchUtils for common search logic.
+ * Refactored to eliminate code duplication using SearchType enum.
  */
 @Service
 class DocumentSearchService(
@@ -26,6 +33,15 @@ class DocumentSearchService(
     private val embeddingModel: EmbeddingModel,
     private val fieldConfig: SearchFieldWeightConfig
 ) {
+
+    /**
+     * Data class to hold search request information
+     */
+    private data class SearchRequestInfo(
+        val type: SearchType,
+        val request: HybridSearchRequest,
+        val index: Int
+    )
 
     /**
      * Perform multi-search across titles, contents, paths, and keywords
@@ -47,144 +63,115 @@ class DocumentSearchService(
         // Generate embedding once (reused for all searches)
         log.debug { "[Multi-Search] Generating embedding..." }
         val embedding = embeddingModel.embed(
-            contents?.contents?.joinToString {
-                it.term
-            } ?: ""
+            contents?.contents?.joinToString { it.term } ?: ""
         ).toList()
         log.debug { "[Multi-Search] Embedding generated with dimension ${embedding.size}" }
 
-        val requests = mutableListOf<HybridSearchRequest>()
-        var reqIndex = 0
-        var keyWordReq: Int? = null
-        var titleReq: Int? = null
-        var contentReq: Int? = null
-        var pathReq: Int? = null
-        keywords?.let {
-            requests.add(
-                HybridSearchUtils.buildSearchRequest(
-                    query = it.toOrQuery(),
-                    embedding = embedding,
-                    fields = fieldConfig.keyword,
-                    topK = topK
-                )
-            )
-            keyWordReq = reqIndex
-            reqIndex++
-        }
-
-        titles?.let {
-            requests.add(
-                HybridSearchUtils.buildSearchRequest(
-                    query = it.toOrQuery(),
-                    embedding = embedding,
-                    fields = fieldConfig.title,
-                    topK = topK
-                )
-            )
-            titleReq = reqIndex
-            reqIndex++
-        }
-
-        contents?.let {
-            requests.add(
-                HybridSearchUtils.buildSearchRequest(
-                    query = it.toOrQuery(),
-                    embedding = embedding,
-                    fields = fieldConfig.content,
-                    topK = topK
-                )
-            )
-            contentReq = reqIndex
-            reqIndex++
-        }
-
-        paths?.let {
-            requests.add(
-                HybridSearchUtils.buildSearchRequest(
-                    query = it.toOrQuery(),
-                    embedding = embedding,
-                    fields = fieldConfig.path,
-                    topK = topK
-                )
-            )
-            pathReq = reqIndex
-            reqIndex++
-        }
+        // Build search requests using unified approach
+        val searchRequests = buildSearchRequests(
+            keywords = keywords,
+            titles = titles,
+            contents = contents,
+            paths = paths,
+            embedding = embedding,
+            topK = topK
+        )
 
         // Execute all searches in a single HTTP request
-        log.debug { "[Multi-Search] Executing batched search..." }
-        val responses = searchClient.multiHybridSearch(requests)
+        log.debug { "[Multi-Search] Executing batched search with ${searchRequests.size} requests..." }
+        val responses = searchClient.multiHybridSearch(searchRequests.map { it.request })
 
-        // Parse responses into SearchResults and deduplicate
-        var keywordResults: List<SearchResult> = emptyList()
-        keyWordReq?.let {
-            log.debug { "[Multi-Search] Parsing keyword results..." }
-            keywordResults = HybridSearchUtils.deduplicateResults(
-                HybridSearchUtils.parseSearchResults(responses[it])
-            )
-        } ?: run {
-            keywordResults = emptyList()
-        }
+        // Parse and deduplicate results by type
+        val resultsByType = parseSearchResponses(searchRequests, responses)
 
-        var titleResults: List<SearchResult> = emptyList()
-        titleReq?.let {
-            log.debug { "[Multi-Search] Parsing title results..." }
-            titleResults = HybridSearchUtils.deduplicateResults(
-                HybridSearchUtils.parseSearchResults(responses[it])
-            )
-        } ?: run {
-            titleResults = emptyList()
-        }
-
-        var contentResults: List<SearchResult> = emptyList()
-        contentReq?.let {
-            log.debug { "[Multi-Search] Parsing content results..." }
-            contentResults = HybridSearchUtils.deduplicateResults(
-                HybridSearchUtils.parseSearchResults(responses[it])
-            )
-        } ?: run {
-            contentResults = emptyList()
-        }
-
-        var pathResults: List<SearchResult> = emptyList()
-        pathReq?.let {
-            log.debug { "[Multi-Search] Parsing path results..." }
-            pathResults = HybridSearchUtils.deduplicateResults(
-                HybridSearchUtils.parseSearchResults(responses[it])
-            )
-        } ?: run {
-            pathResults = emptyList()
-        }
-
-        // Log top results from each search type (DEBUG only)
+        // Log results if debug enabled
         if (log.isDebugEnabled()) {
-            log.debug { "[Multi-Search] ━━━ Keyword search top 5 ━━━" }
-            keywordResults.take(5).forEachIndexed { i, r ->
-                log.debug { "  [K${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
-            }
-
-            log.debug { "[Multi-Search] ━━━ Title search top 5 ━━━" }
-            titleResults.take(5).forEachIndexed { i, r ->
-                log.debug { "  [T${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
-            }
-
-            log.debug { "[Multi-Search] ━━━ Content search top 5 ━━━" }
-            contentResults.take(5).forEachIndexed { i, r ->
-                log.debug { "  [C${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
-            }
-
-            log.debug { "[Multi-Search] ━━━ Path search top 5 ━━━" }
-            pathResults.take(5).forEachIndexed { i, r ->
-                log.debug { "  [P${i + 1}] ${r.title} (score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)" }
-            }
-            log.debug { "[Multi-Search] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
+            logSearchResults(resultsByType)
         }
 
         return MultiSearchResult(
-            keywordResults = keywordResults,
-            titleResults = titleResults,
-            contentResults = contentResults,
-            pathResults = pathResults
+            keywordResults = KeywordSearchResults(resultsByType[SearchType.KEYWORD] ?: emptyList()),
+            titleResults = TitleSearchResults(resultsByType[SearchType.TITLE] ?: emptyList()),
+            contentResults = ContentSearchResults(resultsByType[SearchType.CONTENT] ?: emptyList()),
+            pathResults = PathSearchResults(resultsByType[SearchType.PATH] ?: emptyList())
         )
+    }
+
+    /**
+     * Build search requests for all provided search parameters.
+     * Eliminates duplication by using SearchType enum.
+     */
+    private fun buildSearchRequests(
+        keywords: SearchKeywords?,
+        titles: SearchTitles?,
+        contents: SearchContents?,
+        paths: SearchPaths?,
+        embedding: List<Float>,
+        topK: Int
+    ): List<SearchRequestInfo> {
+        val requests = mutableListOf<SearchRequestInfo>()
+        var index = 0
+
+        // Helper function to build request
+        fun addRequest(type: SearchType, query: String?) {
+            query?.let {
+                requests.add(
+                    SearchRequestInfo(
+                        type = type,
+                        request = HybridSearchUtils.buildSearchRequest(
+                            query = it,
+                            embedding = embedding,
+                            fields = type.getFieldWeights(fieldConfig),
+                            topK = topK
+                        ),
+                        index = index++
+                    )
+                )
+            }
+        }
+
+        // Add requests for each search type
+        addRequest(SearchType.KEYWORD, keywords?.toOrQuery())
+        addRequest(SearchType.TITLE, titles?.toOrQuery())
+        addRequest(SearchType.CONTENT, contents?.toOrQuery())
+        addRequest(SearchType.PATH, paths?.toOrQuery())
+
+        return requests
+    }
+
+    /**
+     * Parse and deduplicate search responses by type.
+     * Eliminates duplication in result parsing logic.
+     */
+    private fun parseSearchResponses(
+        requests: List<SearchRequestInfo>,
+        responses: List<HybridSearchResponse>
+    ): Map<SearchType, List<SearchResult>> {
+        return requests.associate { requestInfo ->
+            log.debug { "[Multi-Search] Parsing ${requestInfo.type.getDisplayName()} results..." }
+
+            val results = HybridSearchUtils.deduplicateResults(
+                HybridSearchUtils.parseSearchResults(responses[requestInfo.index])
+            )
+
+            requestInfo.type to results
+        }
+    }
+
+    /**
+     * Log top 5 results for each search type (debug only)
+     */
+    private fun logSearchResults(resultsByType: Map<SearchType, List<SearchResult>>) {
+        resultsByType.forEach { (type, results) ->
+            val prefix = type.name.first() // K, T, C, P
+            log.debug { "[Multi-Search] ━━━ ${type.getDisplayName()} search top 5 ━━━" }
+            results.take(5).forEachIndexed { i, r ->
+                log.debug {
+                    "  [$prefix${i + 1}] ${r.title} " +
+                        "(score: ${"%.4f".format(r.score.value)}, content: ${r.content.length} chars)"
+                }
+            }
+        }
+        log.debug { "[Multi-Search] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
     }
 }

@@ -349,15 +349,19 @@ class ConfluenceSyncTask(
                 val hits = searchResponse.hits().hits()
                 if (hits.isEmpty()) break
 
-                // Extract document IDs (handle both flat and nested structures)
+                // Extract document IDs (청크 ID가 아닌 실제 문서 ID를 가져와야 함)
                 hits.forEach { hit ->
                     val source = hit.source()
+                    // 우선순위: metadata.id (실제 Confluence 페이지 ID) > id (청크 ID) > _id
                     val id = when {
-                        // Try flat structure first (metadata.id)
                         source?.containsKey("metadata.id") == true -> source["metadata.id"]?.toString()
-                        // Try root id field
-                        source?.containsKey("id") == true -> source["id"]?.toString()
-                        // Fallback to hit ID
+                        source?.containsKey("id") == true -> {
+                            // id 필드에서 청크 suffix 제거 (예: "123_chunk_0" -> "123")
+                            val rawId = source["id"]?.toString()
+                            rawId?.let { 
+                                if (it.contains("_chunk_")) it.substringBefore("_chunk_") else it
+                            }
+                        }
                         else -> hit.id()
                     }
                     id?.let { documentIds.add(it) }

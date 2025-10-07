@@ -34,14 +34,14 @@ class OpenSearchVectorStoreClient(
 
     override fun add(documents: List<Document>) {
         log.info { "[VectorStore] Adding ${documents.size} documents" }
-        
+
         val errors = mutableListOf<Pair<String, Exception>>()
         var successCount = 0
 
         documents.forEach { document ->
             try {
                 val docText = document.text ?: ""
-                
+
                 // Generate embedding
                 val embedding = try {
                     embeddingModel.embed(docText).toList()
@@ -68,16 +68,16 @@ class OpenSearchVectorStoreClient(
                         .id(document.id)
                         .document(docMap)
                 }
-                
+
                 successCount++
             } catch (e: Exception) {
                 log.error { "[VectorStore] Failed to index: ${document.id}" }
                 errors.add(document.id to e)
             }
         }
-        
-        log.info { "[VectorStore] Indexed ${successCount}/${documents.size} documents" }
-        
+
+        log.info { "[VectorStore] Indexed $successCount/${documents.size} documents" }
+
         // If any errors occurred, log summary
         if (errors.isNotEmpty()) {
             log.warn { "[VectorStore] ${errors.size} documents failed" }

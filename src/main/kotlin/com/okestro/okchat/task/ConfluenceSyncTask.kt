@@ -147,7 +147,7 @@ class ConfluenceSyncTask(
                     log.warn { "  [Batch $batchNum/${batches.size}] Continuing with next batch..." }
                 }
             }
-            
+
             // Log failed batches summary
             if (failedBatches.isNotEmpty()) {
                 log.error { "  [ConfluenceSync] Failed batches: ${failedBatches.joinToString(", ")} (total: ${failedBatches.size}/${batches.size})" }
@@ -197,7 +197,7 @@ class ConfluenceSyncTask(
                     // 빈 제목/내용도 저장 (모두 의미가 있을 수 있음)
                     val pageTitle = node.title.ifBlank { "Untitled-${node.id}" }
                     val pageContent = node.body?.let { stripHtml(it) } ?: ""
-                    
+
                     if (pageContent.isBlank()) {
                         log.info { "[ConfluenceSync][$pageNum/$totalPages] Processing page with empty content: id=${node.id}, title='$pageTitle'" }
                     }
@@ -358,7 +358,7 @@ class ConfluenceSyncTask(
                         source?.containsKey("id") == true -> {
                             // id 필드에서 청크 suffix 제거 (예: "123_chunk_0" -> "123")
                             val rawId = source["id"]?.toString()
-                            rawId?.let { 
+                            rawId?.let {
                                 if (it.contains("_chunk_")) it.substringBefore("_chunk_") else it
                             }
                         }

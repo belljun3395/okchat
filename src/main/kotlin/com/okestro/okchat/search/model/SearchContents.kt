@@ -12,8 +12,6 @@ data class SearchContents(
 
     override fun toQuery(): String = toOrQuery()
     companion object {
-        private const val MAX_KEYWORDS = 5
-
         fun fromStrings(terms: List<String>): SearchContents {
             return SearchContents(
                 terms.filter { it.isNotBlank() }
@@ -29,7 +27,6 @@ data class SearchContents(
      */
     fun toOrQuery(): String {
         return contents
-            .take(MAX_KEYWORDS)
             .filter { it.isValid() }
             .joinToString(" OR ") { it.term }
     }

@@ -3,6 +3,7 @@ package com.okestro.okchat.ai.tools
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.SearchByQueryInput
 import com.okestro.okchat.ai.model.ToolOutput
+import com.okestro.okchat.search.model.SearchTitles
 import com.okestro.okchat.search.strategy.TitleSearchStrategy
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
@@ -66,8 +67,11 @@ class TitleSearchTool(
 
             log.info { "Title search: query='$query', topK=$topK" }
 
+            // Convert to SearchCriteria
+            val criteria = SearchTitles.fromStrings(listOf(query))
+
             val results = runBlocking {
-                titleSearchStrategy.search(query, topK)
+                titleSearchStrategy.search(criteria, topK)
             }
 
             val answer = if (results.isEmpty()) {

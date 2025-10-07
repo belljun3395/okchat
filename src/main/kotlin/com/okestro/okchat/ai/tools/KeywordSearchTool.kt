@@ -3,6 +3,7 @@ package com.okestro.okchat.ai.tools
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.SearchByKeywordInput
 import com.okestro.okchat.ai.model.ToolOutput
+import com.okestro.okchat.search.model.SearchKeywords
 import com.okestro.okchat.search.strategy.KeywordSearchStrategy
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
@@ -66,8 +67,11 @@ class KeywordSearchTool(
 
             log.info { "Keyword search: keywords='$keywords', topK=$topK" }
 
+            // Convert to SearchCriteria
+            val criteria = SearchKeywords.fromStrings(keywords.split(",").map { it.trim() })
+
             val results = runBlocking {
-                keywordSearchStrategy.search(keywords, topK)
+                keywordSearchStrategy.search(criteria, topK)
             }
 
             val answer = if (results.isEmpty()) {

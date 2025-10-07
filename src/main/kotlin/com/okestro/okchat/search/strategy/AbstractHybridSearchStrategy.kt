@@ -5,6 +5,7 @@ import com.okestro.okchat.search.client.SearchClient
 import com.okestro.okchat.search.client.SearchFields
 import com.okestro.okchat.search.config.SearchFieldWeightConfig
 import com.okestro.okchat.search.config.SearchWeightConfig
+import com.okestro.okchat.search.model.SearchCriteria
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.util.HybridSearchUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -14,6 +15,12 @@ private val log = KotlinLogging.logger {}
 
 /**
  * Template Method Pattern for hybrid search strategies.
+ *
+ * Responsibility:
+ * - Implement common hybrid search flow (embedding + request + parse)
+ * - Allow subclasses to customize field weights and score combination
+ * - Accept SearchCriteria for consistency and extensibility
+ *
  * Engine-agnostic: works with any SearchClient implementation.
  */
 abstract class AbstractHybridSearchStrategy(
@@ -21,8 +28,15 @@ abstract class AbstractHybridSearchStrategy(
     private val embeddingModel: EmbeddingModel
 ) : SearchStrategy {
 
-    override suspend fun search(query: String, topK: Int): List<SearchResult> {
-        log.info { "[${getName()}] Searching: '$query' (topK=$topK)" }
+    override suspend fun search(criteria: SearchCriteria, topK: Int): List<SearchResult> {
+        val query = criteria.toQuery()
+
+        if (query.isBlank()) {
+            log.warn { "[${getName()}] Empty query from criteria, returning empty results" }
+            return emptyList()
+        }
+
+        log.info { "[${getName()}] Searching with ${criteria.getSearchType().name} criteria: '$query' (topK=$topK)" }
 
         log.debug { "[${getName()}] Generating embedding..." }
         val embedding = embeddingModel.embed(query).toList()

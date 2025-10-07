@@ -1,5 +1,6 @@
 package com.okestro.okchat.search.config
 
+import com.okestro.okchat.search.model.SearchDocument
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.springframework.ai.document.Document
@@ -108,11 +109,13 @@ class OpenSearchVectorStore(
             // Convert results to documents
             val documents = searchResponse.hits().hits().mapNotNull { hit ->
                 val source = hit.source() ?: return@mapNotNull null
-                val id = source["id"]?.toString() ?: hit.id() ?: return@mapNotNull null
-                val content = source["content"]?.toString() ?: ""
 
-                @Suppress("UNCHECKED_CAST")
-                val metadata = (source["metadata"] as? Map<String, Any>) ?: emptyMap()
+                // Convert to type-safe SearchDocument
+                val searchDoc = SearchDocument.fromMap(source)
+
+                val id = searchDoc.id.ifEmpty { hit.id() ?: return@mapNotNull null }
+                val content = searchDoc.content
+                val metadata = searchDoc.metadata.toMap()
 
                 Document(id, content, metadata)
             }

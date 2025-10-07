@@ -4,6 +4,7 @@ import com.okestro.okchat.search.client.HybridSearchRequest
 import com.okestro.okchat.search.client.HybridSearchResponse
 import com.okestro.okchat.search.client.SearchFields
 import com.okestro.okchat.search.config.SearchFieldWeightConfig
+import com.okestro.okchat.search.model.SearchDocument
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchScore
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -45,24 +46,14 @@ object HybridSearchUtils {
         scoresCombiner: (Double, Double) -> Double = { text, vector -> text + vector }
     ): List<SearchResult> {
         return response.hits.map { hit ->
-            val document = hit.document
+            // Convert untyped map to type-safe SearchDocument
+            val document = SearchDocument.fromMap(hit.document)
 
-            val rawId = document["id"]?.toString() ?: ""
-            val actualPageId = if (rawId.contains("_chunk_")) {
-                rawId.substringBefore("_chunk_")
-            } else {
-                rawId
-            }
-
-            // Extract metadata - support both flat (metadata.title) and nested (metadata.title) structure
-            @Suppress("UNCHECKED_CAST")
-            val metadata = document["metadata"] as? Map<String, Any> ?: emptyMap()
-
-            // Try flat structure first (metadata.title), fallback to nested (metadata.title)
-            val title = document["metadata.title"]?.toString() ?: metadata["title"]?.toString() ?: "Untitled"
-            val path = document["metadata.path"]?.toString() ?: metadata["path"]?.toString() ?: ""
-            val spaceKey = document["metadata.spaceKey"]?.toString() ?: metadata["spaceKey"]?.toString() ?: ""
-            val keywords = document["metadata.keywords"]?.toString() ?: metadata["keywords"]?.toString() ?: ""
+            val actualPageId = document.getActualPageId()
+            val title = document.getTitle()
+            val path = document.getPath()
+            val spaceKey = document.getSpaceKey()
+            val keywords = document.getKeywords()
 
             val combinedScore = scoresCombiner(hit.textScore, hit.vectorScore)
 
@@ -71,7 +62,7 @@ object HybridSearchUtils {
             SearchResult.withSimilarity(
                 id = actualPageId,
                 title = title,
-                content = document["content"]?.toString() ?: "",
+                content = document.content,
                 path = path,
                 spaceKey = spaceKey,
                 keywords = keywords,

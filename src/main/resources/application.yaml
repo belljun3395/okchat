@@ -121,12 +121,12 @@ email:
             type: GMAIL
             host: imap.gmail.com
             port: 993
-            username: ${EMAIL_PROVIDERS_GMAIL_USERNAME:}
+            username: ${EMAIL_PROVIDERS_GMAIL_USERNAME:dummy@gmail.com}
             auth-type: OAUTH2
-            enabled: true
+            enabled: false  # Disabled by default for Kubernetes
             oauth2:
-                client-id: ${EMAIL_PROVIDERS_GMAIL_OAUTH2_CLIENT_ID:}
-                client-secret: ${EMAIL_PROVIDERS_GMAIL_OAUTH2_CLIENT_SECRET:}
+                client-id: ${EMAIL_PROVIDERS_GMAIL_OAUTH2_CLIENT_ID:dummy-client-id}
+                client-secret: ${EMAIL_PROVIDERS_GMAIL_OAUTH2_CLIENT_SECRET:dummy-secret}
                 tenant-id: ${EMAIL_PROVIDERS_GMAIL_OAUTH2_TENANT_ID:common}
                 scopes:
                     - https://mail.google.com/

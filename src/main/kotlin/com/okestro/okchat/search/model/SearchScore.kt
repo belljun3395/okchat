@@ -26,8 +26,8 @@ sealed class SearchScore : Comparable<SearchScore> {
         }
 
         override fun compareTo(other: SearchScore): Int {
-            // Distance: lower is better, so reverse comparison
-            return -value.compareTo(other.toSimilarity().value)
+            // Distance: lower is better, so compare as similarity (higher is better)
+            return toSimilarity().value.compareTo(other.toSimilarity().value)
         }
     }
 

@@ -1,13 +1,16 @@
-package com.okestro.okchat.search.config
+package com.okestro.okchat.search.client.opensearch
 
 import com.okestro.okchat.search.model.SearchDocument
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
+import org.opensearch.client.opensearch._types.FieldValue
 import org.springframework.ai.document.Document
 import org.springframework.ai.embedding.EmbeddingModel
 import org.springframework.ai.vectorstore.SearchRequest
 import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.ai.vectorstore.filter.Filter
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Component
 
 private val log = KotlinLogging.logger {}
 
@@ -22,10 +25,11 @@ private val log = KotlinLogging.logger {}
  * This class follows Single Responsibility Principle by focusing
  * solely on vector store operations.
  */
-class OpenSearchVectorStore(
+@Component
+class OpenSearchVectorStoreClient(
     private val client: OpenSearchClient,
     private val embeddingModel: EmbeddingModel,
-    private val indexName: String
+    @Value("\${spring.ai.vectorstore.opensearch.index-name:vector_store}") private val indexName: String
 ) : VectorStore {
 
     override fun add(documents: List<Document>) {
@@ -101,7 +105,7 @@ class OpenSearchVectorStore(
                     .query { q ->
                         q.match { m ->
                             m.field("content")
-                                .query(org.opensearch.client.opensearch._types.FieldValue.of(request.query))
+                                .query(FieldValue.of(request.query))
                         }
                     }
             }, Map::class.java)

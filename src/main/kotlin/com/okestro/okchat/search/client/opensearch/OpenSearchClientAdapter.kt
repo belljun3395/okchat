@@ -1,7 +1,12 @@
-package com.okestro.okchat.search.client
+package com.okestro.okchat.search.client.opensearch
 
+import com.okestro.okchat.search.client.HybridSearchRequest
+import com.okestro.okchat.search.client.HybridSearchResponse
+import com.okestro.okchat.search.client.SearchClient
+import com.okestro.okchat.search.client.SearchHit
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
+import kotlin.math.exp
 
 private val log = KotlinLogging.logger {}
 
@@ -92,7 +97,7 @@ class OpenSearchClientAdapter(
         if (score <= 0.0) return 0.0
 
         val k = 5.0 // Scaling factor - adjust based on your score distribution
-        return 1.0 / (1.0 + kotlin.math.exp(-score / k))
+        return 1.0 / (1.0 + exp(-score / k))
     }
 }
 

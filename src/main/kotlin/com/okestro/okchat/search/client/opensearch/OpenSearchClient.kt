@@ -1,4 +1,4 @@
-package com.okestro.okchat.search.client
+package com.okestro.okchat.search.client.opensearch
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.oshai.kotlinlogging.KotlinLogging

@@ -11,7 +11,6 @@ import org.opensearch.client.RestHighLevelClient
 import org.opensearch.client.json.jackson.JacksonJsonpMapper
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.opensearch.client.transport.rest_client.RestClientTransport
-import org.springframework.ai.embedding.EmbeddingModel
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
@@ -45,9 +44,7 @@ class OpenSearchConfig(
     @Value("\${spring.ai.vectorstore.opensearch.port:9200}") val port: Int,
     @Value("\${spring.ai.vectorstore.opensearch.scheme:http}") val scheme: String,
     @Value("\${spring.ai.vectorstore.opensearch.username:}") val username: String,
-    @Value("\${spring.ai.vectorstore.opensearch.password:}") val password: String,
-    @Value("\${spring.ai.vectorstore.opensearch.index-name:vector_store}") val indexName: String,
-    @Value("\${spring.ai.vectorstore.opensearch.embedding-dimension:1536}") val embeddingDimension: Int
+    @Value("\${spring.ai.vectorstore.opensearch.password:}") val password: String
 ) {
 
     /**
@@ -133,22 +130,5 @@ class OpenSearchConfig(
             }
             setBackOffPolicy(backOffPolicy)
         }
-    }
-
-    /**
-     * Vector store for Spring AI integration.
-     * This provides the VectorStore abstraction for document storage.
-     */
-    @Bean
-    fun vectorStore(
-        openSearchClient: OpenSearchClient,
-        embeddingModel: EmbeddingModel
-    ): OpenSearchVectorStore {
-        log.info { "Creating OpenSearchVectorStore: index=$indexName, dimension=$embeddingDimension" }
-        return OpenSearchVectorStore(
-            client = openSearchClient,
-            embeddingModel = embeddingModel,
-            indexName = indexName
-        )
     }
 }

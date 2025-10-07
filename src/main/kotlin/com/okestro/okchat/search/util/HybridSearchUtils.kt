@@ -1,9 +1,6 @@
 package com.okestro.okchat.search.util
 
-import com.okestro.okchat.search.client.HybridSearchRequest
 import com.okestro.okchat.search.client.HybridSearchResponse
-import com.okestro.okchat.search.client.SearchFields
-import com.okestro.okchat.search.config.SearchFieldWeightConfig
 import com.okestro.okchat.search.model.SearchDocument
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchScore
@@ -16,28 +13,6 @@ private val log = KotlinLogging.logger {}
  * Provides common logic for building requests, parsing responses, and deduplicating results
  */
 object HybridSearchUtils {
-
-    /**
-     * Build search request with field configuration
-     */
-    fun buildSearchRequest(
-        query: String,
-        embedding: List<Float>,
-        fields: SearchFieldWeightConfig.FieldWeights,
-        topK: Int
-    ): HybridSearchRequest {
-        return HybridSearchRequest(
-            textQuery = query,
-            vectorQuery = embedding,
-            fields = SearchFields(
-                queryBy = fields.queryBy.split(","),
-                weights = fields.weights.split(",").map { it.toInt() }
-            ),
-            filters = mapOf("metadata.type" to "confluence-page"),
-            limit = topK
-        )
-    }
-
     /**
      * Parse search response hits into SearchResult objects
      */

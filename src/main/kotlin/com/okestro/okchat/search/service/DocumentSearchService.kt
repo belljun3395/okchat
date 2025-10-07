@@ -3,6 +3,7 @@ package com.okestro.okchat.search.service
 import com.okestro.okchat.search.client.HybridSearchRequest
 import com.okestro.okchat.search.client.HybridSearchResponse
 import com.okestro.okchat.search.client.SearchClient
+import com.okestro.okchat.search.client.SearchFields
 import com.okestro.okchat.search.config.SearchFieldWeightConfig
 import com.okestro.okchat.search.model.ContentSearchResults
 import com.okestro.okchat.search.model.KeywordSearchResults
@@ -118,11 +119,15 @@ class DocumentSearchService(
                 requests.add(
                     SearchRequestInfo(
                         type = type,
-                        request = HybridSearchUtils.buildSearchRequest(
-                            query = it,
-                            embedding = embedding,
-                            fields = type.getFieldWeights(fieldConfig),
-                            topK = topK
+                        request = HybridSearchRequest(
+                            textQuery = it,
+                            vectorQuery = embedding,
+                            fields = SearchFields(
+                                queryBy = type.getFieldWeights(fieldConfig).queryByList(),
+                                weights = type.getFieldWeights(fieldConfig).weightsList()
+                            ),
+                            filters = mapOf("metadata.type" to "confluence-page"),
+                            limit = topK
                         ),
                         index = index++
                     )

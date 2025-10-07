@@ -49,5 +49,13 @@ data class SearchFieldWeightConfig(
     data class FieldWeights(
         var queryBy: String,
         var weights: String
-    )
+    ) {
+        fun queryByList(): List<String> {
+            return queryBy.split(",").map { it.trim() }
+        }
+
+        fun weightsList(): List<Int> {
+            return weights.split(",").map { it.trim().toInt() }
+        }
+    }
 }

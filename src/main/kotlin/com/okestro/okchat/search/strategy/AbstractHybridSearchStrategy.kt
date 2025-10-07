@@ -1,6 +1,8 @@
 package com.okestro.okchat.search.strategy
 
+import com.okestro.okchat.search.client.HybridSearchRequest
 import com.okestro.okchat.search.client.SearchClient
+import com.okestro.okchat.search.client.SearchFields
 import com.okestro.okchat.search.config.SearchFieldWeightConfig
 import com.okestro.okchat.search.config.SearchWeightConfig
 import com.okestro.okchat.search.model.SearchResult
@@ -25,7 +27,16 @@ abstract class AbstractHybridSearchStrategy(
         log.debug { "[${getName()}] Generating embedding..." }
         val embedding = embeddingModel.embed(query).toList()
 
-        val request = HybridSearchUtils.buildSearchRequest(query, embedding, getFieldWeights(), topK)
+        val request = HybridSearchRequest(
+            query,
+            embedding,
+            SearchFields(
+                queryBy = getFieldWeights().queryByList(),
+                weights = getFieldWeights().weightsList()
+            ),
+            mapOf("metadata.type" to "confluence-page"),
+            topK
+        )
 
         log.debug { "[${getName()}] Executing search..." }
         val response = searchClient.hybridSearch(request)

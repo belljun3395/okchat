@@ -4,27 +4,35 @@ spring:
     output:
         ansi:
             enabled: ALWAYS  # Enable colored output
+    
+    # Database configuration (overridable by environment variables)
     datasource:
-        url: jdbc:mysql://localhost:13306/okchat?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
-        driver-class-name: com.mysql.cj.jdbc.Driver
-        username: root
-        password: root
+        url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:13306/okchat?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul}
+        driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
+        username: ${SPRING_DATASOURCE_USERNAME:root}
+        password: ${SPRING_DATASOURCE_PASSWORD:root}
         hikari:
             maximum-pool-size: 10
             minimum-idle: 2
             connection-timeout: 30000
             idle-timeout: 600000
             max-lifetime: 1800000
+    
+    # Redis configuration (overridable by environment variables)
     data:
         redis:
-            host: localhost
-            port: 16379
+            host: ${SPRING_DATA_REDIS_HOST:localhost}
+            port: ${SPRING_DATA_REDIS_PORT:16379}
+    
+    # Spring Cloud Task
     cloud:
         task:
             enabled: true  # Set to true to run as task mode
             initialize-enabled: true
             table-prefix: TASK_
             single-instance-enabled: true
+    
+    # Spring AI configuration
     ai:
         retry:
             max-attempts: 5
@@ -34,20 +42,20 @@ spring:
                 max-interval: 30s
         vectorstore:
             opensearch:
-                host: localhost
-                port: 9200
-                scheme: http
-                username: ''  # Leave empty for local development (security disabled)
-                password: ''  # Leave empty for local development (security disabled)
-                index-name: vector_store
-                embedding-dimension: 1536
+                host: ${SPRING_AI_VECTORSTORE_OPENSEARCH_HOST:localhost}
+                port: ${SPRING_AI_VECTORSTORE_OPENSEARCH_PORT:9200}
+                scheme: ${SPRING_AI_VECTORSTORE_OPENSEARCH_SCHEME:http}
+                username: ${SPRING_AI_VECTORSTORE_OPENSEARCH_USERNAME:}
+                password: ${SPRING_AI_VECTORSTORE_OPENSEARCH_PASSWORD:}
+                index-name: ${SPRING_AI_VECTORSTORE_OPENSEARCH_INDEX_NAME:vector_store}
+                embedding-dimension: ${SPRING_AI_VECTORSTORE_OPENSEARCH_EMBEDDING_DIMENSION:1536}
         openai:
-            api-key: ${OPENAI_API_KEY}
+            api-key: ${SPRING_AI_OPENAI_API_KEY:${OPENAI_API_KEY:}}
             embedding:
-                model: text-embedding-3-small
+                model: ${SPRING_AI_OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
             chat:
                 options:
-                    model: gpt-4.1-mini
+                    model: ${SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL:gpt-4.1-mini}
         mcp:
             client:
                 stdio:
@@ -63,13 +71,37 @@ spring:
                                 - "-y"
                                 - "@modelcontextprotocol/server-memory"
 
+# Spring Boot Actuator for Kubernetes health checks
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info,metrics,prometheus
+            base-path: /actuator
+    endpoint:
+        health:
+            probes:
+                enabled: true
+            show-details: when-authorized
+    health:
+        livenessState:
+            enabled: true
+        readinessState:
+            enabled: true
+    prometheus:
+        metrics:
+            export:
+                enabled: true
+
+# Confluence configuration
 confluence:
     base-url: ${CONFLUENCE_BASE_URL}
     auth:
         type: BASIC
-        email: ${CONFLUENCE_EMAIL}
-        api-token: ${CONFLUENCE_API_TOKEN}
+        email: ${CONFLUENCE_EMAIL:}
+        api-token: ${CONFLUENCE_API_TOKEN:}
 
+# Email configuration
 email:
     polling:
         interval: 60000
@@ -83,23 +115,23 @@ email:
         ssl:
             enabled: true
             trust: "*"
-
     providers:
         gmail:
             type: GMAIL
             host: imap.gmail.com
             port: 993
-            username: ${GMAIL_USERNAME}
+            username: ${EMAIL_PROVIDERS_GMAIL_USERNAME:}
             auth-type: OAUTH2
             enabled: true
             oauth2:
-                client-id: ${GMAIL_CLIENT_ID}
-                client-secret: ${GMAIL_CLIENT_SECRET}
-                tenant-id: ${GMAIL_TENANT_ID:common}
+                client-id: ${EMAIL_PROVIDERS_GMAIL_OAUTH2_CLIENT_ID:}
+                client-secret: ${EMAIL_PROVIDERS_GMAIL_OAUTH2_CLIENT_SECRET:}
+                tenant-id: ${EMAIL_PROVIDERS_GMAIL_OAUTH2_TENANT_ID:common}
                 scopes:
                     - https://mail.google.com/
                 redirect-uri: http://localhost:8080/oauth2/callback
 
+# Task configuration
 task:
     confluence-sync:
         enabled: false
@@ -131,6 +163,8 @@ search:
         path:
             query-by: "metadata.path,metadata.title,content"
             weights: "10,5,1"  # Heavy weight on path field
+
+# RAG configuration
 rag:
     confluence:
         chunking:
@@ -143,7 +177,6 @@ rag:
             keep-separators: true
             semantic-similarity-threshold: 0.5
             sentence-window-size: 3
-
     rrf:
         k: 60.0
         keyword-weight: 1.0

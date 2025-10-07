@@ -112,6 +112,7 @@ class ConfluenceSyncTask(
             val batchSize = 10 // Process 10 documents at a time
             val batches = documents.chunked(batchSize)
             var successCount = 0
+            val failedBatches = mutableListOf<Int>()
 
             batches.forEachIndexed { batchIndex, batch ->
                 val batchNum = batchIndex + 1
@@ -121,7 +122,7 @@ class ConfluenceSyncTask(
                     // Get count before add
                     val countBefore = getOpenSearchDocumentCount()
 
-                    // Add documents via VectorStore
+                    // Add documents via VectorStore (now handles errors gracefully)
                     vectorStore.add(batch)
 
                     // Verify count increased
@@ -141,8 +142,15 @@ class ConfluenceSyncTask(
                     log.error(e) { "  [Batch $batchNum/${batches.size}] ✗ Failed to add batch: ${e.message}" }
                     log.error { "  [Batch $batchNum/${batches.size}] Batch IDs: ${batch.map { it.id }.take(5)}..." }
                     log.error { "  [Batch $batchNum/${batches.size}] Stack trace: ${e.stackTraceToString()}" }
-                    throw e // Rethrow to mark task as failed
+                    failedBatches.add(batchNum)
+                    // Continue processing remaining batches instead of failing entire task
+                    log.warn { "  [Batch $batchNum/${batches.size}] Continuing with next batch..." }
                 }
+            }
+            
+            // Log failed batches summary
+            if (failedBatches.isNotEmpty()) {
+                log.error { "  [ConfluenceSync] Failed batches: ${failedBatches.joinToString(", ")} (total: ${failedBatches.size}/${batches.size})" }
             }
 
             // Verify final count
@@ -186,30 +194,32 @@ class ConfluenceSyncTask(
                     val pageNum = index + 1
                     val path = getPagePath(node, hierarchy)
 
-                    // 제목이 없거나 비어있는 페이지 필터링
-                    if (node.title.isBlank() || node.title.equals("Untitled", ignoreCase = true)) {
-                        log.warn { "[ConfluenceSync][$pageNum/$totalPages] Skipping page with invalid title: id=${node.id}, title='${node.title}'" }
-                        return@async emptyList()
-                    }
-
-                    // 본문이 비어있는 페이지 필터링
+                    // 빈 제목/내용도 저장 (모두 의미가 있을 수 있음)
+                    val pageTitle = node.title.ifBlank { "Untitled-${node.id}" }
                     val pageContent = node.body?.let { stripHtml(it) } ?: ""
+                    
                     if (pageContent.isBlank()) {
-                        log.warn { "[ConfluenceSync][$pageNum/$totalPages] Skipping page with empty content: id=${node.id}, title='${node.title}'" }
-                        return@async emptyList()
+                        log.info { "[ConfluenceSync][$pageNum/$totalPages] Processing page with empty content: id=${node.id}, title='$pageTitle'" }
                     }
 
-                    log.info { "[ConfluenceSync][$pageNum/$totalPages] Processing page: title='${node.title}', id=${node.id}, path=$path" }
+                    // Only log every 10th page to reduce noise
+                    if (pageNum % 10 == 0 || pageNum == 1 || pageNum == totalPages) {
+                        log.info { "[ConfluenceSync][$pageNum/$totalPages] Processing: title='$pageTitle', content_length=${pageContent.length}" }
+                    }
 
                     // Extract keywords FIRST (before building content)
                     // Use semaphore to limit concurrent API calls
-                    log.debug { "[ConfluenceSync] Extracting keywords for page: id=${node.id}" }
-                    val keywords = apiCallSemaphore.withPermit {
-                        try {
-                            keywordExtractionService.extractKeywordsFromContentAndTitle(pageContent, node.title)
-                        } catch (e: Exception) {
-                            log.warn { "[ConfluenceSync] Failed to extract keywords: page_title='${node.title}', error=${e.message}" }
-                            emptyList()
+                    // Skip keyword extraction for empty content to save API calls
+                    val keywords = if (pageContent.isBlank()) {
+                        emptyList()
+                    } else {
+                        apiCallSemaphore.withPermit {
+                            try {
+                                keywordExtractionService.extractKeywordsFromContentAndTitle(pageContent, pageTitle)
+                            } catch (e: Exception) {
+                                log.warn { "[ConfluenceSync] Keyword extraction failed: page_title='$pageTitle'" }
+                                emptyList()
+                            }
                         }
                     }
 
@@ -219,47 +229,53 @@ class ConfluenceSyncTask(
                     // Combine content keywords + path keywords for better hierarchical search
                     val allKeywords = (keywords + pathKeywords).distinct()
 
-                    if (keywords.isNotEmpty()) {
-                        log.debug { "[ConfluenceSync] Content keywords: count=${keywords.size}, keywords=${keywords.joinToString(", ")}" }
-                    } else {
-                        log.debug { "[ConfluenceSync] No content keywords extracted for page: id=${node.id}" }
-                    }
-                    log.debug { "[ConfluenceSync] Path keywords: count=${pathKeywords.size}, keywords=${pathKeywords.joinToString(", ")}" }
-                    log.info { "[ConfluenceSync] Total keywords extracted: total=${allKeywords.size}, content=${keywords.size}, path=${pathKeywords.size}" }
-
-                    // Note: pageContent already extracted above for validation
-                    val contentLength = pageContent.length
+                    // Reduced logging for keywords
 
                     // Create initial document with metadata including ALL keywords (content + path)
+                    // For empty content, store at least the title and metadata
+                    val documentContent = pageContent.ifBlank { pageTitle }
                     val baseDocument = Document(
                         node.id,
-                        pageContent,
+                        documentContent,
                         mapOf(
                             "id" to node.id,
-                            "title" to node.title,
+                            "title" to pageTitle,
                             "type" to "confluence-page",
                             "spaceKey" to spaceKey,
                             "path" to path,
-                            "keywords" to allKeywords.joinToString(", ")
+                            "keywords" to allKeywords.joinToString(", "),
+                            "isEmpty" to pageContent.isBlank()
                         )
                     )
 
                     // Split document into chunks if too large
-                    log.debug { "[ConfluenceSync] Content length: chars=$contentLength, page_id=${node.id}" }
                     val chunks = try {
                         chunkingStrategy.chunk(baseDocument)
                     } catch (e: Exception) {
-                        log.warn { "[ConfluenceSync] Failed to chunk document: page_title='${node.title}', error=${e.message}, using_original=true" }
-                        listOf(baseDocument)
+                        log.warn { "[ConfluenceSync] Failed to chunk document: page_title='$pageTitle', error=${e.message}" }
+                        // If chunking fails and content is too large, truncate it
+                        val maxLength = 8000 // Safe limit for embedding models
+                        if (documentContent.length > maxLength) {
+                            log.warn { "[ConfluenceSync] Content too large (${documentContent.length} chars), truncating to $maxLength chars" }
+                            val truncated = Document(
+                                baseDocument.id,
+                                documentContent.take(maxLength) + "... [truncated]",
+                                baseDocument.metadata + mapOf("truncated" to true)
+                            )
+                            listOf(truncated)
+                        } else {
+                            listOf(baseDocument)
+                        }
                     }
 
                     // If single chunk, use original page ID
                     // If multiple chunks, append chunk index to ID
                     val resultDocuments = if (chunks.size == 1) {
-                        log.debug { "[ConfluenceSync] Document created as single chunk: page_id=${node.id}" }
                         chunks
                     } else {
-                        log.info { "[ConfluenceSync] Document split into chunks: page_id=${node.id}, chunk_count=${chunks.size}" }
+                        if (pageNum % 10 == 0 || chunks.size > 5) {
+                            log.info { "[ConfluenceSync] Split into ${chunks.size} chunks: page_id=${node.id}" }
+                        }
                         chunks.mapIndexed { chunkIndex, chunk ->
                             Document(
                                 "${node.id}_chunk_$chunkIndex",
@@ -274,7 +290,7 @@ class ConfluenceSyncTask(
                         }
                     }
 
-                    log.info { "[ConfluenceSync] Progress: current=$pageNum, total=$totalPages, percent=${String.format("%.1f", (pageNum.toDouble() / totalPages) * 100)}%" }
+                    // Progress logged only every 10 pages above
 
                     resultDocuments
                 }
@@ -322,20 +338,28 @@ class ConfluenceSyncTask(
                         .size(size)
                         .query { q ->
                             q.term { t ->
+                                // Use flat field name (metadata is flattened with dot notation)
                                 t.field("metadata.spaceKey")
                                     .value(org.opensearch.client.opensearch._types.FieldValue.of(spaceKey))
                             }
                         }
-                        .source { src -> src.filter { f -> f.includes(listOf("id")) } }
+                        .source { src -> src.filter { f -> f.includes(listOf("id", "metadata.id")) } }
                 }, Map::class.java)
 
                 val hits = searchResponse.hits().hits()
                 if (hits.isEmpty()) break
 
-                // Extract document IDs
+                // Extract document IDs (handle both flat and nested structures)
                 hits.forEach { hit ->
                     val source = hit.source()
-                    val id = source?.get("id")?.toString() ?: hit.id()
+                    val id = when {
+                        // Try flat structure first (metadata.id)
+                        source?.containsKey("metadata.id") == true -> source["metadata.id"]?.toString()
+                        // Try root id field
+                        source?.containsKey("id") == true -> source["id"]?.toString()
+                        // Fallback to hit ID
+                        else -> hit.id()
+                    }
                     id?.let { documentIds.add(it) }
                 }
 

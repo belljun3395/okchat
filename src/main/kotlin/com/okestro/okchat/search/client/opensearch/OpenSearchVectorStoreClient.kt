@@ -33,17 +33,22 @@ class OpenSearchVectorStoreClient(
 ) : VectorStore {
 
     override fun add(documents: List<Document>) {
-        log.info { "[OpenSearch VectorStore] Adding ${documents.size} documents to index: $indexName" }
+        log.info { "[VectorStore] Adding ${documents.size} documents" }
+        
+        val errors = mutableListOf<Pair<String, Exception>>()
+        var successCount = 0
 
         documents.forEach { document ->
             try {
-                // Generate embedding
                 val docText = document.text ?: ""
-                if (docText.isEmpty()) {
-                    log.warn { "[OpenSearch VectorStore] Skipping document with empty text: ${document.id}" }
-                    return@forEach
+                
+                // Generate embedding
+                val embedding = try {
+                    embeddingModel.embed(docText).toList()
+                } catch (e: Exception) {
+                    log.error { "[VectorStore] Embedding failed: ${document.id}, length=${docText.length}" }
+                    throw e
                 }
-                val embedding = embeddingModel.embed(docText).toList()
 
                 // Create document with embedding (flatten metadata for better search)
                 val docMap = mutableMapOf(
@@ -63,11 +68,24 @@ class OpenSearchVectorStoreClient(
                         .id(document.id)
                         .document(docMap)
                 }
-
-                log.debug { "[OpenSearch VectorStore] Indexed document: ${document.id}" }
+                
+                successCount++
             } catch (e: Exception) {
-                log.error(e) { "[OpenSearch VectorStore] Failed to index document: ${document.id}" }
-                throw e
+                log.error { "[VectorStore] Failed to index: ${document.id}" }
+                errors.add(document.id to e)
+            }
+        }
+        
+        log.info { "[VectorStore] Indexed ${successCount}/${documents.size} documents" }
+        
+        // If any errors occurred, log summary
+        if (errors.isNotEmpty()) {
+            log.warn { "[VectorStore] ${errors.size} documents failed" }
+            errors.take(3).forEach { (id, ex) ->
+                log.error { "[VectorStore] Failed: $id - ${ex.message}" }
+            }
+            if (errors.size > 3) {
+                log.error { "[VectorStore] ... and ${errors.size - 3} more failures" }
             }
         }
     }

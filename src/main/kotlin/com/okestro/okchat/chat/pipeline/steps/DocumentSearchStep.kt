@@ -77,10 +77,10 @@ class DocumentSearchStep(
         )
 
         // Sort results by score
-        val sortedKeywordResults = searchResult.keywordResults.sortedByDescending { it.score }
-        val sortedTitleResults = searchResult.titleResults.sortedByDescending { it.score }
-        val sortedContentResults = searchResult.contentResults.sortedByDescending { it.score }
-        val sortedPathResults = searchResult.pathResults.sortedByDescending { it.score }
+        val sortedKeywordResults = searchResult.keywordResults.results.sortedByDescending { it.score }
+        val sortedTitleResults = searchResult.titleResults.results.sortedByDescending { it.score }
+        val sortedContentResults = searchResult.contentResults.results.sortedByDescending { it.score }
+        val sortedPathResults = searchResult.pathResults.results.sortedByDescending { it.score }
 
         log.info { "[${getStepName()}] Multi-search completed: keyword=${sortedKeywordResults.size}, title=${sortedTitleResults.size}, content=${sortedContentResults.size}" }
 

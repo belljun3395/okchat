@@ -3,7 +3,7 @@ package com.okestro.okchat.chat.pipeline.steps
 import com.okestro.okchat.ai.support.ContentExtractionService
 import com.okestro.okchat.ai.support.DateExtractor
 import com.okestro.okchat.ai.support.KeywordExtractionService
-import com.okestro.okchat.ai.support.LocationExtractionService
+import com.okestro.okchat.ai.support.PathExtractionService
 import com.okestro.okchat.ai.support.QueryClassifier
 import com.okestro.okchat.ai.support.TitleExtractionService
 import com.okestro.okchat.chat.pipeline.ChatContext
@@ -25,7 +25,7 @@ class QueryAnalysisStep(
     private val queryClassifier: QueryClassifier,
     private val keywordExtractionService: KeywordExtractionService,
     private val contentExtractionService: ContentExtractionService,
-    private val locationExtractionService: LocationExtractionService,
+    private val pathExtractionService: PathExtractionService,
     private val titleExtractionService: TitleExtractionService
 ) : FirstChatPipelineStep {
 
@@ -44,12 +44,12 @@ class QueryAnalysisStep(
         val contents = contentExtractionService.extractContentKeywords(userMessage)
 
         // Extract location using AI
-        val paths = locationExtractionService.extractLocationKeywords(userMessage)
+        val paths = pathExtractionService.extractLocationKeywords(userMessage)
 
         // Extract keywords using AI (if not provided)
         val providedKeywords = context.input.providedKeywords
         val keywords = providedKeywords.ifEmpty {
-            keywordExtractionService.extractKeywords(userMessage)
+            keywordExtractionService.extractQueryKeywords(userMessage)
         }
         log.debug {
             if (providedKeywords.isNotEmpty()) {

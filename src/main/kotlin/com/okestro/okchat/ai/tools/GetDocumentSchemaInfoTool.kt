@@ -43,75 +43,88 @@ class GetDocumentSchemaInfoTool(
     }
 
     override fun call(toolInput: String): String {
-        return try {
+        return ToolExecutor.execute(
+            toolName = "GetDocumentSchemaInfo",
+            log = log,
+            objectMapper = objectMapper,
+            errorThought = "An error occurred while retrieving the schema."
+        ) {
             // Parse input to type-safe object
             val input = objectMapper.readValue(toolInput, GetDocumentSchemaInput::class.java)
             val thought = input.thought ?: "No thought provided."
 
             log.info { "Retrieving schema for index: $indexName" }
 
-            // Get index mapping
-            val indexResponse = openSearchClient.indices().get { g ->
-                g.index(indexName)
+            val answer = retrieveSchemaInfo()
+
+            ToolOutput(thought = thought, answer = answer)
+        }
+    }
+
+    /**
+     * Retrieve schema information including mappings and sample document.
+     * Separated for better testability and readability.
+     */
+    private fun retrieveSchemaInfo(): String {
+        // Get index mapping
+        val indexResponse = openSearchClient.indices().get { g ->
+            g.index(indexName)
+        }
+
+        val index = indexResponse.get(indexName)
+        val mappings = index?.mappings()
+
+        return buildString {
+            append("Index: $indexName\n")
+
+            // Get document count
+            appendDocumentCount()
+
+            append("Schema Fields:\n")
+            mappings?.properties()?.forEach { (name, property) ->
+                append("- $name: ${property._kind()}\n")
             }
 
-            val index = indexResponse.get(indexName)
-            val mappings = index?.mappings()
+            // Get a sample document
+            append("\nSample Document Structure:\n")
+            appendSampleDocument()
+        }
+    }
 
-            val answer = buildString {
-                append("Index: $indexName\n")
-
-                // Get document count
-                try {
-                    val stats = openSearchClient.indices().stats { s ->
-                        s.index(indexName)
-                    }
-                    val docCount = stats.indices()?.get(indexName)?.primaries()?.docs()?.count() ?: 0
-                    append("Number of documents: $docCount\n\n")
-                } catch (_: Exception) {
-                    append("Number of documents: Unknown\n\n")
-                }
-
-                append("Schema Fields:\n")
-                mappings?.properties()?.forEach { (name, property) ->
-                    append("- $name: ${property._kind()}\n")
-                }
-
-                // Get a sample document
-                append("\nSample Document Structure:\n")
-                try {
-                    val searchResponse = openSearchClient.search({ s ->
-                        s.index(indexName)
-                            .size(1)
-                            .query { q -> q.matchAll { it } }
-                    }, Map::class.java)
-
-                    val hits = searchResponse.hits().hits()
-                    if (hits.isNotEmpty()) {
-                        val sampleDoc = hits.first().source()
-                        append(
-                            objectMapper.writerWithDefaultPrettyPrinter()
-                                .writeValueAsString(sampleDoc)
-                        )
-                    } else {
-                        append("No documents found in index.")
-                    }
-                } catch (e: Exception) {
-                    log.warn(e) { "Could not retrieve sample document: ${e.message}" }
-                    append("Could not retrieve sample document.\n")
-                    append("Error: ${e.message}")
-                }
+    private fun StringBuilder.appendDocumentCount() {
+        try {
+            val stats = openSearchClient.indices().stats { s ->
+                s.index(indexName)
             }
+            val docCount = stats.indices()?.get(indexName)?.primaries()?.docs()?.count() ?: 0
+            append("Number of documents: $docCount\n\n")
+        } catch (_: Exception) {
+            append("Number of documents: Unknown\n\n")
+        }
+    }
 
-            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
-        } catch (e: Exception) {
-            log.error(e) { "Error retrieving schema: ${e.message}" }
-            objectMapper.writeValueAsString(
-                ToolOutput(
-                    thought = "An error occurred while retrieving the schema.",
-                    answer = "Error retrieving schema information: ${e.message}"
+    private fun StringBuilder.appendSampleDocument() {
+        try {
+            val searchResponse = openSearchClient.search({ s ->
+                s.index(indexName)
+                    .size(1)
+                    .query { q -> q.matchAll { it } }
+            }, Map::class.java)
+
+            val hits = searchResponse.hits().hits()
+            if (hits.isNotEmpty()) {
+                val sampleDoc = hits.first().source()
+                append(
+                    objectMapper.writerWithDefaultPrettyPrinter()
+                        .writeValueAsString(sampleDoc)
                 )
-            )
+            } else {
+                append("No documents found in index.")
+            }
+        } catch (e: Exception) {
+            log.warn(e) { "Could not retrieve sample document: ${e.message}" }
+            append("Could not retrieve sample document.\n")
+            append("Error: ${e.message}")
         }
     }
 }

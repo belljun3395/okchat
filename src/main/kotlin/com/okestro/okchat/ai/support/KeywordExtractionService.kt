@@ -9,91 +9,91 @@ import org.springframework.stereotype.Service
 private val log = KotlinLogging.logger {}
 
 /**
- * Service for extracting keywords from text using LLM
- * Supports both Korean and English keyword extraction
+ * Service for extracting keywords from text using LLM.
+ * Supports both Korean and English keyword extraction.
+ * Extends BaseExtractionService but with custom settings for query extraction.
  */
 @Service
 class KeywordExtractionService(
-    private val chatModel: ChatModel
-) {
+    chatModel: ChatModel
+) : BaseExtractionService(chatModel) {
 
     /**
      * Extract keywords from the message using LLM (in both Korean and English)
      * Optimized for RRF-based hybrid search: quality over quantity
      * Ordered from most to least important
+     *
+     * Note: This is a public wrapper around the protected base method
      */
-    suspend fun extractKeywords(message: String): List<String> {
-        val keywordPrompt = """
-            Extract 5-8 core keywords from the user message for hybrid search (BM25 + semantic).
-            And Order them from most important to least important.
-
-            EXTRACT (include both Korean and English):
-            - Core subjects and topics (the 'what', not the 'how')
-            - Technical terms and technologies
-            - Entities (people, teams, products, projects)
-            - For compound terms: full term + meaningful components
-               Example: "주간회의록" → "주간회의록, 회의록, 회의" (broader search)
-               Example: "개발파트" → "개발파트, 개발" (broader search)
-
-            AVOID (these are handled separately or add noise):
-            - Common action verbs or requests (e.g., 알려줘, 찾아줘, 검색해, 요약해, search, find, summarize)
-            - Dates and numbers (handled by DateExtractor)
-            - Stop words (이, 그, 저, the, a, an, is, are)
-            - Morphological variations (개발/개발자/개발팀 - pick one)
-            - Overly generic terms alone ("문서", "정보", "내용")
-            - Ambiguous short forms (<2 characters)
-
-            FORMAT: Comma-separated list only, no explanation
-            TARGET: 7-10 keywords for broader coverage (max 12)
-
-            EXAMPLES:
-            - Input: "백엔드 개발 레포 정보"
-              Output: "백엔드, backend, 개발, development, 레포, repository"
-              (6 keywords - good balance, skipped generic "정보")
-
-            - Input: "PPP 개발 회의록 문의"
-              Output: "PPP, 개발, development, 회의록, 회의, meeting minutes"
-              (6 keywords - '문의' is an action/request, so it's excluded)
-
-            - Input: "2025년 9월 주간회의록 요약"
-              Bad: "2025, 2025년, 9월, September, 09, 250, 주간, 회의록, 회의, 주간회의, meeting, weekly, minutes"
-              (13 keywords - too many, includes dates, over-variations)
-              Good: "주간회의록, 회의록, 회의, weekly meeting, meeting minutes, meeting"
-              (6 keywords - '요약' is an action, excluded. Dates handled separately)
-
-            User message: "$message"
-
-            Keywords (7-10 core terms):
-        """.trimIndent()
-
-        return try {
-            // Use lower temperature for consistent keyword extraction
-            val options = OpenAiChatOptions.builder()
-                .temperature(0.3) // Lower = more consistent (vs 0.7 default)
-                .maxTokens(100) // Limit output length for efficiency
-                .build()
-
-            val response = chatModel.call(Prompt(keywordPrompt, options))
-            val keywordsText = response.result.output.text?.trim()
-            log.debug { "Extracted keywords (KR+EN): $keywordsText" }
-
-            val keywords = keywordsText?.split(",")
-                ?.map { it.trim() }
-                ?.filter { it.isNotBlank() }
-                ?.filter { it.length >= 2 } // Remove single characters or too short
-                ?: listOf(message)
-
-            // Remove duplicates (case-insensitive) and limit to 12 max (RRF optimization)
-            keywords.distinctBy { it.lowercase() }.take(12)
-        } catch (e: Exception) {
-            log.warn { "Failed to extract keywords: ${e.message}. Using original message." }
-            listOf(message)
-        }
+    suspend fun extractQueryKeywords(message: String): List<String> {
+        return execute(message)
     }
 
+    override fun buildPrompt(message: String): String {
+        val instruction = """
+Extract 5-8 core keywords from the user message for hybrid search (BM25 + semantic).
+Order them from most important to least important.
+
+EXTRACT (include both Korean and English):
+- Core subjects and topics (the 'what', not the 'how')
+- Technical terms and technologies
+- Entities (people, teams, products, projects)
+- For compound terms: full term + meaningful components
+   Example: "주간회의록" → "주간회의록, 회의록, 회의" (broader search)
+   Example: "개발파트" → "개발파트, 개발" (broader search)
+
+AVOID (these are handled separately or add noise):
+- Common action verbs or requests (e.g., 알려줘, 찾아줘, 검색해, 요약해, search, find, summarize)
+- Dates and numbers (handled by DateExtractor)
+- Stop words (이, 그, 저, the, a, an, is, are)
+- Morphological variations (개발/개발자/개발팀 - pick one)
+- Overly generic terms alone ("문서", "정보", "내용")
+- Ambiguous short forms (<2 characters)
+
+TARGET: 7-10 keywords for broader coverage (max 12)
+        """.trimIndent()
+
+        val examples = """
+EXAMPLES:
+- Input: "백엔드 개발 레포 정보"
+  Good: "백엔드, backend, 개발, development, 레포, repository"
+  (6 keywords - good balance, skipped generic "정보")
+
+- Input: "PPP 개발 회의록 문의"
+  Good: "PPP, 개발, development, 회의록, 회의, meeting minutes"
+  (6 keywords - '문의' is an action/request, so it's excluded)
+
+- Input: "2025년 9월 주간회의록 요약"
+  Bad: "2025, 2025년, 9월, September, 09, 250, 주간, 회의록, 회의, 주간회의, meeting, weekly, minutes"
+  (13 keywords - too many, includes dates, over-variations)
+  Good: "주간회의록, 회의록, 회의, weekly meeting, meeting minutes, meeting"
+  (6 keywords - '요약' is an action, excluded. Dates handled separately)
+        """.trimIndent()
+
+        return PromptTemplate.buildExtractionPrompt(instruction, examples, message)
+    }
+
+    override fun getOptions(): OpenAiChatOptions {
+        return OpenAiChatOptions.builder()
+            .temperature(0.3) // Slightly higher for keyword variety
+            .maxTokens(100)
+            .build()
+    }
+
+    override fun getMinKeywordLength(): Int = 2
+
+    override fun getMaxKeywords(): Int = 12
+
+    override fun getEmptyResult(): List<String> {
+        // Return original message as fallback for query keywords
+        return emptyList()
+    }
+
+    override fun getFallbackMessage(): String = "Using fallback strategy."
+
     /**
-     * Extract keywords from document content for indexing
-     * This method is optimized for document content rather than user queries
+     * Extract keywords from document content for indexing.
+     * This method is optimized for document content rather than user queries.
      */
     suspend fun extractKeywordsFromContentAndTitle(content: String, title: String? = null): List<String> {
         val contentPrompt = """

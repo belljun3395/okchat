@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Permission Management</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: #f5f7fa; 
+            padding: 20px;
+            overflow-x: hidden;
+            user-select: none; /* Prevent text selection during drag */
+        }
+        .container { 
+            max-width: 1800px; 
+            margin: 0 auto; 
+        }
+        .header { 
+            background: white; 
+            padding: 25px 30px; 
+            border-radius: 12px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 { 
+            color: #1a1a1a; 
+            font-size: 28px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .back-btn {
+            padding: 10px 20px;
+            background: #6b7280;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .back-btn:hover { background: #4b5563; }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 10px 1fr 10px 450px;
+            gap: 0;
+            height: calc(100vh - 180px);
+        }
+
+        .splitter {
+            background: #e5e7eb;
+            cursor: col-resize;
+            transition: background 0.2s;
+        }
+        .splitter:hover {
+            background: #3b82f6;
+        }
+        
+        /* Panel min-width */
+        .user-panel, .tree-panel, .preview-panel {
+            min-width: 150px;
+            overflow: hidden; /* Prevent content from overflowing during resize */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* User Selection Panel */
+        .user-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+        .user-search {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 15px;
+            transition: border-color 0.2s;
+            flex-shrink: 0;
+        }
+        .user-search:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        .user-list {
+            list-style: none;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .user-item {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .user-item:hover {
+            background: #f3f4f6;
+        }
+        .user-item.active {
+            background: #eff6ff;
+            border-color: #3b82f6;
+        }
+        .user-name {
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+        .user-email {
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .user-perms {
+            font-size: 12px;
+            color: #3b82f6;
+            margin-top: 4px;
+        }
+        
+        /* Document Tree Panel */
+        .tree-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .tree-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        .btn-success:hover { background: #059669; }
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #1a1a1a;
+        }
+        .btn-secondary:hover { background: #d1d5db; }
+        
+        .tree {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        .tree-node {
+            margin-bottom: 4px;
+        }
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            gap: 8px;
+        }
+        .tree-node-content:hover {
+            background: #f3f4f6;
+        }
+        .tree-node-content.selected {
+            background: #dbeafe;
+        }
+        .expand-icon {
+            width: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+            flex-shrink: 0;
+        }
+        .node-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .node-icon {
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .node-label {
+            flex: 1;
+            font-size: 14px;
+            color: #1a1a1a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .permission-badge {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 500;
+            background: #10b981;
+            color: white;
+            flex-shrink: 0;
+        }
+        .tree-children {
+            margin-left: 28px;
+            display: none;
+        }
+        .tree-children.expanded {
+            display: block;
+        }
+        
+        /* Preview Panel */
+        .preview-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .preview-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #9ca3af;
+            text-align: center;
+        }
+        .preview-empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        .preview-content {
+            display: none;
+        }
+        .preview-content.active {
+            display: block;
+        }
+        .preview-header {
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+        .preview-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+        .preview-path {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+        .preview-id {
+            font-size: 12px;
+            color: #9ca3af;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+        .preview-body {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        .preview-text {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #374151;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: none;
+            font-weight: 500;
+        }
+        .notification.success {
+            background: #10b981;
+            color: white;
+        }
+        .notification.error {
+            background: #ef4444;
+            color: white;
+        }
+        .notification.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .stats {
+            display: flex;
+            gap: 16px;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 2px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+        .stat-item {
+            flex: 1;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #3b82f6;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span>🔐</span>
+                <span>Document Permission Management</span>
+            </h1>
+            <a href="/admin/permissions" class="back-btn">← Back to Overview</a>
+        </div>
+        
+        <div class="main-content" id="mainContent">
+            <!-- User Selection Panel -->
+            <div class="user-panel">
+                <div class="panel-title">👥 Select User</div>
+                <input type="text" class="user-search" id="userSearch" placeholder="Search users...">
+                <ul class="user-list" id="userList"></ul>
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalSelected">0</div>
+                        <div class="stat-label">Selected</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalDocs">0</div>
+                        <div class="stat-label">Total Docs</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="splitter" id="splitter1"></div>
+            
+            <!-- Document Tree Panel -->
+            <div class="tree-panel">
+                <div class="panel-title">📁 Document Tree</div>
+                <div class="tree-actions">
+                    <button class="btn btn-success" id="saveBtn" disabled>💾 Save Permissions</button>
+                    <button class="btn btn-secondary" id="expandAllBtn">⊕ Expand All</button>
+                    <button class="btn btn-secondary" id="collapseAllBtn">⊖ Collapse All</button>
+                </div>
+                <div class="tree" id="documentTree">
+                    <div class="loading">Loading documents...</div>
+                </div>
+            </div>
+
+            <div class="splitter" id="splitter2"></div>
+            
+            <!-- Preview Panel -->
+            <div class="preview-panel">
+                <div class="panel-title">📄 Document Preview</div>
+                <div class="preview-empty" id="previewEmpty">
+                    <div class="preview-empty-icon">📄</div>
+                    <div>Select a document to preview its content</div>
+                </div>
+                <div class="preview-content" id="previewContent">
+                    <div class="preview-header">
+                        <div class="preview-title" id="previewTitle"></div>
+                        <div class="preview-path" id="previewPath"></div>
+                        <div class="preview-id" id="previewId"></div>
+                    </div>
+                    <div class="preview-body">
+                        <div class="preview-text" id="previewText"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification"></div>
+    
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        let users = /*[[${users}]]*/ [];
+        let hierarchy = /*[[${hierarchy}]]*/ [];
+        /*]]>*/
+        
+        let selectedUser = null;
+        let userPermissions = {
+            docs: new Set(),
+            paths: new Set()
+        };
+        let selectedDocuments = new Set();
+        let selectedFolders = new Set();
+        let allDocuments = new Map();
+        
+        function init() {
+            renderUserList();
+            renderTree();
+            updateStats();
+            setupEventListeners();
+            initSplitters(); // Initialize resizable panels
+        }
+        
+        function initSplitters() {
+            const mainContent = document.getElementById('mainContent');
+            const splitter1 = document.getElementById('splitter1');
+            const splitter2 = document.getElementById('splitter2');
+
+            let isDragging1 = false;
+            let isDragging2 = false;
+
+            splitter1.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                isDragging1 = true;
+            });
+
+            splitter2.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                isDragging2 = true;
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging1 = false;
+                isDragging2 = false;
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging1 && !isDragging2) return;
+                e.preventDefault();
+
+                const containerRect = mainContent.getBoundingClientRect();
+                const userPanel = mainContent.children[0];
+                const previewPanel = mainContent.children[4];
+
+                if (isDragging1) {
+                    const newWidth = e.clientX - containerRect.left;
+                    if (newWidth > 150) { // Set a min width
+                        mainContent.style.gridTemplateColumns = `${newWidth}px 10px 1fr 10px ${previewPanel.offsetWidth}px`;
+                    }
+                } else if (isDragging2) {
+                    const newWidth = containerRect.right - e.clientX;
+                    if (newWidth > 150) { // Set a min width
+                        mainContent.style.gridTemplateColumns = `${userPanel.offsetWidth}px 10px 1fr 10px ${newWidth}px`;
+                    }
+                }
+            });
+        }
+
+        function renderUserList(filter = '') {
+            const userList = document.getElementById('userList');
+            const filtered = users.filter(u => 
+                u.email.toLowerCase().includes(filter.toLowerCase()) ||
+                u.name.toLowerCase().includes(filter.toLowerCase())
+            );
+            
+            userList.innerHTML = filtered.map(user => `
+                <li class="user-item ${selectedUser?.id === user.id ? 'active' : ''}" data-user-id="${user.id}">
+                    <div class="user-name">${user.name}</div>
+                    <div class="user-email">${user.email}</div>
+                    <div class="user-perms" id="user-perms-${user.id}">Loading...</div>
+                </li>
+            `).join('');
+            
+            filtered.forEach(user => loadUserPermissionCount(user));
+        }
+        
+        async function loadUserPermissionCount(user) {
+            try {
+                const response = await fetch(`/api/admin/permissions/user/${user.email}`);
+                const data = await response.json();
+                const elem = document.getElementById(`user-perms-${user.id}`);
+                if (elem) elem.textContent = `${data.totalDocuments} permissions`;
+            } catch (error) {
+                console.error('Failed to load permission count:', error);
+            }
+        }
+        
+        function renderTree() {
+            const tree = document.getElementById('documentTree');
+            tree.innerHTML = hierarchy.map(folder => renderTreeNode(folder, true)).join('');
+        }
+        
+        function renderTreeNode(node, isFolder) {
+            if (isFolder) {
+                const hasChildren = node.children.length > 0 || node.documents.length > 0;
+                const hasPermission = userPermissions.paths.has(node.path);
+                const isChecked = selectedFolders.has(node.path);
+                
+                return `
+                    <div class="tree-node" data-path="${node.path}">
+                        <div class="tree-node-content">
+                            <span class="expand-icon" data-path="${node.path}">${hasChildren ? '▶' : ''}</span>
+                            <input type="checkbox" class="node-checkbox folder-checkbox" data-path="${node.path}" ${isChecked ? 'checked' : ''}>
+                            <span class="node-icon">📁</span>
+                            <span class="node-label">${node.name}</span>
+                            ${hasPermission ? '<span class="permission-badge">✓</span>' : ''}
+                        </div>
+                        ${hasChildren ? `
+                            <div class="tree-children">
+                                ${node.children.map(child => renderTreeNode(child, true)).join('')}
+                                ${node.documents.map(doc => renderDocumentNode(doc)).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+        }
+        
+        function renderDocumentNode(doc) {
+            allDocuments.set(doc.id, {title: doc.title, path: doc.path});
+            const hasPermission = userPermissions.docs.has(doc.id);
+            const isChecked = selectedDocuments.has(doc.id);
+            
+            return `
+                <div class="tree-node" data-doc-id="${doc.id}">
+                    <div class="tree-node-content document-node" data-doc-id="${doc.id}">
+                        <span class="expand-icon"></span>
+                        <input type="checkbox" class="node-checkbox doc-checkbox" data-doc-id="${doc.id}" ${isChecked ? 'checked' : ''}>
+                        <span class="node-icon">📄</span>
+                        <span class="node-label">${doc.title}</span>
+                        ${hasPermission ? '<span class="permission-badge">✓</span>' : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function selectUser(userId) {
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+            
+            selectedUser = user;
+            
+            try {
+                const response = await fetch(`/api/admin/permissions/user/${user.email}`);
+                const data = await response.json();
+                
+                userPermissions.docs.clear();
+                userPermissions.paths.clear();
+                selectedDocuments.clear();
+                selectedFolders.clear();
+                
+                data.permissions.forEach(perm => {
+                    if (perm.documentId) {
+                        userPermissions.docs.add(perm.documentId);
+                        selectedDocuments.add(perm.documentId);
+                    }
+                    if (perm.documentPath) {
+                        userPermissions.paths.add(perm.documentPath);
+                        selectedFolders.add(perm.documentPath);
+                    }
+                });
+                
+                renderUserList();
+                renderTree();
+                updateStats();
+                document.getElementById('saveBtn').disabled = false;
+            } catch (error) {
+                console.error('Failed to load user permissions:', error);
+                showNotification('Failed to load user permissions', 'error');
+            }
+        }
+        
+        async function previewDocument(docId) {
+            const previewContent = document.getElementById('previewContent');
+            const previewEmpty = document.getElementById('previewEmpty');
+            
+            previewEmpty.style.display = 'none';
+            previewContent.style.display = 'block';
+            
+            document.getElementById('previewTitle').textContent = 'Loading...';
+            document.getElementById('previewPath').textContent = `Attempting to load docId: ${docId}`;
+            document.getElementById('previewId').textContent = docId;
+            document.getElementById('previewText').textContent = 'Loading document content...';
+
+            if (!docId) {
+                document.getElementById('previewText').textContent = 'Error: Document ID is missing.';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/permissions/document/${docId}/content`);
+                if (!response.ok) throw new Error(`Document not found or API error. Status: ${response.status}`);
+                
+                const doc = await response.json();
+                document.getElementById('previewTitle').textContent = doc.title;
+                document.getElementById('previewPath').textContent = `📍 ${doc.path}`;
+                document.getElementById('previewId').textContent = `ID: ${doc.documentId}`;
+                document.getElementById('previewText').textContent = doc.content || 'No content available';
+            } catch (error) {
+                console.error('Failed to preview document:', error);
+                document.getElementById('previewText').textContent = `Failed to load document content. Error: ${error.message}`;
+            }
+        }
+        
+        async function savePermissions() {
+            if (!selectedUser) {
+                showNotification('Please select a user first', 'error');
+                return;
+            }
+
+            const docsToGrant = [...selectedDocuments].filter(d => !userPermissions.docs.has(d));
+            const docsToRevoke = [...userPermissions.docs].filter(d => !selectedDocuments.has(d));
+            const pathsToGrant = [...selectedFolders].filter(p => !userPermissions.paths.has(p));
+            const pathsToRevoke = [...userPermissions.paths].filter(p => !selectedFolders.has(p));
+
+            try {
+                if (docsToGrant.length > 0) {
+                    await fetch('/api/admin/permissions/bulk', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userEmail: selectedUser.email, documentIds: docsToGrant }) });
+                }
+                if (pathsToGrant.length > 0) {
+                    await fetch('/api/admin/permissions/path/bulk', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userEmail: selectedUser.email, documentPaths: pathsToGrant }) });
+                }
+                if (docsToRevoke.length > 0) {
+                    await fetch('/api/admin/permissions', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userEmail: selectedUser.email, documentId: docId }) });
+                }
+
+                let message = 'Permissions updated successfully.';
+                let messageType = 'success';
+
+                if (pathsToRevoke.length > 0) {
+                    message = 'Permissions partially updated. Revoking path permissions is not supported by the backend and was skipped.';
+                    messageType = 'warning';
+                }
+                
+                showNotification(message, messageType);
+                await selectUser(selectedUser.id);
+
+            } catch (error) {
+                console.error('Failed to save permissions:', error);
+                showNotification('Failed to save permissions', 'error');
+            }
+        }
+        
+        function setupEventListeners() {
+            document.getElementById('userSearch').addEventListener('input', (e) => renderUserList(e.target.value));
+            document.getElementById('userList').addEventListener('click', (e) => {
+                const userItem = e.target.closest('.user-item');
+                if (userItem) selectUser(parseInt(userItem.dataset.userId));
+            });
+            
+            document.getElementById('documentTree').addEventListener('click', (e) => {
+                if (e.target.classList.contains('expand-icon') && e.target.textContent) {
+                    const path = e.target.dataset.path;
+                    const node = document.querySelector(`[data-path="${path}"] > .tree-children`);
+                    if (node) {
+                        node.classList.toggle('expanded');
+                        e.target.textContent = node.classList.contains('expanded') ? '▼' : '▶';
+                    }
+                }
+                
+                if (e.target.classList.contains('node-checkbox')) {
+                    const isChecked = e.target.checked;
+                    const parentNode = e.target.closest('.tree-node');
+                    const checkboxesToUpdate = parentNode.querySelectorAll('.node-checkbox');
+                    checkboxesToUpdate.forEach(checkbox => {
+                        checkbox.checked = isChecked;
+                        const docId = checkbox.dataset.docId;
+                        const folderPath = checkbox.dataset.path;
+                        if (docId) {
+                            if (isChecked) selectedDocuments.add(docId); else selectedDocuments.delete(docId);
+                        }
+                        if (folderPath) {
+                            if (isChecked) selectedFolders.add(folderPath); else selectedFolders.delete(folderPath);
+                        }
+                    });
+                    updateStats();
+                }
+                
+                if (e.target.closest('.document-node')) {
+                    const docId = e.target.closest('.document-node').dataset.docId;
+                    previewDocument(docId);
+                }
+            });
+            
+            document.getElementById('saveBtn').addEventListener('click', savePermissions);
+            document.getElementById('expandAllBtn').addEventListener('click', () => {
+                document.querySelectorAll('.tree-children').forEach(n => n.classList.add('expanded'));
+                document.querySelectorAll('.expand-icon').forEach(i => { if (i.textContent) i.textContent = '▼'; });
+            });
+            document.getElementById('collapseAllBtn').addEventListener('click', () => {
+                document.querySelectorAll('.tree-children').forEach(n => n.classList.remove('expanded'));
+                document.querySelectorAll('.expand-icon').forEach(i => { if (i.textContent) i.textContent = '▶'; });
+            });
+        }
+        
+        function updateStats() {
+            document.getElementById('totalSelected').textContent = selectedDocuments.size + selectedFolders.size;
+            document.getElementById('totalDocs').textContent = allDocuments.size;
+        }
+        
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            if (type === 'warning') notification.style.background = '#f59e0b';
+            else if (type === 'error') notification.style.background = '#ef4444';
+            else notification.style.background = '#10b981';
+            notification.className = `notification show`;
+            setTimeout(() => { notification.classList.remove('show'); }, 5000);
+        }
+        
+        init();
+        /*]]>*/
+    </script>
+</body>
+</html>

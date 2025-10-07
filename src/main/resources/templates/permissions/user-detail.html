@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Permissions</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: white; padding: 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 10px; }
+        .user-info { color: #666; font-size: 14px; margin-top: 10px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 15px; }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-secondary:hover { background: #4b5563; }
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-delete:hover { background: #dc2626; }
+        .section { background: white; padding: 25px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; }
+        .section-title { font-size: 18px; font-weight: 600; color: #333; margin: 0; }
+        .permission-list { list-style: none; }
+        .permission-item { padding: 15px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .permission-item:last-child { border-bottom: none; }
+        .permission-path { font-weight: 500; color: #333; }
+        .empty-state { text-align: center; padding: 40px; color: #9ca3af; }
+
+        /* Tree styles */
+        .tree {
+            list-style: none !important;
+            padding-left: 0;
+            margin: 0;
+        }
+        .tree-item {
+            list-style: none !important;
+            margin: 0;
+        }
+        .tree-node { display: flex; align-items: center; padding: 8px 12px; border-radius: 4px; transition: background 0.2s; user-select: none; }
+        .tree-node:hover { background: #f3f4f6; }
+        .tree-toggle { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; margin-right: 8px; cursor: pointer; transition: transform 0.2s; font-size: 12px; color: #6b7280; }
+        .tree-toggle.collapsed { transform: rotate(-90deg); }
+        .tree-toggle.empty { visibility: hidden; }
+        .tree-icon { margin-right: 8px; font-size: 16px; }
+        .tree-label { flex: 1; font-size: 14px; color: #374151; }
+        .tree-label.granted { font-weight: 600; color: #059669; }
+        .tree-children {
+            list-style: none !important;
+            padding-left: 20px;
+            margin: 0;
+        }
+        .tree-children.collapsed {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👤 User Permissions</h1>
+            <div class="user-info">
+                <strong th:text="${user.name}">User Name</strong> (<span th:text="${user.email}">email@example.com</span>)
+                <br>Total Permissions: <strong id="totalPermissions" th:text="${totalPermissions}">0</strong>
+            </div>
+            <a href="/admin/permissions/users" class="btn btn-secondary">← Back to Users</a>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">📁 Accessible Paths (<span id="pathPermsCount" th:text="${#lists.size(pathPermissions)}">0</span>)</h2>
+                <button id="deleteSelectedPaths" class="btn-delete">Delete Selected</button>
+            </div>
+            <div class="info-box" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px; margin-bottom: 15px; font-size: 13px; color: #1e40af;">
+                ℹ️ Path-based permissions grant access to all documents under the selected path. Deleting a path will remove access to all documents within it.
+            </div>
+            <div id="pathTree" th:if="${!#lists.isEmpty(pathPermissions)}"></div>
+            <div class="empty-state" th:if="${#lists.isEmpty(pathPermissions)}">
+                No permissions granted yet. Use the Manage Permissions page to grant access.
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const pathPermissions = /*[[${pathPermissions}]]*/ [];
+        const userEmail = /*[[${user.email}]]*/ '';
+        /*]]>*/
+
+        // --- Tree rendering for Path-Based Permissions ---
+        if (pathPermissions.length > 0) {
+            const paths = pathPermissions.map(p => p.documentPath);
+            const grantedPaths = new Set(paths);
+
+            function buildTree(paths) {
+                const tree = {};
+                paths.forEach(path => {
+                    const parts = path.split(' > ').map(p => p.trim());
+                    let current = tree;
+                    parts.forEach((part, index) => {
+                        const fullPath = parts.slice(0, index + 1).join(' > ');
+                        if (!current[part]) {
+                            current[part] = {
+                                name: part,
+                                fullPath: fullPath,
+                                children: {}
+                            };
+                        }
+                        current = current[part].children;
+                    });
+                });
+                return tree;
+            }
+
+            function renderTree(node) {
+                const ul = document.createElement('ul');
+                ul.className = 'tree';
+                
+                const entries = Object.entries(node).sort((a, b) => a[0].localeCompare(b[0]));
+                
+                entries.forEach(([key, value]) => {
+                    const li = document.createElement('li');
+                    li.className = 'tree-item';
+
+                    const hasChildren = Object.keys(value.children).length > 0;
+                    const isGranted = grantedPaths.has(value.fullPath);
+
+                    const nodeDiv = document.createElement('div');
+                    nodeDiv.className = 'tree-node';
+
+                    const toggle = document.createElement('span');
+                    toggle.className = 'tree-toggle' + (hasChildren ? '' : ' empty');
+                    toggle.innerHTML = hasChildren ? '▼' : '';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'path-checkbox';
+                    checkbox.dataset.path = value.fullPath;
+                    checkbox.style.marginRight = '8px';
+                    // Only show checkbox if this path is explicitly granted
+                    if (!isGranted) {
+                        checkbox.style.visibility = 'hidden';
+                    }
+
+                    const icon = document.createElement('span');
+                    icon.className = 'tree-icon';
+                    icon.innerHTML = hasChildren ? '📁' : '📄';
+
+                    const label = document.createElement('span');
+                    label.className = 'tree-label' + (isGranted ? ' granted' : '');
+                    label.textContent = value.name;
+
+                    nodeDiv.appendChild(toggle);
+                    nodeDiv.appendChild(checkbox);
+                    nodeDiv.appendChild(icon);
+                    nodeDiv.appendChild(label);
+
+                    nodeDiv.onclick = (e) => {
+                        if (e.target.tagName !== 'INPUT' && hasChildren) {
+                            toggleNode(li);
+                        }
+                    };
+                    
+                    li.appendChild(nodeDiv);
+                    
+                    if (hasChildren) {
+                        const childrenUl = renderTree(value.children);
+                        childrenUl.className = 'tree-children';
+                        li.appendChild(childrenUl);
+                    }
+                    
+                    ul.appendChild(li);
+                });
+                return ul;
+            }
+
+            function toggleNode(li) {
+                const children = li.querySelector('.tree-children');
+                if (children) {
+                    children.classList.toggle('collapsed');
+                    const toggle = li.querySelector('.tree-toggle');
+                    toggle.classList.toggle('collapsed');
+                }
+            }
+
+            const tree = buildTree(paths);
+            const treeElement = document.getElementById('pathTree');
+            const renderedTree = renderTree(tree);
+            treeElement.appendChild(renderedTree);
+        }
+
+        // --- Bulk Deletion Logic ---
+        if (document.getElementById('pathTree')) {
+            document.getElementById('pathTree').addEventListener('change', (e) => {
+                if (e.target.classList.contains('path-checkbox')) {
+                    const isChecked = e.target.checked;
+                    const li = e.target.closest('.tree-item');
+                    const childCheckboxes = li.querySelectorAll('.path-checkbox');
+                    childCheckboxes.forEach(cb => cb.checked = isChecked);
+                }
+            });
+        }
+
+        async function bulkDeletePaths() {
+            const checkedPaths = document.querySelectorAll('.path-checkbox:checked');
+            const itemsToDelete = [];
+            checkedPaths.forEach(cb => itemsToDelete.push(cb.dataset.path));
+
+            if (itemsToDelete.length === 0) {
+                return alert('No paths selected.');
+            }
+
+            if (!confirm(`Are you sure you want to remove access to ${itemsToDelete.length} path(s)?\n\nThis will also remove access to all documents within these paths.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/permissions/path/bulk', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userEmail: userEmail,
+                        documentPaths: itemsToDelete
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Selected permissions removed successfully.');
+                    window.location.reload();
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to delete permissions.');
+                }
+            } catch (error) {
+                console.error('Bulk deletion failed:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+
+        document.getElementById('deleteSelectedPaths').addEventListener('click', bulkDeletePaths);
+
+    </script>
+
+</body>
+</html>

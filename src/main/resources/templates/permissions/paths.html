@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Paths</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: white; padding: 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        h1 { color: #333; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-secondary:hover { background: #4b5563; }
+        .section { background: white; padding: 25px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        /* Tree structure styles */
+        .tree { list-style: none; padding-left: 0; }
+        .tree-item { margin: 0; }
+        .tree-node { display: flex; align-items: center; padding: 8px 12px; border-radius: 4px; transition: background 0.2s; cursor: pointer; user-select: none; }
+        .tree-node:hover { background: #f3f4f6; }
+        .tree-toggle { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; margin-right: 8px; cursor: pointer; transition: transform 0.2s; font-size: 12px; color: #6b7280; }
+        .tree-toggle.collapsed { transform: rotate(-90deg); }
+        .tree-toggle.empty { visibility: hidden; }
+        .tree-icon { margin-right: 8px; font-size: 16px; }
+        .tree-label { flex: 1; font-size: 14px; color: #374151; }
+        .tree-children { list-style: none; padding-left: 28px; overflow: visible; transition: opacity 0.2s ease-out; opacity: 1; }
+        .tree-children.collapsed { display: none; }
+        .tree-action { padding: 4px 12px; font-size: 12px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: 0; transition: opacity 0.2s; }
+        .tree-node:hover .tree-action { opacity: 1; }
+        .tree-action:hover { background: #1d4ed8; }
+        .leaf-node { background: #fafafa; border-left: 2px solid #e5e7eb; }
+        .controls { margin-bottom: 15px; display: flex; gap: 10px; }
+        .controls button { padding: 8px 16px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .controls button:hover { background: #f9fafb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>📁 Document Paths</h1>
+                <div style="font-size: 14px; color: #666; margin-top: 5px;">Total: <strong th:text="${totalPaths}">0</strong> paths</div>
+            </div>
+            <a href="/admin/permissions" class="btn btn-secondary">← Back to Dashboard</a>
+        </div>
+
+        <div class="section">
+            <div class="controls">
+                <button onclick="expandAll()">📂 Expand All</button>
+                <button onclick="collapseAll()">📁 Collapse All</button>
+            </div>
+            <ul class="tree" id="pathTree"></ul>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const paths = /*[[${paths}]]*/ [];
+        
+        // Build tree structure from flat path list
+        function buildTree(paths) {
+            const tree = {};
+            
+            paths.forEach(path => {
+                const parts = path.split(' > ').map(p => p.trim());
+                let current = tree;
+                
+                parts.forEach((part, index) => {
+                    if (!current[part]) {
+                        current[part] = {
+                            name: part,
+                            fullPath: parts.slice(0, index + 1).join(' > '),
+                            children: {},
+                            isLeaf: index === parts.length - 1
+                        };
+                    }
+                    current = current[part].children;
+                });
+            });
+            
+            return tree;
+        }
+        
+        // Render tree recursively
+        function renderTree(node, container) {
+            const ul = document.createElement('ul');
+            ul.className = 'tree-children';
+            
+            const entries = Object.entries(node).sort((a, b) => a[0].localeCompare(b[0]));
+            
+            entries.forEach(([key, value]) => {
+                const li = document.createElement('li');
+                li.className = 'tree-item';
+                
+                const hasChildren = Object.keys(value.children).length > 0;
+                const isLeaf = value.isLeaf;
+                
+                const nodeDiv = document.createElement('div');
+                nodeDiv.className = 'tree-node' + (isLeaf && !hasChildren ? ' leaf-node' : '');
+                
+                // Toggle button
+                const toggle = document.createElement('span');
+                toggle.className = 'tree-toggle' + (hasChildren ? '' : ' empty');
+                toggle.innerHTML = hasChildren ? '▼' : '';
+                
+                // Icon
+                const icon = document.createElement('span');
+                icon.className = 'tree-icon';
+                icon.innerHTML = hasChildren ? '📁' : '📄';
+                
+                // Label
+                const label = document.createElement('span');
+                label.className = 'tree-label';
+                label.textContent = value.name;
+                
+                // Action button for all nodes
+                const action = document.createElement('button');
+                action.className = 'tree-action';
+                action.textContent = 'View Details';
+                action.onclick = (e) => {
+                    e.stopPropagation();
+                    window.location.href = '/admin/permissions/path/' + encodeURIComponent(value.fullPath);
+                };
+
+                nodeDiv.appendChild(toggle);
+                nodeDiv.appendChild(icon);
+                nodeDiv.appendChild(label);
+                nodeDiv.appendChild(action);
+
+                // Make node clickable to toggle
+                nodeDiv.onclick = (e) => {
+                    if (e.target !== action && hasChildren) {
+                        toggleNode(li);
+                    }
+                };
+                
+                li.appendChild(nodeDiv);
+                
+                // Render children
+                if (hasChildren) {
+                    const childrenUl = renderTree(value.children, ul);
+                    li.appendChild(childrenUl);
+                }
+                
+                ul.appendChild(li);
+            });
+            
+            return ul;
+        }
+        
+        function toggleNode(li) {
+            const toggle = li.querySelector('.tree-toggle');
+            const children = li.querySelector('.tree-children');
+            
+            if (children) {
+                children.classList.toggle('collapsed');
+                toggle.classList.toggle('collapsed');
+            }
+        }
+        
+        function expandAll() {
+            document.querySelectorAll('.tree-children').forEach(el => {
+                el.classList.remove('collapsed');
+            });
+            document.querySelectorAll('.tree-toggle').forEach(el => {
+                el.classList.remove('collapsed');
+            });
+        }
+        
+        function collapseAll() {
+            document.querySelectorAll('.tree-children').forEach(el => {
+                el.classList.add('collapsed');
+            });
+            document.querySelectorAll('.tree-toggle').forEach(el => {
+                if (!el.classList.contains('empty')) {
+                    el.classList.add('collapsed');
+                }
+            });
+        }
+        
+        // Initialize tree
+        const tree = buildTree(paths);
+        const treeElement = document.getElementById('pathTree');
+        const renderedTree = renderTree(tree, treeElement);
+        treeElement.appendChild(renderedTree);
+        /*]]>*/
+    </script>
+</body>
+</html>

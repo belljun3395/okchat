@@ -1,6 +1,9 @@
 spring:
     application:
         name:  ok-chat
+    output:
+        ansi:
+            enabled: ALWAYS  # Enable colored output
     datasource:
         url: jdbc:mysql://localhost:13306/okchat?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
         driver-class-name: com.mysql.cj.jdbc.Driver

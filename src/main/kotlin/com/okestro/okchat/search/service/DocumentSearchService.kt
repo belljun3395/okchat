@@ -35,6 +35,10 @@ class DocumentSearchService(
      * Perform multi-search across titles, contents, paths, and keywords.
      * Delegates to the configured search strategy.
      *
+     * Uses polymorphic SearchCriteria for flexibility:
+     * - Adding new search types doesn't require changing this method
+     * - Each criteria type knows how to convert itself to a query
+     *
      * @param titles Title search terms
      * @param contents Content search terms
      * @param paths Path search terms
@@ -51,11 +55,11 @@ class DocumentSearchService(
     ): MultiSearchResult {
         log.info { "[DocumentSearchService] Delegating to ${searchStrategy.getStrategyName()} strategy" }
 
-        return searchStrategy.executeMultiSearch(
-            keywords = keywords,
-            titles = titles,
-            contents = contents,
-            paths = paths,
+        // Build criteria list (polymorphic approach)
+        val criteria = listOfNotNull(keywords, titles, contents, paths)
+
+        return searchStrategy.search(
+            searchCriteria = criteria,
             topK = topK
         )
     }

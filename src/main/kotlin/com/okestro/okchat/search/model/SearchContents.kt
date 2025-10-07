@@ -1,11 +1,16 @@
 package com.okestro.okchat.search.model
 
 /**
- * Value object representing search contents
+ * Value object representing search contents.
+ * Implements SearchCriteria for polymorphic handling.
  */
 data class SearchContents(
     val contents: List<SearchContent>
-) {
+) : SearchCriteria {
+
+    override fun getSearchType(): SearchType = SearchType.CONTENT
+
+    override fun toQuery(): String = toOrQuery()
     companion object {
         private const val MAX_KEYWORDS = 5
 
@@ -29,7 +34,9 @@ data class SearchContents(
             .joinToString(" OR ") { it.term }
     }
 
-    fun isEmpty(): Boolean = contents.isEmpty()
+    override fun isEmpty(): Boolean = contents.isEmpty()
+
+    override fun size(): Int = contents.size
 
     fun terms(): List<String> = contents.map { it.term }
 }

@@ -1,11 +1,16 @@
 package com.okestro.okchat.search.model
 
 /**
- * Value object representing search paths
+ * Value object representing search paths.
+ * Implements SearchCriteria for polymorphic handling.
  */
 data class SearchPaths(
     val paths: List<SearchPath>
-) {
+) : SearchCriteria {
+
+    override fun getSearchType(): SearchType = SearchType.PATH
+
+    override fun toQuery(): String = toOrQuery()
     companion object {
         private const val MAX_KEYWORDS = 5
 
@@ -29,7 +34,9 @@ data class SearchPaths(
             .joinToString(" OR ") { it.term }
     }
 
-    fun isEmpty(): Boolean = paths.isEmpty()
+    override fun isEmpty(): Boolean = paths.isEmpty()
+
+    override fun size(): Int = paths.size
 
     fun terms(): List<String> = paths.map { it.term }
 }

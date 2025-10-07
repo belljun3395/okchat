@@ -5,17 +5,11 @@ import com.okestro.okchat.search.client.HybridSearchResponse
 import com.okestro.okchat.search.client.SearchClient
 import com.okestro.okchat.search.client.SearchFields
 import com.okestro.okchat.search.config.SearchFieldWeightConfig
-import com.okestro.okchat.search.model.ContentSearchResults
-import com.okestro.okchat.search.model.KeywordSearchResults
 import com.okestro.okchat.search.model.MultiSearchResult
-import com.okestro.okchat.search.model.PathSearchResults
-import com.okestro.okchat.search.model.SearchContents
-import com.okestro.okchat.search.model.SearchKeywords
-import com.okestro.okchat.search.model.SearchPaths
+import com.okestro.okchat.search.model.SearchCriteria
 import com.okestro.okchat.search.model.SearchResult
-import com.okestro.okchat.search.model.SearchTitles
 import com.okestro.okchat.search.model.SearchType
-import com.okestro.okchat.search.model.TitleSearchResults
+import com.okestro.okchat.search.model.TypedSearchResults
 import com.okestro.okchat.search.util.HybridSearchUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.embedding.EmbeddingModel
@@ -27,14 +21,16 @@ private val log = KotlinLogging.logger {}
  * Hybrid multi-search strategy using batched requests.
  *
  * Responsibility:
- * - Execute multiple search types (keyword/title/content/path) in a single batched request
+ * - Execute multiple search types in a single batched request
  * - Generate embeddings once and reuse across all searches
  * - Parse and deduplicate results for each search type
+ * - Support polymorphic search criteria (Open-Closed Principle)
  *
  * Benefits:
- * - Performance: Single HTTP request instead of 4 separate requests
+ * - Performance: Single HTTP request instead of N separate requests
  * - Efficiency: Embedding generated once and reused
  * - Consistency: All searches use the same embedding
+ * - Extensibility: New search types supported without code changes
  */
 @Component
 class HybridMultiSearchStrategy(
@@ -52,27 +48,31 @@ class HybridMultiSearchStrategy(
         val index: Int
     )
 
-    override suspend fun executeMultiSearch(
-        keywords: SearchKeywords?,
-        titles: SearchTitles?,
-        contents: SearchContents?,
-        paths: SearchPaths?,
+    override suspend fun search(
+        searchCriteria: List<SearchCriteria>,
         topK: Int
     ): MultiSearchResult {
+        // Filter out empty criteria
+        val validCriteria = searchCriteria.filterNot { it.isEmpty() }
+
         log.info {
-            "[${getStrategyName()}] Starting with topK=$topK: " +
-                "keywords=${keywords?.keywords?.size ?: 0}, titles=${titles?.titles?.size ?: 0}, " +
-                "contents=${contents?.contents?.size ?: 0}, paths=${paths?.paths?.size ?: 0}"
+            "[${getStrategyName()}] Starting with topK=$topK, ${validCriteria.size} active criteria: " +
+                validCriteria.joinToString(", ") { "${it.getSearchType().name}(${it.size()})" }
+        }
+
+        if (validCriteria.isEmpty()) {
+            log.warn { "[${getStrategyName()}] No valid search criteria provided" }
+            return MultiSearchResult.empty()
         }
 
         // Generate embedding once (reused for all searches)
-        val embedding = generateEmbedding(contents)
+        val embedding = generateEmbeddingFromCriteria(validCriteria)
 
-        // Build search requests
-        val searchRequests = buildSearchRequests(keywords, titles, contents, paths, embedding, topK)
+        // Build search requests from criteria
+        val searchRequests = buildSearchRequestsFromCriteria(validCriteria, embedding, topK)
 
-        // Execute batched search
-        val responses = executeBatchedSearch(searchRequests)
+        log.debug { "[${getStrategyName()}] Executing batched search with ${searchRequests.size} requests..." }
+        val responses = searchClient.multiHybridSearch(searchRequests.map { it.request })
 
         // Parse and wrap results
         val resultsByType = parseSearchResponses(searchRequests, responses)
@@ -86,69 +86,64 @@ class HybridMultiSearchStrategy(
     }
 
     /**
-     * Generate embedding from content terms, reused across all searches
+     * Generate embedding from content criteria, reused across all searches.
+     *
+     * IMPORTANT: Only uses Content criteria for embedding to maintain vector space consistency.
+     * - Documents in vector DB are indexed with content embeddings
+     * - Using title/keyword for embedding would cause vector space mismatch
+     * - If no content criteria: returns empty embedding (falls back to BM25-only search)
+     *
+     * Search behavior:
+     * - With content criteria: Hybrid search (BM25 + Vector similarity)
+     * - Without content criteria: BM25 only (text matching)
      */
-    private suspend fun generateEmbedding(contents: SearchContents?): List<Float> {
+    private suspend fun generateEmbeddingFromCriteria(criteria: List<SearchCriteria>): List<Float> {
         log.debug { "[${getStrategyName()}] Generating embedding..." }
-        val embedding = embeddingModel.embed(
-            contents?.contents?.joinToString { it.term } ?: ""
-        ).toList()
-        log.debug { "[${getStrategyName()}] Embedding generated with dimension ${embedding.size}" }
+
+        // Only use content criteria for embedding (vector space consistency)
+        val embeddingText = criteria
+            .firstOrNull { it.getSearchType() == SearchType.CONTENT }
+            ?.toQuery()
+
+        val embedding = embeddingText?.let {
+            embeddingModel.embed(it).toList()
+        } ?: emptyList() // No content = BM25 only (correct behavior)
+
+        log.debug {
+            "[${getStrategyName()}] Embedding generated with dimension ${embedding.size} " +
+                "(mode: ${if (embedding.isEmpty()) "BM25-only" else "Hybrid"})"
+        }
         return embedding
     }
 
     /**
-     * Build search requests for all provided search parameters
+     * Build search requests from search criteria (polymorphic approach).
+     * Each criterion knows its type and converts itself to a query.
      */
-    private fun buildSearchRequests(
-        keywords: SearchKeywords?,
-        titles: SearchTitles?,
-        contents: SearchContents?,
-        paths: SearchPaths?,
+    private fun buildSearchRequestsFromCriteria(
+        criteria: List<SearchCriteria>,
         embedding: List<Float>,
         topK: Int
     ): List<SearchRequestInfo> {
-        val requests = mutableListOf<SearchRequestInfo>()
-        var index = 0
+        return criteria.mapIndexed { index, criterion ->
+            val type = criterion.getSearchType()
+            val fieldWeights = type.getFieldWeights(fieldConfig)
 
-        fun addRequest(type: SearchType, query: String?) {
-            query?.let {
-                val fieldWeights = type.getFieldWeights(fieldConfig)
-                requests.add(
-                    SearchRequestInfo(
-                        type = type,
-                        request = HybridSearchRequest(
-                            textQuery = it,
-                            vectorQuery = embedding,
-                            fields = SearchFields(
-                                queryBy = fieldWeights.queryByList(),
-                                weights = fieldWeights.weightsList()
-                            ),
-                            filters = mapOf("metadata.type" to "confluence-page"),
-                            limit = topK
-                        ),
-                        index = index++
-                    )
-                )
-            }
+            SearchRequestInfo(
+                type = type,
+                request = HybridSearchRequest(
+                    textQuery = criterion.toQuery(),
+                    vectorQuery = embedding,
+                    fields = SearchFields(
+                        queryBy = fieldWeights.queryByList(),
+                        weights = fieldWeights.weightsList()
+                    ),
+                    filters = mapOf("metadata.type" to "confluence-page"),
+                    limit = topK
+                ),
+                index = index
+            )
         }
-
-        addRequest(SearchType.KEYWORD, keywords?.toOrQuery())
-        addRequest(SearchType.TITLE, titles?.toOrQuery())
-        addRequest(SearchType.CONTENT, contents?.toOrQuery())
-        addRequest(SearchType.PATH, paths?.toOrQuery())
-
-        return requests
-    }
-
-    /**
-     * Execute all searches in a single batched HTTP request
-     */
-    private suspend fun executeBatchedSearch(
-        searchRequests: List<SearchRequestInfo>
-    ): List<HybridSearchResponse> {
-        log.debug { "[${getStrategyName()}] Executing batched search with ${searchRequests.size} requests..." }
-        return searchClient.multiHybridSearch(searchRequests.map { it.request })
     }
 
     /**
@@ -170,15 +165,14 @@ class HybridMultiSearchStrategy(
     }
 
     /**
-     * Wrap parsed results in type-safe result classes
+     * Wrap parsed results in type-safe result classes.
+     * Uses TypedSearchResults factory for polymorphic creation.
      */
     private fun wrapResults(resultsByType: Map<SearchType, List<SearchResult>>): MultiSearchResult {
-        return MultiSearchResult(
-            keywordResults = KeywordSearchResults(resultsByType[SearchType.KEYWORD] ?: emptyList()),
-            titleResults = TitleSearchResults(resultsByType[SearchType.TITLE] ?: emptyList()),
-            contentResults = ContentSearchResults(resultsByType[SearchType.CONTENT] ?: emptyList()),
-            pathResults = PathSearchResults(resultsByType[SearchType.PATH] ?: emptyList())
-        )
+        val typedResults = resultsByType.mapValues { (type, results) ->
+            TypedSearchResults.of(type, results)
+        }
+        return MultiSearchResult.fromMap(typedResults)
     }
 
     /**

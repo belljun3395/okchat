@@ -2,66 +2,46 @@ package com.okestro.okchat.search.model
 
 /**
  * Result container for multi-search operations.
- * Holds type-safe results from keyword, title, content, and path searches.
+ * Uses Map-based approach for Open-Closed Principle.
  *
- * Each result type is wrapped in its own class for:
- * - Type safety (prevents mixing up result types)
- * - Semantic clarity (explicit meaning of each result set)
- * - Extensibility (each type can have specialized methods)
+ * Responsibility:
+ * - Hold results from multiple search types
+ * - Provide convenient access methods
+ * - Support extensibility (new search types don't require class changes)
+ *
+ * Benefits:
+ * - Extensible: Add new search types without modifying this class
+ * - Type-safe: Uses TypedSearchResults sealed interface
+ * - Flexible: Results accessed by SearchType enum
  */
 data class MultiSearchResult(
-    val keywordResults: KeywordSearchResults,
-    val titleResults: TitleSearchResults,
-    val contentResults: ContentSearchResults,
-    val pathResults: PathSearchResults
+    private val resultsByType: Map<SearchType, TypedSearchResults>
 ) {
-    /**
-     * Get all results combined (useful for displaying all search results)
-     */
-    fun getAllResults(): List<SearchResult> {
-        return (
-            keywordResults.results +
-                titleResults.results +
-                contentResults.results +
-                pathResults.results
-            ).distinctBy { it.id }
-    }
 
     /**
-     * Get total number of unique documents found across all search types
+     * Convenience properties for backward compatibility and common usage
      */
-    fun getTotalUniqueDocuments(): Int {
-        return getAllResults().size
-    }
+    val keywordResults: KeywordSearchResults
+        get() = resultsByType[SearchType.KEYWORD] as? KeywordSearchResults ?: KeywordSearchResults.empty()
 
-    /**
-     * Check if any search returned results
-     */
-    fun hasResults(): Boolean {
-        return keywordResults.isNotEmpty ||
-            titleResults.isNotEmpty ||
-            contentResults.isNotEmpty ||
-            pathResults.isNotEmpty
-    }
+    val titleResults: TitleSearchResults
+        get() = resultsByType[SearchType.TITLE] as? TitleSearchResults ?: TitleSearchResults.empty()
 
-    /**
-     * Get summary statistics of search results
-     */
-    fun getSummary(): SearchSummary {
-        return SearchSummary(
-            keywordCount = keywordResults.size,
-            titleCount = titleResults.size,
-            contentCount = contentResults.size,
-            pathCount = pathResults.size,
-            totalUnique = getTotalUniqueDocuments()
-        )
-    }
+    val contentResults: ContentSearchResults
+        get() = resultsByType[SearchType.CONTENT] as? ContentSearchResults ?: ContentSearchResults.empty()
 
-    data class SearchSummary(
-        val keywordCount: Int,
-        val titleCount: Int,
-        val contentCount: Int,
-        val pathCount: Int,
-        val totalUnique: Int
-    )
+    val pathResults: PathSearchResults
+        get() = resultsByType[SearchType.PATH] as? PathSearchResults ?: PathSearchResults.empty()
+
+    companion object {
+        /**
+         * Create an empty multi-search result
+         */
+        fun empty() = MultiSearchResult(emptyMap())
+
+        /**
+         * Builder for creating MultiSearchResult from Map
+         */
+        fun fromMap(results: Map<SearchType, TypedSearchResults>) = MultiSearchResult(results)
+    }
 }

@@ -1,6 +1,8 @@
 package com.okestro.okchat.ai.tools.confluence
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.okestro.okchat.ai.model.GetPageByIdInput
+import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.confluence.client.ConfluenceClient
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
@@ -40,10 +42,10 @@ class GetPageByIdConfluenceTool(
 
     override fun call(toolInput: String): String {
         return try {
-            val input = objectMapper.readValue(toolInput, Map::class.java)
-            val thought = input["thought"] as? String ?: "No thought provided."
-            val pageId = input["pageId"] as? String
-                ?: return "Invalid input: pageId parameter is required"
+            // Parse input to type-safe object
+            val input = objectMapper.readValue(toolInput, GetPageByIdInput::class.java)
+            val thought = input.thought ?: "No thought provided."
+            val pageId = input.pageId
 
             val page = confluenceClient.getPageById(pageId)
 
@@ -81,9 +83,14 @@ class GetPageByIdConfluenceTool(
                 }
             }
 
-            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
+            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
         } catch (e: Exception) {
-            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred while retrieving the page.", "answer" to "Error retrieving page: ${e.message}"))
+            objectMapper.writeValueAsString(
+                ToolOutput(
+                    thought = "An error occurred while retrieving the page.",
+                    answer = "Error retrieving page: ${e.message}"
+                )
+            )
         }
     }
 }

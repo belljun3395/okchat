@@ -1,6 +1,8 @@
 package com.okestro.okchat.ai.tools.confluence
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.okestro.okchat.ai.model.GetSpaceByKeyInput
+import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.confluence.service.ConfluenceService
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
@@ -40,19 +42,29 @@ class GetSpaceByKeyConfluenceTool(
 
     override fun call(toolInput: String): String {
         return try {
-            val input = objectMapper.readValue(toolInput, Map::class.java)
-            val thought = input["thought"] as? String ?: "No thought provided."
-            val spaceKey = input["spaceKey"] as? String
-                ?: return "Invalid input: spaceKey parameter is required"
+            // Parse input to type-safe object
+            val input = objectMapper.readValue(toolInput, GetSpaceByKeyInput::class.java)
+            val thought = input.thought ?: "No thought provided."
+            val spaceKey = input.spaceKey
 
             val spaceId = confluenceService.getSpaceIdByKey(spaceKey)
             val answer = "Successfully found space with key '$spaceKey'. Space ID: $spaceId"
 
-            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
+            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
         } catch (e: IllegalArgumentException) {
-            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred: the space key was not found.", "answer" to "Error: ${e.message}"))
+            objectMapper.writeValueAsString(
+                ToolOutput(
+                    thought = "An error occurred: the space key was not found.",
+                    answer = "Error: ${e.message}"
+                )
+            )
         } catch (e: Exception) {
-            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred while retrieving the space.", "answer" to "Error retrieving space: ${e.message}"))
+            objectMapper.writeValueAsString(
+                ToolOutput(
+                    thought = "An error occurred while retrieving the space.",
+                    answer = "Error retrieving space: ${e.message}"
+                )
+            )
         }
     }
 }

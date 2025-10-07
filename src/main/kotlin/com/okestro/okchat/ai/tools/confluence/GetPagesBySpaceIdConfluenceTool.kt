@@ -1,6 +1,8 @@
 package com.okestro.okchat.ai.tools.confluence
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.okestro.okchat.ai.model.GetPagesBySpaceIdInput
+import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.confluence.service.ContentCollector
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
@@ -45,11 +47,11 @@ class GetPagesBySpaceIdConfluenceTool(
 
     override fun call(toolInput: String): String {
         return try {
-            val input = objectMapper.readValue(toolInput, Map::class.java)
-            val thought = input["thought"] as? String ?: "No thought provided."
-            val spaceId = input["spaceId"] as? String
-                ?: return "Invalid input: spaceId parameter is required"
-            val limit = (input["limit"] as? Number)?.toInt() ?: 20
+            // Parse input to type-safe object
+            val input = objectMapper.readValue(toolInput, GetPagesBySpaceIdInput::class.java)
+            val thought = input.thought ?: "No thought provided."
+            val spaceId = input.spaceId
+            val limit = input.getValidatedLimit()
 
             val allPages = contentCollector.collectAllContent(spaceId)
             val limitedPages = allPages.take(limit)
@@ -69,9 +71,14 @@ class GetPagesBySpaceIdConfluenceTool(
                 }
             }
 
-            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
+            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
         } catch (e: Exception) {
-            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred while retrieving pages from the space.", "answer" to "Error retrieving pages: ${e.message}"))
+            objectMapper.writeValueAsString(
+                ToolOutput(
+                    thought = "An error occurred while retrieving pages from the space.",
+                    answer = "Error retrieving pages: ${e.message}"
+                )
+            )
         }
     }
 }

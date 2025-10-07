@@ -1,6 +1,8 @@
 package com.okestro.okchat.ai.tools.confluence
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.okestro.okchat.ai.model.GetAllChildPagesInput
+import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.confluence.client.ConfluenceClient
 import com.okestro.okchat.confluence.client.Page
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -69,11 +71,11 @@ class GetAllChildPagesConfluenceTool(
 
     override fun call(toolInput: String): String {
         return try {
-            val input = objectMapper.readValue(toolInput, Map::class.java)
-            val thought = input["thought"] as? String ?: "No thought provided."
-            val pageId = input["pageId"] as? String
-                ?: return "Invalid input: pageId parameter is required"
-            val maxDepth = ((input["maxDepth"] as? Number)?.toInt() ?: 10).coerceIn(1, 20)
+            // Parse input to type-safe object
+            val input = objectMapper.readValue(toolInput, GetAllChildPagesInput::class.java)
+            val thought = input.thought ?: "No thought provided."
+            val pageId = input.pageId
+            val maxDepth = input.getValidatedMaxDepth()
 
             log.info { "[ConfluenceTool] Getting all child pages: page_id=$pageId, max_depth=$maxDepth" }
 
@@ -162,10 +164,15 @@ class GetAllChildPagesConfluenceTool(
                 append("Don't just list page titles, but extract and answer the main content covered on each page, completed tasks, ongoing tasks, etc.")
             }
 
-            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
+            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
         } catch (e: Exception) {
             log.error(e) { "Error getting child pages: ${e.message}" }
-            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred while getting child pages.", "answer" to "Error retrieving child pages: ${e.message}"))
+            objectMapper.writeValueAsString(
+                ToolOutput(
+                    thought = "An error occurred while getting child pages.",
+                    answer = "Error retrieving child pages: ${e.message}"
+                )
+            )
         }
     }
 

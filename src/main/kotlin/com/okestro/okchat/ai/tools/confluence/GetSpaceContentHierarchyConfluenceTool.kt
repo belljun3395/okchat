@@ -1,6 +1,8 @@
 package com.okestro.okchat.ai.tools.confluence
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.okestro.okchat.ai.model.GetSpaceContentHierarchyInput
+import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.confluence.model.ContentNode
 import com.okestro.okchat.confluence.service.ConfluenceService
 import org.springframework.ai.tool.ToolCallback
@@ -46,11 +48,11 @@ class GetSpaceContentHierarchyConfluenceTool(
 
     override fun call(toolInput: String): String {
         return try {
-            val input = objectMapper.readValue(toolInput, Map::class.java)
-            val thought = input["thought"] as? String ?: "No thought provided."
-            val spaceId = input["spaceId"] as? String
-                ?: return "Invalid input: spaceId parameter is required"
-            val maxDepth = (input["maxDepth"] as? Number)?.toInt() ?: 3
+            // Parse input to type-safe object
+            val input = objectMapper.readValue(toolInput, GetSpaceContentHierarchyInput::class.java)
+            val thought = input.thought ?: "No thought provided."
+            val spaceId = input.spaceId
+            val maxDepth = input.maxDepth
 
             val hierarchy = confluenceService.getSpaceContentHierarchy(spaceId)
 
@@ -65,9 +67,14 @@ class GetSpaceContentHierarchyConfluenceTool(
                 }
             }
 
-            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
+            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
         } catch (e: Exception) {
-            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred while retrieving the space hierarchy.", "answer" to "Error retrieving space hierarchy: ${e.message}"))
+            objectMapper.writeValueAsString(
+                ToolOutput(
+                    thought = "An error occurred while retrieving the space hierarchy.",
+                    answer = "Error retrieving space hierarchy: ${e.message}"
+                )
+            )
         }
     }
 

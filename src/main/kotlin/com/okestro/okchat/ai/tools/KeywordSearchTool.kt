@@ -1,6 +1,8 @@
 package com.okestro.okchat.ai.tools
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.okestro.okchat.ai.model.SearchByKeywordInput
+import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.search.strategy.KeywordSearchStrategy
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
@@ -56,11 +58,11 @@ class KeywordSearchTool(
 
     override fun call(toolInput: String): String {
         return try {
-            val input = objectMapper.readValue(toolInput, Map::class.java)
-            val thought = input["thought"] as? String ?: "No thought provided."
-            val keywords = input["keywords"] as? String
-                ?: return "Invalid input: keywords parameter is required"
-            val topK = ((input["topK"] as? Number)?.toInt() ?: 10).coerceIn(1, 50)
+            // Parse input to type-safe object
+            val input = objectMapper.readValue(toolInput, SearchByKeywordInput::class.java)
+            val thought = input.thought ?: "No thought provided."
+            val keywords = input.keywords
+            val topK = input.getValidatedTopK()
 
             log.info { "Keyword search: keywords='$keywords', topK=$topK" }
 
@@ -93,10 +95,15 @@ class KeywordSearchTool(
                 }
             }
 
-            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
+            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
         } catch (e: Exception) {
             log.error(e) { "Error in keyword search: ${e.message}" }
-            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred during the keyword search.", "answer" to "Error performing keyword search: ${e.message}"))
+            objectMapper.writeValueAsString(
+                ToolOutput(
+                    thought = "An error occurred during the keyword search.",
+                    answer = "Error performing keyword search: ${e.message}"
+                )
+            )
         }
     }
 }

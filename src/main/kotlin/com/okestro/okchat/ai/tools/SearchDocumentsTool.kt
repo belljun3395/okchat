@@ -1,6 +1,9 @@
 package com.okestro.okchat.ai.tools
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.okestro.okchat.ai.model.SearchDocumentsInput
+import com.okestro.okchat.ai.model.ToolOutput
+import com.okestro.okchat.search.model.SearchDocument
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.springframework.ai.tool.ToolCallback
@@ -55,13 +58,12 @@ class SearchDocumentsTool(
 
     override fun call(toolInput: String): String {
         return try {
-            @Suppress("UNCHECKED_CAST")
-            val input = objectMapper.readValue(toolInput, Map::class.java) as Map<String, Any>
-            val thought = input["thought"] as? String ?: "No thought provided."
-            val query = input["query"] as? String
-                ?: return "Invalid input: query parameter is required"
-            val limit = ((input["limit"] as? Number)?.toInt() ?: 5).coerceIn(1, 20)
-            val filterBySpace = input["filterBySpace"] as? String
+            // Parse input to type-safe object
+            val input = objectMapper.readValue(toolInput, SearchDocumentsInput::class.java)
+            val thought = input.thought ?: "No thought provided."
+            val query = input.query
+            val limit = input.getValidatedLimit()
+            val filterBySpace = input.filterBySpace
 
             log.info { "Searching OpenSearch: query='$query', limit=$limit, space=$filterBySpace" }
 
@@ -104,17 +106,17 @@ class SearchDocumentsTool(
                     append("Found ${hits.size} document(s):\n\n")
 
                     hits.forEachIndexed { index, hit ->
-                        val doc = hit.source() ?: return@forEachIndexed
+                        val source = hit.source() ?: return@forEachIndexed
 
-                        // Extract metadata - support both flat and nested structure
-                        @Suppress("UNCHECKED_CAST")
-                        val metadata = doc["metadata"] as? Map<String, Any> ?: emptyMap()
+                        // Convert to type-safe SearchDocument
+                        // fromMap now handles Any type safely
+                        val doc = SearchDocument.fromMap(source)
 
-                        val title = doc["metadata.title"]?.toString() ?: metadata["title"]?.toString() ?: "Untitled"
-                        val path = doc["metadata.path"]?.toString() ?: metadata["path"]?.toString() ?: ""
-                        val spaceKey = doc["metadata.spaceKey"]?.toString() ?: metadata["spaceKey"]?.toString() ?: ""
-                        val pageId = doc["metadata.id"]?.toString() ?: metadata["id"]?.toString() ?: doc["id"]?.toString() ?: ""
-                        val content = doc["content"]?.toString() ?: ""
+                        val title = doc.getTitle()
+                        val path = doc.getPath()
+                        val spaceKey = doc.getSpaceKey()
+                        val pageId = doc.resolveMetadataId()
+                        val content = doc.content
 
                         append("${index + 1}. $title\n")
                         if (path.isNotBlank()) {
@@ -131,10 +133,15 @@ class SearchDocumentsTool(
                 }
             }
 
-            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
+            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
         } catch (e: Exception) {
             log.error(e) { "Error searching OpenSearch: ${e.message}" }
-            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred during the document search.", "answer" to "Error searching documents: ${e.message}"))
+            objectMapper.writeValueAsString(
+                ToolOutput(
+                    thought = "An error occurred during the document search.",
+                    answer = "Error searching documents: ${e.message}"
+                )
+            )
         }
     }
 }

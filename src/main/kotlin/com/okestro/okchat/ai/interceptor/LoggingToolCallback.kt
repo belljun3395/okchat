@@ -1,6 +1,7 @@
 package com.okestro.okchat.ai.interceptor
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.okestro.okchat.ai.model.ToolOutput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
@@ -28,14 +29,12 @@ class LoggingToolCallback(
             val duration = System.currentTimeMillis() - startTime
             log.info { "[Tool Completed] $toolName (${duration}ms)" }
             try {
-                @Suppress("UNCHECKED_CAST")
-                val outJson = objectMapper.readValue(output, Map::class.java) as Map<String, Any>
-                val thought = outJson["thought"]?.toString() ?: "N/A"
-                val answer = outJson["answer"]?.toString() ?: "N/A"
-                log.info { "Thought: $thought" }
-                log.info { "Answer: ${answer.take(100)}..." }
+                // Parse output as type-safe ToolOutput
+                val toolOutput = objectMapper.readValue(output, ToolOutput::class.java)
+                log.info { "Thought: ${toolOutput.thought}" }
+                log.info { "Answer: ${toolOutput.answer.take(100)}..." }
             } catch (_: Exception) {
-                // It's okay if the output is not a JSON map; just log the raw output.
+                // It's okay if the output is not a ToolOutput; just log the raw output.
                 log.info { "Output: ${output.take(100)}..." }
             }
             return output

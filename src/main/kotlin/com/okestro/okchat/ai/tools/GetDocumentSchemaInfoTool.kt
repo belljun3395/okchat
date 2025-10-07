@@ -1,6 +1,8 @@
 package com.okestro.okchat.ai.tools
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.okestro.okchat.ai.model.GetDocumentSchemaInput
+import com.okestro.okchat.ai.model.ToolOutput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.springframework.ai.tool.ToolCallback
@@ -42,9 +44,9 @@ class GetDocumentSchemaInfoTool(
 
     override fun call(toolInput: String): String {
         return try {
-            @Suppress("UNCHECKED_CAST")
-            val input = objectMapper.readValue(toolInput, Map::class.java) as Map<String, Any>
-            val thought = input["thought"] as? String ?: "No thought provided."
+            // Parse input to type-safe object
+            val input = objectMapper.readValue(toolInput, GetDocumentSchemaInput::class.java)
+            val thought = input.thought ?: "No thought provided."
 
             log.info { "Retrieving schema for index: $indexName" }
 
@@ -101,10 +103,15 @@ class GetDocumentSchemaInfoTool(
                 }
             }
 
-            objectMapper.writeValueAsString(mapOf("thought" to thought, "answer" to answer))
+            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
         } catch (e: Exception) {
             log.error(e) { "Error retrieving schema: ${e.message}" }
-            objectMapper.writeValueAsString(mapOf("thought" to "An error occurred while retrieving the schema.", "answer" to "Error retrieving schema information: ${e.message}"))
+            objectMapper.writeValueAsString(
+                ToolOutput(
+                    thought = "An error occurred while retrieving the schema.",
+                    answer = "Error retrieving schema information: ${e.message}"
+                )
+            )
         }
     }
 }

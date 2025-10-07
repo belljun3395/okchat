@@ -1,0 +1,130 @@
+# AWS Managed Services Configuration Example
+# 프로덕션 환경에서는 AWS 관리형 서비스 사용을 권장합니다.
+# 이 파일은 참고용 예시입니다.
+
+---
+# Example: Using Amazon RDS instead of self-hosted MySQL
+# ConfigMap에서 다음과 같이 데이터베이스 URL을 변경합니다:
+#
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: okchat-config
+#   namespace: okchat
+# data:
+#   SPRING_DATASOURCE_URL: "jdbc:mysql://okchat-db.xxxxx.ap-northeast-2.rds.amazonaws.com:3306/okchat?useSSL=true&serverTimezone=Asia/Seoul"
+#
+# RDS 생성 명령어:
+# aws rds create-db-instance \
+#   --db-instance-identifier okchat-db \
+#   --db-instance-class db.t3.medium \
+#   --engine mysql \
+#   --engine-version 8.0.35 \
+#   --master-username admin \
+#   --master-user-password <strong-password> \
+#   --allocated-storage 100 \
+#   --storage-type gp3 \
+#   --vpc-security-group-ids sg-xxxxxxxx \
+#   --db-subnet-group-name my-db-subnet-group \
+#   --backup-retention-period 7 \
+#   --preferred-backup-window "03:00-04:00" \
+#   --preferred-maintenance-window "mon:04:00-mon:05:00" \
+#   --multi-az \
+#   --storage-encrypted \
+#   --enable-performance-insights \
+#   --region ap-northeast-2
+
+---
+# Example: Using Amazon ElastiCache for Redis
+# ConfigMap에서 다음과 같이 Redis 설정을 변경합니다:
+#
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: okchat-config
+#   namespace: okchat
+# data:
+#   SPRING_DATA_REDIS_HOST: "okchat-redis.xxxxx.cache.amazonaws.com"
+#   SPRING_DATA_REDIS_PORT: "6379"
+#
+# ElastiCache 생성 명령어:
+# aws elasticache create-replication-group \
+#   --replication-group-id okchat-redis \
+#   --replication-group-description "OkChat Redis Cache" \
+#   --engine redis \
+#   --cache-node-type cache.t3.medium \
+#   --num-cache-clusters 2 \
+#   --automatic-failover-enabled \
+#   --cache-subnet-group-name my-cache-subnet-group \
+#   --security-group-ids sg-xxxxxxxx \
+#   --at-rest-encryption-enabled \
+#   --transit-encryption-enabled \
+#   --snapshot-retention-limit 5 \
+#   --snapshot-window "03:00-05:00" \
+#   --region ap-northeast-2
+
+---
+# Example: Using Amazon OpenSearch Service
+# ConfigMap에서 다음과 같이 OpenSearch 설정을 변경합니다:
+#
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: okchat-config
+#   namespace: okchat
+# data:
+#   SPRING_AI_VECTORSTORE_OPENSEARCH_HOST: "search-okchat-xxxxx.ap-northeast-2.es.amazonaws.com"
+#   SPRING_AI_VECTORSTORE_OPENSEARCH_PORT: "443"
+#   SPRING_AI_VECTORSTORE_OPENSEARCH_SCHEME: "https"
+#
+# Secret에 인증 정보 추가:
+# kubectl create secret generic okchat-opensearch-secret \
+#   --from-literal=SPRING_AI_VECTORSTORE_OPENSEARCH_USERNAME=admin \
+#   --from-literal=SPRING_AI_VECTORSTORE_OPENSEARCH_PASSWORD=<strong-password> \
+#   --namespace=okchat
+#
+# OpenSearch Service 생성은 AWS Console 사용 권장:
+# 1. AWS Console > OpenSearch Service
+# 2. Create domain
+# 3. Domain name: okchat-opensearch
+# 4. Deployment type: Production
+# 5. Version: 2.11
+# 6. Data nodes: 3 x r6g.xlarge.search
+# 7. Storage: 100 GiB EBS gp3 per node
+# 8. Network: VPC access
+# 9. Fine-grained access control: Enabled
+# 10. Encryption: At rest and in transit
+
+---
+# AWS Managed Services 사용 시 장점:
+#
+# 1. 고가용성 (Multi-AZ)
+# 2. 자동 백업 및 복구
+# 3. 자동 패치 및 업데이트
+# 4. 모니터링 및 알림 (CloudWatch)
+# 5. 스케일링 용이
+# 6. 보안 강화 (암호화, VPC, IAM)
+# 7. 운영 부담 감소
+#
+# AWS Managed Services 사용 시 주의사항:
+#
+# 1. 비용이 더 높을 수 있음
+# 2. 네트워크 연결 설정 필요 (VPC Peering, Transit Gateway 등)
+# 3. 보안 그룹 설정 필요
+# 4. IAM 권한 설정 필요
+# 5. 초기 프로비저닝 시간 소요
+
+---
+# AWS Managed Services를 사용하는 경우,
+# k8s/overlays/production/kustomization.yaml에서
+# MySQL, Redis, OpenSearch Deployment를 제외하고 배포하세요:
+#
+# resources:
+#   - ../../base/namespace.yaml
+#   - ../../base/configmap.yaml
+#   - ../../base/secret.yaml
+#   # - ../../base/mysql-deployment.yaml    # 주석 처리
+#   # - ../../base/redis-deployment.yaml    # 주석 처리
+#   # - ../../base/opensearch-deployment.yaml  # 주석 처리
+#   - ../../base/okchat-deployment.yaml
+#   - ../../base/ingress.yaml

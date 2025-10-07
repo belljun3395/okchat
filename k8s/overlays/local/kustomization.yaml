@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: okchat
+
+bases:
+  - ../../base
+
+# Patches for local development with Minikube
+patchesStrategicMerge:
+  - deployment-patch.yaml
+  - pvc-patch.yaml
+  - ingress-patch.yaml
+
+# Local environment labels
+commonLabels:
+  environment: local
+  cluster: minikube
+
+# ConfigMap additions for local environment
+configMapGenerator:
+  - name: okchat-config-local
+    namespace: okchat
+    literals:
+      - LOGGING_LEVEL_ROOT=INFO
+      - LOGGING_LEVEL_COM_OKESTRO=DEBUG
+      - SPRING_PROFILES_ACTIVE=local
+
+# Secret additions for local environment (base64 encoded)
+secretGenerator:
+  - name: okchat-secret-local
+    namespace: okchat
+    type: Opaque
+    literals:
+      - DEBUG_MODE=true

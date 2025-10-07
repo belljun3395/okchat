@@ -1,0 +1,53 @@
+# Gradle
+.gradle/
+build/
+!build/libs/*.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+docs/
+
+# Logs
+logs/
+*.log
+
+# Data directories
+opensearch-data/
+typesense-data/
+mysql-data/
+
+# Kubernetes
+k8s/
+
+# Docker
+docker-compose.yml
+compose.yaml
+Dockerfile
+
+# Resources
+resources/
+
+# Test
+src/test/
+
+# Misc
+.env
+.env.*
+*.jpg
+*.jpeg
+*.txt

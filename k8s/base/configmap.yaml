@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: okchat-config
+  namespace: okchat
+data:
+  # Application Configuration
+  SPRING_APPLICATION_NAME: "ok-chat"
+  
+  # Database Configuration
+  SPRING_DATASOURCE_URL: "jdbc:mysql://okchat-mysql:3306/okchat?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul"
+  SPRING_DATASOURCE_DRIVER_CLASS_NAME: "com.mysql.cj.jdbc.Driver"
+  
+  # Redis Configuration
+  SPRING_DATA_REDIS_HOST: "okchat-redis"
+  SPRING_DATA_REDIS_PORT: "6379"
+  
+  # OpenSearch Configuration
+  SPRING_AI_VECTORSTORE_OPENSEARCH_HOST: "okchat-opensearch"
+  SPRING_AI_VECTORSTORE_OPENSEARCH_PORT: "9200"
+  SPRING_AI_VECTORSTORE_OPENSEARCH_SCHEME: "http"
+  SPRING_AI_VECTORSTORE_OPENSEARCH_INDEX_NAME: "vector_store"
+  SPRING_AI_VECTORSTORE_OPENSEARCH_EMBEDDING_DIMENSION: "1536"
+  
+  # Spring AI Configuration
+  SPRING_AI_OPENAI_EMBEDDING_MODEL: "text-embedding-3-small"
+  SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL: "gpt-4.1-mini"
+  
+  # Task Configuration
+  SPRING_CLOUD_TASK_ENABLED: "true"
+  SPRING_CLOUD_TASK_INITIALIZE_ENABLED: "true"
+  SPRING_CLOUD_TASK_TABLE_PREFIX: "TASK_"
+  SPRING_CLOUD_TASK_SINGLE_INSTANCE_ENABLED: "true"
+  
+  # Task Scheduler Configuration
+  TASK_CONFLUENCE_SYNC_ENABLED: "false"
+  TASK_EMAIL_POLLING_ENABLED: "false"
+  
+  # Hikari Configuration
+  SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "10"
+  SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: "2"
+  SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: "30000"
+  SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: "600000"
+  SPRING_DATASOURCE_HIKARI_MAX_LIFETIME: "1800000"

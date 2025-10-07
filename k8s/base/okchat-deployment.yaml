@@ -1,0 +1,242 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: okchat-app
+  namespace: okchat
+  labels:
+    app: okchat-app
+    component: application
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: okchat-app
+  template:
+    metadata:
+      labels:
+        app: okchat-app
+        component: application
+    spec:
+      initContainers:
+      # Wait for MySQL to be ready
+      - name: wait-for-mysql
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          until nc -z okchat-mysql 3306; do
+            echo "Waiting for MySQL..."
+            sleep 2
+          done
+      # Wait for Redis to be ready
+      - name: wait-for-redis
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          until nc -z okchat-redis 6379; do
+            echo "Waiting for Redis..."
+            sleep 2
+          done
+      # Wait for OpenSearch to be ready
+      - name: wait-for-opensearch
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          until nc -z okchat-opensearch 9200; do
+            echo "Waiting for OpenSearch..."
+            sleep 2
+          done
+      containers:
+      - name: okchat
+        image: okchat:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        # Spring Profile
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+        
+        # ConfigMap values
+        - name: SPRING_APPLICATION_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: okchat-config
+              key: SPRING_APPLICATION_NAME
+        - name: SPRING_DATASOURCE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: okchat-config
+              key: SPRING_DATASOURCE_URL
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: okchat-config
+              key: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+        - name: SPRING_DATA_REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: okchat-config
+              key: SPRING_DATA_REDIS_HOST
+        - name: SPRING_DATA_REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: okchat-config
+              key: SPRING_DATA_REDIS_PORT
+        - name: SPRING_AI_VECTORSTORE_OPENSEARCH_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: okchat-config
+              key: SPRING_AI_VECTORSTORE_OPENSEARCH_HOST
+        - name: SPRING_AI_VECTORSTORE_OPENSEARCH_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: okchat-config
+              key: SPRING_AI_VECTORSTORE_OPENSEARCH_PORT
+        - name: SPRING_AI_VECTORSTORE_OPENSEARCH_SCHEME
+          valueFrom:
+            configMapKeyRef:
+              name: okchat-config
+              key: SPRING_AI_VECTORSTORE_OPENSEARCH_SCHEME
+        - name: SPRING_AI_VECTORSTORE_OPENSEARCH_INDEX_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: okchat-config
+              key: SPRING_AI_VECTORSTORE_OPENSEARCH_INDEX_NAME
+        - name: SPRING_AI_VECTORSTORE_OPENSEARCH_EMBEDDING_DIMENSION
+          valueFrom:
+            configMapKeyRef:
+              name: okchat-config
+              key: SPRING_AI_VECTORSTORE_OPENSEARCH_EMBEDDING_DIMENSION
+        
+        # Secret values
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: okchat-secret
+              key: SPRING_DATASOURCE_USERNAME
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: okchat-secret
+              key: SPRING_DATASOURCE_PASSWORD
+        - name: SPRING_AI_OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: okchat-secret
+              key: OPENAI_API_KEY
+        
+        # Confluence credentials (optional)
+        - name: CONFLUENCE_BASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: okchat-secret
+              key: CONFLUENCE_BASE_URL
+        - name: CONFLUENCE_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: okchat-secret
+              key: CONFLUENCE_EMAIL
+        - name: CONFLUENCE_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: okchat-secret
+              key: CONFLUENCE_API_TOKEN
+        
+        # Gmail credentials (optional)
+        - name: EMAIL_PROVIDERS_GMAIL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: okchat-secret
+              key: EMAIL_PROVIDERS_GMAIL_USERNAME
+        - name: EMAIL_PROVIDERS_GMAIL_OAUTH2_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: okchat-secret
+              key: EMAIL_PROVIDERS_GMAIL_OAUTH2_CLIENT_ID
+        - name: EMAIL_PROVIDERS_GMAIL_OAUTH2_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: okchat-secret
+              key: EMAIL_PROVIDERS_GMAIL_OAUTH2_CLIENT_SECRET
+        
+        # Java Options
+        - name: JAVA_OPTS
+          value: "-Xms512m -Xmx2g -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+        
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "3Gi"
+            cpu: "2000m"
+        
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+      
+      volumes:
+      - name: logs
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: okchat-app
+  namespace: okchat
+  labels:
+    app: okchat-app
+    component: application
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: okchat-app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: okchat-app-headless
+  namespace: okchat
+  labels:
+    app: okchat-app
+    component: application
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: okchat-app

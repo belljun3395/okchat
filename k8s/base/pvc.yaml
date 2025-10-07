@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: okchat-mysql-pvc
+  namespace: okchat
+  labels:
+    app: okchat-mysql
+    component: database
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  # storageClassName will be overridden by overlays
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: okchat-redis-pvc
+  namespace: okchat
+  labels:
+    app: okchat-redis
+    component: cache
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  # storageClassName will be overridden by overlays
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: okchat-opensearch-pvc
+  namespace: okchat
+  labels:
+    app: okchat-opensearch
+    component: search
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  # storageClassName will be overridden by overlays

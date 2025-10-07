@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: okchat
+
+bases:
+  - ../../base
+
+# Patches for AWS EKS production environment
+patchesStrategicMerge:
+  - deployment-patch.yaml
+  - pvc-patch.yaml
+  - ingress-patch.yaml
+  - hpa.yaml
+
+# Production environment labels
+commonLabels:
+  environment: production
+  cluster: eks
+
+# ConfigMap additions for production environment
+configMapGenerator:
+  - name: okchat-config-prod
+    namespace: okchat
+    literals:
+      - LOGGING_LEVEL_ROOT=WARN
+      - LOGGING_LEVEL_COM_OKESTRO=INFO
+      - SPRING_PROFILES_ACTIVE=prod
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+      - MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED=true
+
+# Note: Create actual secrets using AWS Secrets Manager or external-secrets-operator
+# Example: kubectl create secret generic okchat-secret-prod --from-literal=...
+secretGenerator:
+  - name: okchat-secret-prod
+    namespace: okchat
+    type: Opaque
+    literals:
+      - DEBUG_MODE=false

@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: okchat-mysql
+  namespace: okchat
+  labels:
+    app: okchat-mysql
+    component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: okchat-mysql
+  template:
+    metadata:
+      labels:
+        app: okchat-mysql
+        component: database
+    spec:
+      containers:
+      - name: mysql
+        image: mysql/mysql-server:8.0.27
+        ports:
+        - containerPort: 3306
+          name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: okchat-secret
+              key: MYSQL_ROOT_PASSWORD
+        - name: MYSQL_ROOT_HOST
+          value: "%"
+        - name: TZ
+          value: "Asia/Seoul"
+        args:
+        - "--character-set-server=utf8mb4"
+        - "--collation-server=utf8mb4_unicode_ci"
+        - "--lower_case_table_names=1"
+        - "--max_connections=2048"
+        - "--wait_timeout=3600"
+        volumeMounts:
+        - name: mysql-data
+          mountPath: /var/lib/mysql
+        - name: mysql-init
+          mountPath: /docker-entrypoint-initdb.d
+        livenessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+            - -u
+            - root
+            - -proot
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+            - -u
+            - root
+            - -proot
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+      volumes:
+      - name: mysql-data
+        persistentVolumeClaim:
+          claimName: okchat-mysql-pvc
+      - name: mysql-init
+        configMap:
+          name: mysql-init-scripts
+          optional: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: okchat-mysql
+  namespace: okchat
+  labels:
+    app: okchat-mysql
+    component: database
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3306
+    targetPort: 3306
+    protocol: TCP
+    name: mysql
+  selector:
+    app: okchat-mysql

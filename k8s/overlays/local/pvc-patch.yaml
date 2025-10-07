@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: okchat-mysql-pvc
+  namespace: okchat
+spec:
+  # Use standard storage class for minikube
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: okchat-redis-pvc
+  namespace: okchat
+spec:
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: okchat-opensearch-pvc
+  namespace: okchat
+spec:
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 10Gi

@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: okchat-app
+  namespace: okchat
+spec:
+  # Use single replica for local development
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: okchat
+        # Use local built image
+        image: okchat:latest
+        imagePullPolicy: Never  # Never pull from registry in local
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "local"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: okchat-mysql
+  namespace: okchat
+spec:
+  template:
+    spec:
+      containers:
+      - name: mysql
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: okchat-redis
+  namespace: okchat
+spec:
+  template:
+    spec:
+      containers:
+      - name: redis
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: okchat-opensearch
+  namespace: okchat
+spec:
+  template:
+    spec:
+      containers:
+      - name: opensearch
+        env:
+        - name: OPENSEARCH_JAVA_OPTS
+          value: "-Xms512m -Xmx512m"  # Reduced memory for local
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"

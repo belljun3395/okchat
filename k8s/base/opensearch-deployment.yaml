@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: okchat-opensearch
+  namespace: okchat
+  labels:
+    app: okchat-opensearch
+    component: search
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: okchat-opensearch
+  template:
+    metadata:
+      labels:
+        app: okchat-opensearch
+        component: search
+    spec:
+      initContainers:
+      - name: sysctl
+        image: busybox:1.35
+        command:
+        - sysctl
+        - -w
+        - vm.max_map_count=262144
+        securityContext:
+          privileged: true
+      containers:
+      - name: opensearch
+        image: opensearchproject/opensearch:2.18.0
+        ports:
+        - containerPort: 9200
+          name: http
+        - containerPort: 9600
+          name: performance
+        env:
+        - name: discovery.type
+          value: "single-node"
+        - name: DISABLE_SECURITY_PLUGIN
+          value: "true"
+        - name: OPENSEARCH_JAVA_OPTS
+          value: "-Xms1g -Xmx1g"
+        - name: cluster.routing.allocation.disk.threshold_enabled
+          value: "false"
+        - name: action.auto_create_index
+          value: "true"
+        volumeMounts:
+        - name: opensearch-data
+          mountPath: /usr/share/opensearch/data
+        livenessProbe:
+          httpGet:
+            path: /_cluster/health
+            port: 9200
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /_cluster/health
+            port: 9200
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+      volumes:
+      - name: opensearch-data
+        persistentVolumeClaim:
+          claimName: okchat-opensearch-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: okchat-opensearch
+  namespace: okchat
+  labels:
+    app: okchat-opensearch
+    component: search
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9200
+    targetPort: 9200
+    protocol: TCP
+    name: http
+  - port: 9600
+    targetPort: 9600
+    protocol: TCP
+    name: performance
+  selector:
+    app: okchat-opensearch

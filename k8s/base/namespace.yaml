@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: okchat
+  labels:
+    name: okchat
+    environment: base

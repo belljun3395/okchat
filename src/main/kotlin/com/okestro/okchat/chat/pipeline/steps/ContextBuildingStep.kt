@@ -30,6 +30,7 @@ class ContextBuildingStep(
         private const val MAX_OTHER_RESULTS_PREVIEW = 10 // Increased to show more related documents
         private val DATE_PATTERN = Regex("""(\d{6})""")
     }
+    override fun getStepName(): String = "Context Building"
 
     override suspend fun execute(context: ChatContext): ChatContext {
         log.info { "[${getStepName()}] Building context from search results" }
@@ -43,42 +44,22 @@ class ContextBuildingStep(
 
         val topResults = searchResults.take(TOP_RESULTS_FOR_CONTEXT)
         log.info { "[${getStepName()}] Using top ${topResults.size} documents for context" }
-
-        // Log top documents in DEBUG mode
         if (log.isDebugEnabled()) {
-            log.debug { "[${getStepName()}] ━━━ All ${topResults.size} documents selected for context ━━━" }
-            topResults.forEachIndexed { index, result ->
-                log.debug { "  [${index + 1}/${topResults.size}] ${result.title}" }
-                log.debug { "       Score: ${"%.4f".format(result.score.value)}, ID: ${result.id}" }
-                log.debug { "       Content: ${result.content.length} chars" }
-                log.debug { "       Preview: ${result.content.take(150).replace("\n", " ")}..." }
-            }
-            log.debug { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
+            logTopResults(topResults)
         }
 
-        val contextText = buildContextText(topResults, context.input.message)
-        log.info { "[${getStepName()}] Built context: ${contextText.length} chars" }
-        log.debug { "[${getStepName()}] Context detail:\n" + contextText }
-
-        return context.copy(
-            search = context.search.copy(contextText = contextText)
-        )
-    }
-
-    private fun buildContextText(results: List<SearchResult>, userQuestion: String): String {
-        // Filter out documents with minimal content (metadata-only chunks)
-        val validResults = results.filter { it.content.length > 100 }
-
-        if (results.size > validResults.size) {
-            val filtered = results.filter { it.content.length <= 100 }
-            log.info { "[${getStepName()}] Content filtering: ${results.size} → ${validResults.size} results (filtered ${filtered.size} minimal docs)" }
+        val userQuestion = context.input.message
+        val validResults = topResults.filter { it.content.length > 100 }
+        if (topResults.size > validResults.size) {
+            val filtered = topResults.filter { it.content.length <= 100 }
+            log.info { "[${getStepName()}] Content filtering: ${topResults.size} → ${validResults.size} results (filtered ${filtered.size} minimal docs)" }
             if (log.isDebugEnabled()) {
                 filtered.take(5).forEach {
                     log.debug { "    - ${it.title} (content: ${it.content.length} chars)" }
                 }
             }
         } else {
-            log.debug { "[${getStepName()}] Content filtering: ${results.size} → ${validResults.size} results" }
+            log.debug { "[${getStepName()}] Content filtering: ${topResults.size} → ${validResults.size} results" }
         }
 
         val highRelevance = validResults.filter { it.score.value >= HIGH_RELEVANCE_THRESHOLD }
@@ -87,12 +68,19 @@ class ContextBuildingStep(
 
         log.info { "[${getStepName()}] Relevance distribution: High=${highRelevance.size}, Medium=${mediumRelevance.size}, Other=${otherResults.size}" }
 
-        return buildString {
+        val contextText = buildString {
             appendHeader(userQuestion, validResults.size, highRelevance.size)
             appendHighRelevanceDocuments(highRelevance)
             appendMediumRelevanceDocuments(mediumRelevance)
             appendOtherResults(otherResults)
         }
+
+        log.info { "[${getStepName()}] Built context: ${contextText.length} chars" }
+        log.debug { "[${getStepName()}] Context detail:\n" + contextText }
+
+        return context.copy(
+            search = context.search.copy(contextText = contextText)
+        )
     }
 
     private fun StringBuilder.appendHeader(question: String, totalCount: Int, highCount: Int) {
@@ -193,5 +181,14 @@ class ContextBuildingStep(
         return "$baseDomain/spaces/$spaceKey/pages/$actualPageId"
     }
 
-    override fun getStepName(): String = "Context Building"
+    private fun logTopResults(topResults: List<SearchResult>) {
+        log.debug { "[${getStepName()}] ━━━ All ${topResults.size} documents selected for context ━━━" }
+        topResults.forEachIndexed { index, result ->
+            log.debug { "[${index + 1}/${topResults.size}] ${result.title}" }
+            log.debug { "Score: ${"%.4f".format(result.score.value)}, ID: ${result.id}" }
+            log.debug { "Content: ${result.content.length} chars" }
+            log.debug { "Preview: ${result.content.take(150).replace("\n", " ")}..." }
+        }
+        log.debug { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
+    }
 }

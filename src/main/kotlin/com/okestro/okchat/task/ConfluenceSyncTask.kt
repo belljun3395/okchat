@@ -1,7 +1,7 @@
 package com.okestro.okchat.task
 
-import com.okestro.okchat.ai.support.KeywordExtractionService
 import com.okestro.okchat.ai.chunking.ChunkingStrategy
+import com.okestro.okchat.ai.support.KeywordExtractionService
 import com.okestro.okchat.confluence.model.ContentHierarchy
 import com.okestro.okchat.confluence.model.ContentNode
 import com.okestro.okchat.confluence.service.ConfluenceService
@@ -63,9 +63,14 @@ class ConfluenceSyncTask(
 
             // 1. Fetch Confluence content hierarchy
             log.info { "1. Fetching Confluence content..." }
-            val spaceId = confluenceService.getSpaceIdByKey(spaceKey)
-            val hierarchy = confluenceService.getSpaceContentHierarchy(spaceId).apply {
-                log.info { "Content Hierarchy:\n${ContentHierarchyVisualizer.visualize(this)}" }
+            val spaceId = runBlocking(Dispatchers.IO) {
+                confluenceService.getSpaceIdByKey(spaceKey)
+            }
+
+            val hierarchy = runBlocking {
+                confluenceService.getSpaceContentHierarchy(spaceId).apply {
+                    log.info { "Content Hierarchy:\n${ContentHierarchyVisualizer.visualize(this)}" }
+                }
             }
 
             log.info { "[ConfluenceSync] Retrieved contents: total=${hierarchy.getTotalCount()}, folders=${hierarchy.getAllFolders().size}, pages=${hierarchy.getAllPages().size}" }

@@ -3,6 +3,8 @@ package com.okestro.okchat.confluence.service
 import com.okestro.okchat.confluence.client.ConfluenceClient
 import com.okestro.okchat.confluence.model.ContentHierarchy
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 
 private val log = KotlinLogging.logger {}
@@ -19,10 +21,14 @@ class ConfluenceService(
 ) {
     /**
      * Get space ID by space key
+     * Uses withContext to maintain structured concurrency
      */
-    fun getSpaceIdByKey(spaceKey: String): String {
+    suspend fun getSpaceIdByKey(spaceKey: String): String {
         log.info { "Getting space ID for key: $spaceKey" }
-        val response = confluenceClient.getSpaceByKey(spaceKey)
+
+        val response = withContext(Dispatchers.IO) {
+            confluenceClient.getSpaceByKey(spaceKey)
+        }
 
         if (response.results.isEmpty()) {
             throw IllegalArgumentException("Space not found: $spaceKey")
@@ -37,14 +43,18 @@ class ConfluenceService(
      * Get content hierarchy for a space
      * This is the main entry point for fetching and organizing Confluence content
      */
-    fun getSpaceContentHierarchy(spaceId: String): ContentHierarchy {
+    suspend fun getSpaceContentHierarchy(spaceId: String): ContentHierarchy {
         log.info { "Fetching content hierarchy for space: $spaceId" }
 
         // Step 1: Collect all content (pages and folders)
-        val allContent = contentCollector.collectAllContent(spaceId)
+        val allContent = withContext(Dispatchers.IO) {
+            contentCollector.collectAllContent(spaceId)
+        }
 
         // Step 2: Build hierarchical structure
-        val hierarchy = hierarchyBuilder.buildHierarchy(allContent, spaceId)
+        val hierarchy = withContext(Dispatchers.IO) {
+            hierarchyBuilder.buildHierarchy(allContent, spaceId)
+        }
 
         // Step 3: Log statistics
         val stats = hierarchy.getStatistics()

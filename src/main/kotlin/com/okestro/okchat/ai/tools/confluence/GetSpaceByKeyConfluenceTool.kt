@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.GetSpaceByKeyInput
 import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.confluence.service.ConfluenceService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
 import org.springframework.context.annotation.Description
@@ -47,7 +49,10 @@ class GetSpaceByKeyConfluenceTool(
             val thought = input.thought ?: "No thought provided."
             val spaceKey = input.spaceKey
 
-            val spaceId = confluenceService.getSpaceIdByKey(spaceKey)
+            // runBlocking is more explicit and simpler than mono { }.block()
+            val spaceId = runBlocking(Dispatchers.IO) {
+                confluenceService.getSpaceIdByKey(spaceKey)
+            }
             val answer = "Successfully found space with key '$spaceKey'. Space ID: $spaceId"
 
             objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))

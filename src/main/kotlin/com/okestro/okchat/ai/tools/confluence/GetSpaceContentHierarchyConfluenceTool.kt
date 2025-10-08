@@ -5,6 +5,7 @@ import com.okestro.okchat.ai.model.GetSpaceContentHierarchyInput
 import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.confluence.model.ContentNode
 import com.okestro.okchat.confluence.service.ConfluenceService
+import kotlinx.coroutines.runBlocking
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
 import org.springframework.context.annotation.Description
@@ -54,7 +55,9 @@ class GetSpaceContentHierarchyConfluenceTool(
             val spaceId = input.spaceId
             val maxDepth = input.maxDepth
 
-            val hierarchy = confluenceService.getSpaceContentHierarchy(spaceId)
+            val hierarchy = runBlocking {
+                confluenceService.getSpaceContentHierarchy(spaceId)
+            }
 
             val answer = buildString {
                 append("Content Hierarchy for Space $spaceId:\n")

@@ -2,7 +2,7 @@ package com.okestro.okchat.ai.support
 
 import kotlin.math.sqrt
 
-object  MathUtils {
+object MathUtils {
 
     fun cosineSimilarity(vec1: List<Float>, vec2: List<Float>): Double {
         require(vec1.size == vec2.size) { "Vectors must have the same dimension" }

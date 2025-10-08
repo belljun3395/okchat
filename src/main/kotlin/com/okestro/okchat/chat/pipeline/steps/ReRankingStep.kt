@@ -10,7 +10,6 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.embedding.EmbeddingModel
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
-import kotlin.math.sqrt
 
 private val log = KotlinLogging.logger {}
 
@@ -121,7 +120,7 @@ class ReRankingStep(
         } else {
             log.info {
                 "[${getStepName()}] Top 5: ${
-                    reranked.take(5).joinToString(", ") { "${it.title}(${"%.4f".format(it.score.value)})" }
+                reranked.take(5).joinToString(", ") { "${it.title}(${"%.4f".format(it.score.value)})" }
                 }"
             }
         }

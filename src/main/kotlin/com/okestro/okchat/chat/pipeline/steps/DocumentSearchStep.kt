@@ -226,7 +226,7 @@ class DocumentSearchStep(
         } else {
             log.info {
                 "[${getStepName()}] Top 5: ${
-                    combinedResults.take(5).joinToString(", ") { "${it.title}(${"%.4f".format(it.score.value)})" }
+                combinedResults.take(5).joinToString(", ") { "${it.title}(${"%.4f".format(it.score.value)})" }
                 }"
             }
         }

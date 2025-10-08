@@ -1,6 +1,6 @@
 package com.okestro.okchat.ai.config
 
-import com.okestro.okchat.ai.interceptor.LoggingToolCallback
+import com.okestro.okchat.ai.tools.interceptor.LoggingToolCallback
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.beans.factory.config.BeanPostProcessor

@@ -1,4 +1,4 @@
-package com.okestro.okchat.ai.interceptor
+package com.okestro.okchat.ai.tools.interceptor
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.ToolOutput

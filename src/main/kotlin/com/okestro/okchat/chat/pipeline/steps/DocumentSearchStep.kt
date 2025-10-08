@@ -14,6 +14,8 @@ import com.okestro.okchat.search.service.DocumentSearchService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
+import kotlin.text.get
+import kotlin.times
 
 private val log = KotlinLogging.logger {}
 
@@ -47,6 +49,8 @@ class DocumentSearchStep(
     init {
         log.info { "[DocumentSearchStep] RRF configuration loaded: k=$rrfK, keyword=$keywordWeight, title=$titleWeight, content=$contentWeight, dateBoost=$dateBoostFactor, pathBoost=$pathBoostFactor" }
     }
+
+    override fun getStepName(): String = "Document Search"
 
     /**
      * Determine if document search should be executed
@@ -84,8 +88,6 @@ class DocumentSearchStep(
 
         log.info { "[${getStepName()}] Multi-search completed: keyword=${sortedKeywordResults.size}, title=${sortedTitleResults.size}, content=${sortedContentResults.size}" }
 
-        // Apply Reciprocal Rank Fusion to combine rankings
-        // Note: RRF already deduplicates by document ID, keeping highest RRF score
         val combinedResults = applyRRF(
             keywordResults = sortedKeywordResults,
             titleResults = sortedTitleResults,
@@ -93,24 +95,12 @@ class DocumentSearchStep(
             pathResults = sortedPathResults,
             dateKeywords = analysis.dateKeywords,
             keyWords = analysis.extractedKeywords
-        ).take(MAX_SEARCH_RESULTS)
+        )
+            .take(MAX_SEARCH_RESULTS)
 
         log.info { "[${getStepName()}] Found ${combinedResults.size} documents via RRF (after deduplication)" }
 
-        // Log top 5 for quick reference, full list in DEBUG
-        if (log.isDebugEnabled()) {
-            log.debug { "[${getStepName()}] ━━━ All ${combinedResults.size} RRF results ━━━" }
-            combinedResults.forEachIndexed { index, result ->
-                log.debug { "  [RRF ${index + 1}] ${result.title} (score: ${"%.4f".format(result.score.value)}, id: ${result.id}, content: ${result.content.length} chars)" }
-            }
-            log.debug { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
-        } else {
-            log.info {
-                "[${getStepName()}] Top 5: ${
-                combinedResults.take(5).joinToString(", ") { "${it.title}(${"%.4f".format(it.score.value)})" }
-                }"
-            }
-        }
+        logResults(combinedResults)
 
         return context.copy(
             search = ChatContext.Search(results = combinedResults)
@@ -155,8 +145,66 @@ class DocumentSearchStep(
         addRRFScore(contentResults, contentWeight)
         addRRFScore(pathResults, pathWeight)
 
+        fun applyContextualBoosts(
+            dateKeywords: List<String>,
+            keyWords: List<String>
+        ): Map<String, Double> {
+            // Apply contextual boosts to RRF scores based on query type and document metadata
+            val boostedScores = mutableMapOf<String, Double>()
+            val dateBoostCount = mutableMapOf<String, Int>()
+            val pathBoostCount = mutableMapOf<String, Int>()
+
+            rrfScores.forEach { (id, score) ->
+                val document = documentMap[id]
+                val title = document?.title ?: ""
+                val path = document?.path ?: ""
+
+                var boostMultiplier = 1.0
+                val boostReasons = mutableListOf<String>()
+
+                // 1. Date boost: Check if title contains any date keyword (case-insensitive)
+                val matchesDateKeyword = dateKeywords.any { dateKeyword ->
+                    title.contains(dateKeyword, ignoreCase = true)
+                }
+
+                if (matchesDateKeyword && dateKeywords.isNotEmpty()) {
+                    boostMultiplier *= dateBoostFactor
+                    dateBoostCount[id] = 1
+                    boostReasons.add("date:${dateBoostFactor}x")
+                }
+
+                // 2. Path hierarchy boost: Check if path matches query type
+                val parentPath = path.substringBeforeLast(">", "").split(">")
+                val matchesPathPattern = keyWords.any { keyword ->
+                    parentPath.contains(keyword)
+                }
+
+                if (matchesPathPattern) {
+                    boostMultiplier *= pathBoostFactor
+                    pathBoostCount[id] = 1
+                    boostReasons.add("path:${pathBoostFactor}x")
+                }
+
+                boostedScores[id] = score * boostMultiplier
+
+                if (boostReasons.isNotEmpty()) {
+                    log.debug { "[RRF] Boost applied to '$title' (id: $id): $score → ${boostedScores[id]} [${boostReasons.joinToString(", ")}]" }
+                }
+            }
+
+            // Log boost statistics
+            if (dateBoostCount.isNotEmpty() || pathBoostCount.isNotEmpty()) {
+                val totalDateBoost = dateBoostCount.size
+                val totalPathBoost = pathBoostCount.size
+                val bothBoosts = dateBoostCount.keys.intersect(pathBoostCount.keys).size
+
+                log.info { "[RRF] Boost statistics: date=$totalDateBoost docs (${dateBoostFactor}x), path=$totalPathBoost docs (${pathBoostFactor}x), both=$bothBoosts docs (${dateBoostFactor * pathBoostFactor}x)" }
+            }
+            return boostedScores
+        }
+
         // Apply intelligent boosts based on date and path hierarchy
-        val boostedScores = applyContextualBoosts(rrfScores, documentMap, dateKeywords, keyWords)
+        val boostedScores = applyContextualBoosts(dateKeywords, keyWords)
 
         // Sort by boosted RRF scores and return
         return boostedScores.entries
@@ -168,67 +216,19 @@ class DocumentSearchStep(
             }
     }
 
-    /**
-     * Apply contextual boosts to RRF scores based on query type and document metadata
-     */
-    private fun applyContextualBoosts(
-        rrfScores: Map<String, Double>,
-        documentMap: Map<String, SearchResult>,
-        dateKeywords: List<String>,
-        keyWords: List<String>
-    ): Map<String, Double> {
-        val boostedScores = mutableMapOf<String, Double>()
-        val dateBoostCount = mutableMapOf<String, Int>()
-        val pathBoostCount = mutableMapOf<String, Int>()
-
-        rrfScores.forEach { (id, score) ->
-            val document = documentMap[id]
-            val title = document?.title ?: ""
-            val path = document?.path ?: ""
-
-            var boostMultiplier = 1.0
-            val boostReasons = mutableListOf<String>()
-
-            // 1. Date boost: Check if title contains any date keyword (case-insensitive)
-            val matchesDateKeyword = dateKeywords.any { dateKeyword ->
-                title.contains(dateKeyword, ignoreCase = true)
+    private fun logResults(combinedResults: List<SearchResult>) {
+        if (log.isDebugEnabled()) {
+            log.debug { "[${getStepName()}] ━━━ All ${combinedResults.size} RRF results ━━━" }
+            combinedResults.forEachIndexed { index, result ->
+                log.debug { "  [RRF ${index + 1}] ${result.title} (score: ${"%.4f".format(result.score.value)}, id: ${result.id}, content: ${result.content.length} chars)" }
             }
-
-            if (matchesDateKeyword && dateKeywords.isNotEmpty()) {
-                boostMultiplier *= dateBoostFactor
-                dateBoostCount[id] = 1
-                boostReasons.add("date:${dateBoostFactor}x")
-            }
-
-            // 2. Path hierarchy boost: Check if path matches query type
-            val parentPath = path.substringBeforeLast(">", "").split(">")
-            val matchesPathPattern = keyWords.any { keyword ->
-                parentPath.contains(keyword)
-            }
-
-            if (matchesPathPattern) {
-                boostMultiplier *= pathBoostFactor
-                pathBoostCount[id] = 1
-                boostReasons.add("path:${pathBoostFactor}x")
-            }
-
-            boostedScores[id] = score * boostMultiplier
-
-            if (boostReasons.isNotEmpty()) {
-                log.debug { "[RRF] Boost applied to '$title' (id: $id): $score → ${boostedScores[id]} [${boostReasons.joinToString(", ")}]" }
+            log.debug { "[${getStepName()}] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
+        } else {
+            log.info {
+                "[${getStepName()}] Top 5: ${
+                    combinedResults.take(5).joinToString(", ") { "${it.title}(${"%.4f".format(it.score.value)})" }
+                }"
             }
         }
-
-        // Log boost statistics
-        if (dateBoostCount.isNotEmpty() || pathBoostCount.isNotEmpty()) {
-            val totalDateBoost = dateBoostCount.size
-            val totalPathBoost = pathBoostCount.size
-            val bothBoosts = dateBoostCount.keys.intersect(pathBoostCount.keys).size
-
-            log.info { "[RRF] Boost statistics: date=$totalDateBoost docs (${dateBoostFactor}x), path=$totalPathBoost docs (${pathBoostFactor}x), both=$bothBoosts docs (${dateBoostFactor * pathBoostFactor}x)" }
-        }
-        return boostedScores
     }
-
-    override fun getStepName(): String = "Document Search"
 }

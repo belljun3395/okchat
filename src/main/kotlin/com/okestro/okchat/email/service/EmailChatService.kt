@@ -1,5 +1,6 @@
 package com.okestro.okchat.email.service
 
+import com.okestro.okchat.chat.service.ChatServiceRequest
 import com.okestro.okchat.chat.service.DocumentBaseChatService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
@@ -35,7 +36,7 @@ If you have any additional questions, please feel free to contact us anytime."""
      * @param emailContent The content of the email (already cleaned by AbstractEmailProvider)
      * @return Flux of response strings with email header and footer
      */
-    fun processEmailQuestion(emailSubject: String, emailContent: String): Flux<String> {
+    suspend fun processEmailQuestion(emailSubject: String, emailContent: String): Flux<String> {
         log.info { "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
         log.info { "[Email Chat Request] Subject: $emailSubject" }
         log.info { "[Email Content Preview] ${emailContent.take(100)}..." }
@@ -62,7 +63,12 @@ If you have any additional questions, please feel free to contact us anytime."""
         // Note: Email-based chats don't maintain session history
         var headerSent = false
 
-        return documentBaseChatService.chat(question)
+        return documentBaseChatService.chat(
+            ChatServiceRequest(
+                message = question,
+                isDeepThink = true
+            )
+        )
             .map { chunk ->
                 if (!headerSent) {
                     headerSent = true

@@ -38,7 +38,7 @@ class ReRankingStep(
      * Only execute re-ranking if we have search results
      */
     override fun shouldExecute(context: ChatContext): Boolean {
-        return !context.search?.results.isNullOrEmpty()
+        return !context.search?.results.isNullOrEmpty() && context.isDeepThink
     }
 
     override suspend fun execute(context: ChatContext): ChatContext {

@@ -14,7 +14,8 @@ fun ChatContext.copy(
         input = input ?: this.input,
         conversationHistory = conversationHistory ?: this.conversationHistory,
         analysis = analysis ?: this.analysis,
-        search = search ?: this.search
+        search = search ?: this.search,
+        isDeepThink = this.isDeepThink
     )
 }
 
@@ -33,7 +34,8 @@ open class ChatContext(
     val input: UserInput,
     val conversationHistory: ConversationHistory? = null,
     val analysis: Analysis? = null,
-    val search: Search? = null
+    val search: Search? = null,
+    val isDeepThink: Boolean
 ) {
     /**
      * User input data

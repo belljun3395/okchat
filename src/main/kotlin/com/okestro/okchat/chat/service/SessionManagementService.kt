@@ -4,10 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.okestro.okchat.chat.pipeline.ChatContext
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.reactive.awaitSingleOrNull
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.data.redis.core.ReactiveRedisTemplate
 import org.springframework.stereotype.Service
-import reactor.core.publisher.Mono
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -38,74 +40,68 @@ class SessionManagementService(
 
     /**
      * Load conversation history for a given session
-     * Returns empty Mono if session doesn't exist or cannot be loaded
+     * Returns null if session doesn't exist or cannot be loaded
      */
-    fun loadConversationHistory(sessionId: String): Mono<ChatContext.ConversationHistory> {
+    suspend fun loadConversationHistory(sessionId: String): ChatContext.ConversationHistory? {
         val key = SESSION_KEY_PREFIX + sessionId
         log.debug { "Loading conversation history for session: $sessionId" }
 
-        return redisTemplate.opsForValue().get(key)
-            .flatMap { json ->
-                try {
-                    val messages = objectMapper.readValue<List<StoredMessage>>(json)
-                    val history = ChatContext.ConversationHistory(
-                        sessionId = sessionId,
-                        messages = messages.map { it.toMessage() },
-                        summary = null // Future: implement summarization
-                    )
-                    Mono.just(history)
-                } catch (e: Exception) {
-                    log.error(e) { "Failed to deserialize conversation history for session: $sessionId" }
-                    Mono.empty()
-                }
+        return try {
+            val json = redisTemplate.opsForValue().get(key).awaitSingleOrNull()
+            if (json != null) {
+                val messages = objectMapper.readValue<List<StoredMessage>>(json)
+                val history = ChatContext.ConversationHistory(
+                    sessionId = sessionId,
+                    messages = messages.map { it.toMessage() }
+                )
+                log.info { "Loaded ${history.messages.size} messages for session: $sessionId" }
+                history
+            } else {
+                log.debug { "No conversation history found for session: $sessionId" }
+                null
             }
-            .doOnNext { log.info { "Loaded ${it.messages.size} messages for session: $sessionId" } }
-            .onErrorResume {
-                log.error(it) { "Error loading conversation history for session: $sessionId" }
-                Mono.empty()
-            }
+        } catch (e: Exception) {
+            log.error(e) { "Failed to load conversation history for session: $sessionId" }
+            null
+        }
     }
 
     /**
      * Save conversation history with sliding window strategy
      */
-    fun saveConversationHistory(
+    suspend fun saveConversationHistory(
         sessionId: String,
         userMessage: String,
         assistantResponse: String,
         existingHistory: ChatContext.ConversationHistory?
-    ): Mono<Unit> {
+    ) {
         val key = SESSION_KEY_PREFIX + sessionId
         log.debug { "Saving conversation history for session: $sessionId" }
 
-        val now = Instant.now()
-        val existingMessages = existingHistory?.messages?.map { StoredMessage.fromMessage(it) } ?: emptyList()
+        try {
+            val now = Instant.now()
+            val existingMessages = existingHistory?.messages?.map { StoredMessage.fromMessage(it) } ?: emptyList()
 
-        // Add new messages
-        val newMessages = existingMessages + listOf(
-            StoredMessage("user", userMessage, now),
-            StoredMessage("assistant", assistantResponse, now)
-        )
+            // Add new messages
+            val newMessages = existingMessages + listOf(
+                StoredMessage("user", userMessage, now),
+                StoredMessage("assistant", assistantResponse, now)
+            )
 
-        // Apply sliding window - keep only recent messages
-        val windowedMessages = applySlidingWindow(newMessages)
+            // Apply sliding window - keep only recent messages
+            val windowedMessages = applySlidingWindow(newMessages)
 
-        val json = try {
-            objectMapper.writeValueAsString(windowedMessages)
+            val json = objectMapper.writeValueAsString(windowedMessages)
+
+            redisTemplate.opsForValue()
+                .set(key, json, SESSION_TTL)
+                .awaitSingle()
+
+            log.info { "Saved ${windowedMessages.size} messages for session: $sessionId (TTL: ${SESSION_TTL.toHours()} hours)" }
         } catch (e: Exception) {
-            log.error(e) { "Failed to serialize conversation history for session: $sessionId" }
-            return Mono.error(e)
+            log.error(e) { "Failed to save conversation history for session: $sessionId" }
+            throw e
         }
-
-        return redisTemplate.opsForValue()
-            .set(key, json, SESSION_TTL)
-            .doOnSuccess {
-                log.info { "Saved ${windowedMessages.size} messages for session: $sessionId (TTL: ${SESSION_TTL.toHours()} hours)" }
-            }
-            .doOnError { error ->
-                log.error(error) { "Failed to save conversation history for session: $sessionId" }
-            }
-            .then(Mono.just(Unit))
     }
 
     /**
@@ -135,19 +131,23 @@ class SessionManagementService(
     /**
      * Clear conversation history for a session
      */
-    fun clearSession(sessionId: String): Mono<Boolean> {
+    suspend fun clearSession(sessionId: String): Boolean {
         val key = SESSION_KEY_PREFIX + sessionId
         log.info { "Clearing conversation history for session: $sessionId" }
 
-        return redisTemplate.delete(key)
-            .map { it > 0 }
-            .doOnSuccess { success ->
-                if (success) {
-                    log.info { "Successfully cleared session: $sessionId" }
-                } else {
-                    log.warn { "Session not found or already cleared: $sessionId" }
-                }
+        return try {
+            val deleted = redisTemplate.delete(key).awaitSingle()
+            val success = deleted > 0
+            if (success) {
+                log.info { "Successfully cleared session: $sessionId" }
+            } else {
+                log.warn { "Session not found or already cleared: $sessionId" }
             }
+            success
+        } catch (e: Exception) {
+            log.error(e) { "Failed to clear session: $sessionId" }
+            false
+        }
     }
 
     /**

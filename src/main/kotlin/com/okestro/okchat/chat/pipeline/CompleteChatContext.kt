@@ -10,7 +10,8 @@ class CompleteChatContext(
     input = input,
     conversationHistory = conversationHistory,
     analysis = analysis,
-    search = search
+    search = search,
+    isDeepThink = false
 ) {
     /**
      * Prompt context (LastChatPipelineStep - always executed at end)

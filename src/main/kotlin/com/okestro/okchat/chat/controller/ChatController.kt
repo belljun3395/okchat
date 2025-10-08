@@ -1,6 +1,7 @@
 
 package com.okestro.okchat.chat.controller
 
+import com.okestro.okchat.chat.service.ChatServiceRequest
 import com.okestro.okchat.chat.service.DocumentBaseChatService
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PostMapping
@@ -16,11 +17,14 @@ class ChatController(
 ) {
 
     @PostMapping(produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
-    fun chat(@RequestBody chatRequest: ChatRequest): Flux<String> {
+    suspend fun chat(@RequestBody chatRequest: ChatRequest): Flux<String> {
         return documentBaseChatService.chat(
-            message = chatRequest.message,
-            keywords = chatRequest.keywords,
-            sessionId = chatRequest.sessionId
+            ChatServiceRequest(
+                message = chatRequest.message,
+                isDeepThink = chatRequest.isDeepThink,
+                keywords = chatRequest.keywords ?: emptyList(),
+                sessionId = chatRequest.sessionId
+            )
         )
     }
 }
@@ -28,5 +32,6 @@ class ChatController(
 data class ChatRequest(
     val message: String,
     val keywords: List<String>? = null,
-    val sessionId: String? = null
+    val sessionId: String? = null,
+    val isDeepThink: Boolean = false
 )

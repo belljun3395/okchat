@@ -1,10 +1,10 @@
 package com.okestro.okchat.chat.pipeline.steps
 
+import com.okestro.okchat.ai.support.QueryClassifier
 import com.okestro.okchat.ai.support.extraction.ContentExtractionService
 import com.okestro.okchat.ai.support.extraction.DateExtractor
 import com.okestro.okchat.ai.support.extraction.KeywordExtractionService
 import com.okestro.okchat.ai.support.extraction.PathExtractionService
-import com.okestro.okchat.ai.support.QueryClassifier
 import com.okestro.okchat.ai.support.extraction.TitleExtractionService
 import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.chat.pipeline.FirstChatPipelineStep

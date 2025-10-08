@@ -22,7 +22,7 @@ class HierarchyBuilder(
     /**
      * Build hierarchical structure from collected content
      */
-    suspend fun  buildHierarchy(allContent: List<Page>, spaceId: String): ContentHierarchy {
+    suspend fun buildHierarchy(allContent: List<Page>, spaceId: String): ContentHierarchy {
         log.info { "Building hierarchy from ${allContent.size} items" }
 
         // Identify folders using parentType field

@@ -16,13 +16,15 @@ class QueryClassifier(
     private val chatModel: ChatModel
 ) {
 
-    enum class QueryType {
-        MEETING_RECORDS, // 회의록 조회
-        PROJECT_STATUS, // 프로젝트 현황
-        HOW_TO, // 방법/절차 질문
-        INFORMATION, // 정보 조회 (누가, 언제, 무엇)
-        DOCUMENT_SEARCH, // 문서 찾기
-        GENERAL // 일반 질문
+    enum class QueryType(val isSystem: Boolean, val description: String, val examples: List<String>) {
+        BASE(true, "기본 프롬프트", emptyList()), // 기본 프롬프트
+        COMMON_GUIDELINES(true, "공통 지침", emptyList()), // 공통 지침
+        MEETING_RECORDS(false, "회의록 관련 질문", listOf("주간회의록", "9월 회의 요약", "회의 내용", "meeting minutes")), // 회의록 관련 질문
+        PROJECT_STATUS(false, "프로젝트 현황/진행상황", listOf("프로젝트 현황", "작업 진행 상태", "완료 현황")), // 프로젝트 현황/진행상황
+        HOW_TO(false, "방법/절차/가이드", listOf("어떻게 하나요", "방법", "설치 절차", "가이드")), // 방법/절차/가이드
+        INFORMATION(false, "정보 조회 (누가, 언제, 무엇, 어디, 왜)", listOf("누가 담당", "언제 완료", "무엇을 해야", "어디에 있나요")), // 정보 조회 (누가, 언제, 무엇, 어디, 왜)
+        DOCUMENT_SEARCH(false, "문서 찾기", listOf("문서 찾아줘", "자료 검색", "페이지 찾기")), // 문서 찾기
+        GENERAL(false, "일반 질문 (위 카테고리에 해당하지 않음)", emptyList()); // 일반 질문 (위 카테고리에 해당하지 않음)
     }
 
     data class QueryAnalysis(
@@ -35,26 +37,10 @@ class QueryClassifier(
      * Classify the user query using AI
      */
     suspend fun classify(query: String): QueryAnalysis {
-        val classificationPrompt = """
+        val header = """
             Classify the following user query into one of these categories:
-            
-            1. MEETING_RECORDS - 회의록 관련 질문
-               Examples: "주간회의록", "9월 회의 요약", "회의 내용", "meeting minutes"
-            
-            2. PROJECT_STATUS - 프로젝트 현황/진행상황
-               Examples: "프로젝트 현황", "작업 진행 상태", "완료 현황"
-            
-            3. HOW_TO - 방법/절차/가이드
-               Examples: "어떻게 하나요", "방법", "설치 절차", "가이드"
-            
-            4. INFORMATION - 정보 조회 (누가, 언제, 무엇, 어디, 왜)
-               Examples: "누가 담당", "언제 완료", "무엇을 해야", "어디에 있나요"
-            
-            5. DOCUMENT_SEARCH - 문서 찾기
-               Examples: "문서 찾아줘", "자료 검색", "페이지 찾기"
-            
-            6. GENERAL - 일반 질문 (위 카테고리에 해당하지 않음)
-            
+            """"
+        val footer = """
             Analyze this query and respond in this EXACT format:
             TYPE: [category name]
             CONFIDENCE: [0.0-1.0]
@@ -64,14 +50,14 @@ class QueryClassifier(
             
             Classification:
         """.trimIndent()
-
+        val classificationPrompt = header + queryTypePrompt + footer
         return try {
             val response = chatModel.call(Prompt(classificationPrompt))
             val result = response.result.output.text?.trim() ?: ""
 
             log.debug { "AI Classification result: $result" }
 
-            parseClassificationResult(result, query)
+            parseClassificationResult(result)
         } catch (e: Exception) {
             log.warn { "Failed to classify query with AI: ${e.message}. Using fallback." }
             // Fallback to simple rule-based classification
@@ -79,10 +65,19 @@ class QueryClassifier(
         }
     }
 
+    private val queryTypePrompt: String = QueryType.entries.filter { !it.isSystem }.joinToString("\n") { type ->
+        val examples = if (type.examples.isNotEmpty()) {
+            "Examples: " + type.examples.joinToString(", ")
+        } else {
+            "Examples: None"
+        }
+        "${type.ordinal + 1}. ${type.name} - ${type.description}\n   $examples"
+    }
+
     /**
      * Parse AI classification result
      */
-    private fun parseClassificationResult(result: String, query: String): QueryAnalysis {
+    private fun parseClassificationResult(result: String): QueryAnalysis {
         val lines = result.lines()
 
         val typeLine = lines.find { it.startsWith("TYPE:") }

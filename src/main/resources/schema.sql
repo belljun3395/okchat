@@ -45,3 +45,17 @@ CREATE TABLE IF NOT EXISTS TASK_SEQ (
 );
 
 INSERT INTO TASK_SEQ (ID, UNIQUE_KEY) SELECT * FROM (SELECT 0 AS ID, '0' AS UNIQUE_KEY) AS TMP WHERE NOT EXISTS(SELECT * FROM TASK_SEQ);
+
+-- Prompts table for versioned prompt management
+CREATE TABLE IF NOT EXISTS prompts (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    type VARCHAR(100) NOT NULL,
+    version INT NOT NULL,
+    content TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    UNIQUE KEY uk_type_version (type, version),
+    INDEX idx_type_active (type, is_active),
+    INDEX idx_type_version_active (type, version, is_active)
+);

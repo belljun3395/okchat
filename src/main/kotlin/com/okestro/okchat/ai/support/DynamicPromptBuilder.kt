@@ -1,54 +1,35 @@
 package com.okestro.okchat.ai.support
 
+import com.okestro.okchat.ai.service.PromptService
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.springframework.core.io.ClassPathResource
+import kotlinx.coroutines.runBlocking
 import org.springframework.stereotype.Component
 
 private val log = KotlinLogging.logger {}
 
 /**
  * Build dynamic system prompts based on query type
- * Loads prompt templates from external files for easy customization
+ * Loads prompt templates from database with Redis caching
  */
 @Component
-class DynamicPromptBuilder {
+class DynamicPromptBuilder(
+    private val promptService: PromptService
+) {
+    fun buildPrompt(queryType: QueryClassifier.QueryType): String = runBlocking {
+        val basePrompt = promptService.getLatestPrompt(QueryClassifier.QueryType.BASE.name)
+            ?: throw IllegalStateException("Base prompt not found in database")
 
-    private val basePrompt: String by lazy { loadPromptTemplate("base.txt") }
-    private val commonGuidelines: String by lazy { loadPromptTemplate("common-guidelines.txt") }
+        val specificGuidance = loadSpecificPrompt(queryType)
 
-    private val promptCache = mutableMapOf<QueryClassifier.QueryType, String>()
+        val commonGuidelines = promptService.getLatestPrompt(QueryClassifier.QueryType.COMMON_GUIDELINES.name)
+            ?: throw IllegalStateException("Common guidelines prompt not found in database")
 
-    init {
-        log.info { "DynamicPromptBuilder initialized with externalized prompt templates" }
+        "$basePrompt\n\n$specificGuidance\n$commonGuidelines"
     }
 
-    fun buildPrompt(queryType: QueryClassifier.QueryType): String {
-        // Cache prompts for performance
-        return promptCache.getOrPut(queryType) {
-            val specificGuidance = loadSpecificPrompt(queryType)
-            "$basePrompt\n\n$specificGuidance\n$commonGuidelines"
-        }
-    }
-
-    private fun loadSpecificPrompt(queryType: QueryClassifier.QueryType): String {
-        val filename = when (queryType) {
-            QueryClassifier.QueryType.MEETING_RECORDS -> "meeting-records.txt"
-            QueryClassifier.QueryType.PROJECT_STATUS -> "project-status.txt"
-            QueryClassifier.QueryType.HOW_TO -> "how-to.txt"
-            QueryClassifier.QueryType.INFORMATION -> "information.txt"
-            QueryClassifier.QueryType.DOCUMENT_SEARCH -> "document-search.txt"
-            QueryClassifier.QueryType.GENERAL -> "general.txt"
-        }
-        return loadPromptTemplate(filename)
-    }
-
-    private fun loadPromptTemplate(filename: String): String {
-        return try {
-            val resource = ClassPathResource("prompts/$filename")
-            resource.inputStream.bufferedReader().use { it.readText() }
-        } catch (e: Exception) {
-            log.error(e) { "Failed to load prompt template: prompts/$filename" }
-            throw IllegalStateException("Could not load prompt template: prompts/$filename", e)
-        }
+    private suspend fun loadSpecificPrompt(queryType: QueryClassifier.QueryType): String {
+        val type = queryType.name
+        return promptService.getLatestPrompt(type)
+            ?: throw IllegalStateException("Prompt not found for query type: $type")
     }
 }

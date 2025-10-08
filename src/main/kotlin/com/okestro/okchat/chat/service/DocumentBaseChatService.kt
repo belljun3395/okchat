@@ -62,7 +62,7 @@ class DocumentBaseChatService(
         val context = ChatContext(
             input = ChatContext.UserInput(
                 message = message,
-                providedKeywords = keywords ?: emptyList(),
+                providedKeywords = keywords,
                 sessionId = actualSessionId
             ),
             conversationHistory = conversationHistory,

@@ -6,6 +6,7 @@ import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.search.model.SearchDocument
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
+import org.opensearch.client.opensearch._types.FieldValue
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
 import org.springframework.beans.factory.annotation.Value
@@ -83,7 +84,7 @@ class SearchDocumentsTool(
                                     .filter { f ->
                                         f.term { t ->
                                             t.field("metadata.spaceKey")
-                                                .value(org.opensearch.client.opensearch._types.FieldValue.of(filterBySpace))
+                                                .value(FieldValue.of(filterBySpace))
                                         }
                                     }
                             }

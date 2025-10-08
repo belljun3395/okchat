@@ -12,9 +12,9 @@ import org.springframework.ai.tool.definition.ToolDefinition
 import org.springframework.context.annotation.Description
 import org.springframework.stereotype.Component
 
-@Component("contentSearchTool")
+@Component("searchDocumentContentTool")
 @Description("Search documents by content using semantic vector search")
-class ContentSearchTool(
+class SearchDocumentContentTool(
     private val contentSearchStrategy: ContentSearchStrategy,
     private val objectMapper: ObjectMapper
 ) : ToolCallback {

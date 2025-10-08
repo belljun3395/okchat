@@ -1,4 +1,4 @@
-package com.okestro.okchat.ai.support
+package com.okestro.okchat.ai.support.extraction
 
 import org.junit.jupiter.api.Test
 import kotlin.test.assertFalse

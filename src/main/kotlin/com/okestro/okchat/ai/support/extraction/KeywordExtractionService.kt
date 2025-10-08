@@ -1,5 +1,6 @@
-package com.okestro.okchat.ai.support
+package com.okestro.okchat.ai.support.extraction
 
+import com.okestro.okchat.ai.support.PromptTemplate
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.prompt.Prompt

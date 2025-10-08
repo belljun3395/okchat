@@ -1,7 +1,7 @@
 package com.okestro.okchat.task
 
-import com.okestro.okchat.ai.chunking.ChunkingStrategy
-import com.okestro.okchat.ai.support.KeywordExtractionService
+import com.okestro.okchat.ai.support.chunking.ChunkingStrategy
+import com.okestro.okchat.ai.support.extraction.KeywordExtractionService
 import com.okestro.okchat.confluence.model.ContentHierarchy
 import com.okestro.okchat.confluence.model.ContentNode
 import com.okestro.okchat.confluence.service.ConfluenceService

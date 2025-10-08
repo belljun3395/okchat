@@ -1,4 +1,4 @@
-package com.okestro.okchat.ai.chunking
+package com.okestro.okchat.ai.support.chunking
 
 import org.springframework.ai.document.Document
 import org.springframework.ai.transformer.splitter.TokenTextSplitter

@@ -1,8 +1,9 @@
-package com.okestro.okchat.ai.support
+package com.okestro.okchat.ai.support.extraction
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private val log = KotlinLogging.logger {}
 
@@ -159,7 +160,7 @@ object DateExtractor {
         try {
             val yearMonth = YearMonth.of(yearInt, monthInt)
 
-            val monthName = yearMonth.format(DateTimeFormatter.ofPattern("MMMM", java.util.Locale.ENGLISH))
+            val monthName = yearMonth.format(DateTimeFormatter.ofPattern("MMMM", Locale.ENGLISH))
             set.add(monthName) // September
 
             val monthNameKr = when (monthInt) {

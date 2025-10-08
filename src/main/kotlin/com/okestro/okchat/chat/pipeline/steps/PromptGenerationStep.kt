@@ -33,6 +33,7 @@ class PromptGenerationStep(
         }
 
         // Build dynamic prompt based on query type (from externalized templates)
+        // TODO: fix this after buildPrompt method to suspend function
         val promptTemplate = dynamicPromptBuilder.buildPrompt(analysis.queryAnalysis.type)
         log.info { "[${getStepName()}] Using ${analysis.queryAnalysis.type} specialized prompt (with RAG context: ${context.search?.contextText != null})" }
 

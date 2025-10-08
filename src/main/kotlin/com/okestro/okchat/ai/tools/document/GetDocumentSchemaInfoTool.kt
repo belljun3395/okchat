@@ -1,8 +1,9 @@
-package com.okestro.okchat.ai.tools
+package com.okestro.okchat.ai.tools.document
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.GetDocumentSchemaInput
 import com.okestro.okchat.ai.model.ToolOutput
+import com.okestro.okchat.ai.tools.ToolExecutor
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.springframework.ai.tool.ToolCallback

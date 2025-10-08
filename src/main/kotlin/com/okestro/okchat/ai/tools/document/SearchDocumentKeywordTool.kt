@@ -1,10 +1,10 @@
-package com.okestro.okchat.ai.tools
+package com.okestro.okchat.ai.tools.document
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.okestro.okchat.ai.model.SearchByQueryInput
+import com.okestro.okchat.ai.model.SearchByKeywordInput
 import com.okestro.okchat.ai.model.ToolOutput
-import com.okestro.okchat.search.model.SearchTitles
-import com.okestro.okchat.search.strategy.TitleSearchStrategy
+import com.okestro.okchat.search.model.SearchKeywords
+import com.okestro.okchat.search.strategy.KeywordSearchStrategy
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import org.springframework.ai.tool.ToolCallback
@@ -12,10 +12,10 @@ import org.springframework.ai.tool.definition.ToolDefinition
 import org.springframework.context.annotation.Description
 import org.springframework.stereotype.Component
 
-@Component("searchDocumentTitleTool")
-@Description("Search documents by title using hybrid search (text + vector)")
-class SearchDocumentTitleTool(
-    private val titleSearchStrategy: TitleSearchStrategy,
+@Component("searchDocumentKeywordTool")
+@Description("Search documents using keyword-based hybrid search (text + vector)")
+class SearchDocumentKeywordTool(
+    private val keywordSearchStrategy: KeywordSearchStrategy,
     private val objectMapper: ObjectMapper
 ) : ToolCallback {
 
@@ -23,12 +23,12 @@ class SearchDocumentTitleTool(
 
     override fun getToolDefinition(): ToolDefinition {
         return ToolDefinition.builder()
-            .name("search_by_title")
+            .name("search_by_keyword")
             .description(
                 """
-                Search documents by title using hybrid search.
-                Prioritizes matching document titles over content.
-                Best for: Finding documents by name or when you know the approximate title.
+                Search documents using keyword-based hybrid search.
+                Combines exact keyword matching with semantic vector search.
+                Best for: Finding documents with specific terms or technical keywords.
                 """.trimIndent()
             )
             .inputSchema(
@@ -40,9 +40,9 @@ class SearchDocumentTitleTool(
                       "type": "string",
                       "description": "The reasoning for using this tool in this specific context."
                     },
-                    "query": {
+                    "keywords": {
                       "type": "string",
-                      "description": "Title query (full or partial title)"
+                      "description": "Keywords to search for (space-separated)"
                     },
                     "topK": {
                       "type": "integer",
@@ -50,7 +50,7 @@ class SearchDocumentTitleTool(
                       "default": 10
                     }
                   },
-                  "required": ["thought", "query"]
+                  "required": ["thought", "keywords"]
                 }
                 """.trimIndent()
             )
@@ -60,25 +60,25 @@ class SearchDocumentTitleTool(
     override fun call(toolInput: String): String {
         return try {
             // Parse input to type-safe object
-            val input = objectMapper.readValue(toolInput, SearchByQueryInput::class.java)
+            val input = objectMapper.readValue(toolInput, SearchByKeywordInput::class.java)
             val thought = input.thought ?: "No thought provided."
-            val query = input.query
+            val keywords = input.keywords
             val topK = input.getValidatedTopK()
 
-            log.info { "Title search: query='$query', topK=$topK" }
+            log.info { "Keyword search: keywords='$keywords', topK=$topK" }
 
             // Convert to SearchCriteria
-            val criteria = SearchTitles.fromStrings(listOf(query))
+            val criteria = SearchKeywords.fromStrings(keywords.split(",").map { it.trim() })
 
             val results = runBlocking {
-                titleSearchStrategy.search(criteria, topK)
+                keywordSearchStrategy.search(criteria, topK)
             }
 
             val answer = if (results.isEmpty()) {
-                "No documents found with title matching: '$query'"
+                "No documents found for keywords: '$keywords'"
             } else {
                 buildString {
-                    append("Found ${results.size} document(s) by title search:\n\n")
+                    append("Found ${results.size} document(s) by keyword search:\n\n")
 
                     results.take(topK).forEachIndexed { index, result ->
                         append("${index + 1}. ${result.title}\n")
@@ -89,6 +89,9 @@ class SearchDocumentTitleTool(
                         if (result.spaceKey.isNotBlank()) {
                             append("   Space: ${result.spaceKey}\n")
                         }
+                        if (result.keywords.isNotBlank()) {
+                            append("   Keywords: ${result.keywords}\n")
+                        }
                         append("   Content: ${result.content.take(200)}")
                         if (result.content.length > 200) append("...")
                         append("\n\n")
@@ -98,11 +101,11 @@ class SearchDocumentTitleTool(
 
             objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
         } catch (e: Exception) {
-            log.error(e) { "Error in title search: ${e.message}" }
+            log.error(e) { "Error in keyword search: ${e.message}" }
             objectMapper.writeValueAsString(
                 ToolOutput(
-                    thought = "An error occurred during the title search.",
-                    answer = "Error performing title search: ${e.message}"
+                    thought = "An error occurred during the keyword search.",
+                    answer = "Error performing keyword search: ${e.message}"
                 )
             )
         }

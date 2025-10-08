@@ -1,10 +1,10 @@
-package com.okestro.okchat.ai.tools
+package com.okestro.okchat.ai.tools.document
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.okestro.okchat.ai.model.SearchByKeywordInput
+import com.okestro.okchat.ai.model.SearchByQueryInput
 import com.okestro.okchat.ai.model.ToolOutput
-import com.okestro.okchat.search.model.SearchKeywords
-import com.okestro.okchat.search.strategy.KeywordSearchStrategy
+import com.okestro.okchat.search.model.SearchContents
+import com.okestro.okchat.search.strategy.ContentSearchStrategy
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import org.springframework.ai.tool.ToolCallback
@@ -12,10 +12,10 @@ import org.springframework.ai.tool.definition.ToolDefinition
 import org.springframework.context.annotation.Description
 import org.springframework.stereotype.Component
 
-@Component("searchDocumentKeywordTool")
-@Description("Search documents using keyword-based hybrid search (text + vector)")
-class SearchDocumentKeywordTool(
-    private val keywordSearchStrategy: KeywordSearchStrategy,
+@Component("searchDocumentContentTool")
+@Description("Search documents by content using semantic vector search")
+class SearchDocumentContentTool(
+    private val contentSearchStrategy: ContentSearchStrategy,
     private val objectMapper: ObjectMapper
 ) : ToolCallback {
 
@@ -23,12 +23,12 @@ class SearchDocumentKeywordTool(
 
     override fun getToolDefinition(): ToolDefinition {
         return ToolDefinition.builder()
-            .name("search_by_keyword")
+            .name("search_by_content")
             .description(
                 """
-                Search documents using keyword-based hybrid search.
-                Combines exact keyword matching with semantic vector search.
-                Best for: Finding documents with specific terms or technical keywords.
+                Search documents by content using semantic vector search.
+                Focuses on semantic meaning and context within document content.
+                Best for: Finding documents based on concepts, ideas, or contextual similarity.
                 """.trimIndent()
             )
             .inputSchema(
@@ -40,9 +40,9 @@ class SearchDocumentKeywordTool(
                       "type": "string",
                       "description": "The reasoning for using this tool in this specific context."
                     },
-                    "keywords": {
+                    "query": {
                       "type": "string",
-                      "description": "Keywords to search for (space-separated)"
+                      "description": "Content query (question or description of what you're looking for)"
                     },
                     "topK": {
                       "type": "integer",
@@ -50,7 +50,7 @@ class SearchDocumentKeywordTool(
                       "default": 10
                     }
                   },
-                  "required": ["thought", "keywords"]
+                  "required": ["thought", "query"]
                 }
                 """.trimIndent()
             )
@@ -60,25 +60,25 @@ class SearchDocumentKeywordTool(
     override fun call(toolInput: String): String {
         return try {
             // Parse input to type-safe object
-            val input = objectMapper.readValue(toolInput, SearchByKeywordInput::class.java)
+            val input = objectMapper.readValue(toolInput, SearchByQueryInput::class.java)
             val thought = input.thought ?: "No thought provided."
-            val keywords = input.keywords
+            val query = input.query
             val topK = input.getValidatedTopK()
 
-            log.info { "Keyword search: keywords='$keywords', topK=$topK" }
+            log.info { "Content search: query='$query', topK=$topK" }
 
             // Convert to SearchCriteria
-            val criteria = SearchKeywords.fromStrings(keywords.split(",").map { it.trim() })
+            val criteria = SearchContents.fromStrings(listOf(query))
 
             val results = runBlocking {
-                keywordSearchStrategy.search(criteria, topK)
+                contentSearchStrategy.search(criteria, topK)
             }
 
             val answer = if (results.isEmpty()) {
-                "No documents found for keywords: '$keywords'"
+                "No documents found with content matching: '$query'"
             } else {
                 buildString {
-                    append("Found ${results.size} document(s) by keyword search:\n\n")
+                    append("Found ${results.size} document(s) by content search:\n\n")
 
                     results.take(topK).forEachIndexed { index, result ->
                         append("${index + 1}. ${result.title}\n")
@@ -89,9 +89,6 @@ class SearchDocumentKeywordTool(
                         if (result.spaceKey.isNotBlank()) {
                             append("   Space: ${result.spaceKey}\n")
                         }
-                        if (result.keywords.isNotBlank()) {
-                            append("   Keywords: ${result.keywords}\n")
-                        }
                         append("   Content: ${result.content.take(200)}")
                         if (result.content.length > 200) append("...")
                         append("\n\n")
@@ -101,11 +98,11 @@ class SearchDocumentKeywordTool(
 
             objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
         } catch (e: Exception) {
-            log.error(e) { "Error in keyword search: ${e.message}" }
+            log.error(e) { "Error in content search: ${e.message}" }
             objectMapper.writeValueAsString(
                 ToolOutput(
-                    thought = "An error occurred during the keyword search.",
-                    answer = "Error performing keyword search: ${e.message}"
+                    thought = "An error occurred during the content search.",
+                    answer = "Error performing content search: ${e.message}"
                 )
             )
         }

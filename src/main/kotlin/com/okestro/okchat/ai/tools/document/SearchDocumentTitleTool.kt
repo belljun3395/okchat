@@ -1,10 +1,10 @@
-package com.okestro.okchat.ai.tools
+package com.okestro.okchat.ai.tools.document
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.SearchByQueryInput
 import com.okestro.okchat.ai.model.ToolOutput
-import com.okestro.okchat.search.model.SearchContents
-import com.okestro.okchat.search.strategy.ContentSearchStrategy
+import com.okestro.okchat.search.model.SearchTitles
+import com.okestro.okchat.search.strategy.TitleSearchStrategy
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import org.springframework.ai.tool.ToolCallback
@@ -12,10 +12,10 @@ import org.springframework.ai.tool.definition.ToolDefinition
 import org.springframework.context.annotation.Description
 import org.springframework.stereotype.Component
 
-@Component("searchDocumentContentTool")
-@Description("Search documents by content using semantic vector search")
-class SearchDocumentContentTool(
-    private val contentSearchStrategy: ContentSearchStrategy,
+@Component("searchDocumentTitleTool")
+@Description("Search documents by title using hybrid search (text + vector)")
+class SearchDocumentTitleTool(
+    private val titleSearchStrategy: TitleSearchStrategy,
     private val objectMapper: ObjectMapper
 ) : ToolCallback {
 
@@ -23,12 +23,12 @@ class SearchDocumentContentTool(
 
     override fun getToolDefinition(): ToolDefinition {
         return ToolDefinition.builder()
-            .name("search_by_content")
+            .name("search_by_title")
             .description(
                 """
-                Search documents by content using semantic vector search.
-                Focuses on semantic meaning and context within document content.
-                Best for: Finding documents based on concepts, ideas, or contextual similarity.
+                Search documents by title using hybrid search.
+                Prioritizes matching document titles over content.
+                Best for: Finding documents by name or when you know the approximate title.
                 """.trimIndent()
             )
             .inputSchema(
@@ -42,7 +42,7 @@ class SearchDocumentContentTool(
                     },
                     "query": {
                       "type": "string",
-                      "description": "Content query (question or description of what you're looking for)"
+                      "description": "Title query (full or partial title)"
                     },
                     "topK": {
                       "type": "integer",
@@ -65,20 +65,20 @@ class SearchDocumentContentTool(
             val query = input.query
             val topK = input.getValidatedTopK()
 
-            log.info { "Content search: query='$query', topK=$topK" }
+            log.info { "Title search: query='$query', topK=$topK" }
 
             // Convert to SearchCriteria
-            val criteria = SearchContents.fromStrings(listOf(query))
+            val criteria = SearchTitles.fromStrings(listOf(query))
 
             val results = runBlocking {
-                contentSearchStrategy.search(criteria, topK)
+                titleSearchStrategy.search(criteria, topK)
             }
 
             val answer = if (results.isEmpty()) {
-                "No documents found with content matching: '$query'"
+                "No documents found with title matching: '$query'"
             } else {
                 buildString {
-                    append("Found ${results.size} document(s) by content search:\n\n")
+                    append("Found ${results.size} document(s) by title search:\n\n")
 
                     results.take(topK).forEachIndexed { index, result ->
                         append("${index + 1}. ${result.title}\n")
@@ -98,11 +98,11 @@ class SearchDocumentContentTool(
 
             objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
         } catch (e: Exception) {
-            log.error(e) { "Error in content search: ${e.message}" }
+            log.error(e) { "Error in title search: ${e.message}" }
             objectMapper.writeValueAsString(
                 ToolOutput(
-                    thought = "An error occurred during the content search.",
-                    answer = "Error performing content search: ${e.message}"
+                    thought = "An error occurred during the title search.",
+                    answer = "Error performing title search: ${e.message}"
                 )
             )
         }

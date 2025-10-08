@@ -1,9 +1,8 @@
-package com.okestro.okchat.chunking
+package com.okestro.okchat.ai.chunking
 
 import com.okestro.okchat.ai.support.MathUtils
 import org.springframework.ai.document.Document
 import org.springframework.ai.embedding.EmbeddingModel
-import kotlin.math.sqrt
 
 /**
  * Semantic chunking - splits text based on semantic similarity between sentences

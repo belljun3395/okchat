@@ -1,4 +1,4 @@
-package com.okestro.okchat.chunking
+package com.okestro.okchat.ai.chunking
 
 import org.springframework.ai.document.Document
 

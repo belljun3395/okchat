@@ -1,5 +1,10 @@
-package com.okestro.okchat.chunking
+package com.okestro.okchat.confluence.config
 
+import com.okestro.okchat.ai.chunking.ChunkingStrategy
+import com.okestro.okchat.ai.chunking.ChunkingStrategyType
+import com.okestro.okchat.ai.chunking.RecursiveCharacterStrategy
+import com.okestro.okchat.ai.chunking.SemanticChunkingStrategy
+import com.okestro.okchat.ai.chunking.SentenceWindowStrategy
 import com.okestro.okchat.config.RagProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.embedding.EmbeddingModel
@@ -15,7 +20,7 @@ private val log = KotlinLogging.logger {}
  */
 @Configuration
 @EnableConfigurationProperties(RagProperties::class)
-class ChunkingStrategyConfig {
+class ChunkingConfig {
 
     @Bean
     fun chunkingStrategy(
@@ -27,7 +32,7 @@ class ChunkingStrategyConfig {
         // Parse strategy type from config with fallback to default
         val strategyType = try {
             ChunkingStrategyType.valueOf(config.strategy.uppercase())
-        } catch (e: IllegalArgumentException) {
+        } catch (_: IllegalArgumentException) {
             log.warn { "Invalid chunking strategy '${config.strategy}', falling back to RECURSIVE_CHARACTER" }
             ChunkingStrategyType.RECURSIVE_CHARACTER
         }

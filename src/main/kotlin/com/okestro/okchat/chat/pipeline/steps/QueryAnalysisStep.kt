@@ -60,8 +60,6 @@ class QueryAnalysisStep(
         }
 
         // Extract date keywords
-        // Always include strategic day patterns for better date matching (e.g., "250804" in titles)
-        // This ensures month-level queries like "2025년 8월" can match day-specific titles
         val dateKeywords = DateExtractor.extractDateKeywords(
             userMessage,
             includeAllDays = true // Always include strategic days for YYMMDD title matching

@@ -1,8 +1,10 @@
 package com.okestro.okchat.chat.pipeline.steps
 
+import com.okestro.okchat.ai.support.MathUtils
 import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.chat.pipeline.DocumentChatPipelineStep
 import com.okestro.okchat.chat.pipeline.copy
+import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchScore
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.embedding.EmbeddingModel
@@ -33,6 +35,8 @@ class ReRankingStep(
         private const val RRF_WEIGHT = 0.4 // Weight for original RRF score (40%)
         private const val SEMANTIC_WEIGHT = 0.6 // Weight for semantic similarity (60%)
     }
+
+    override fun getStepName(): String = "Re-Ranking"
 
     /**
      * Only execute re-ranking if we have search results
@@ -69,7 +73,7 @@ class ReRankingStep(
 
             try {
                 val docEmbedding = embeddingModel.embed(result.content).toList()
-                val semanticSimilarity = cosineSimilarity(queryEmbedding, docEmbedding)
+                val semanticSimilarity = MathUtils.cosineSimilarity(queryEmbedding, docEmbedding)
 
                 // Preserve original RRF score (includes date/path boosts)
                 val originalScore = result.score.value
@@ -100,6 +104,14 @@ class ReRankingStep(
         log.info { "[${getStepName()}] Re-ranking completed: ${topK.size} input → ${reranked.size} output" }
 
         // Log top 5 for quick reference, full list in DEBUG
+        logReRankedResults(reranked)
+
+        return context.copy(
+            search = context.search.copy(results = finalResults)
+        )
+    }
+
+    private fun logReRankedResults(reranked: List<SearchResult>) {
         if (log.isDebugEnabled()) {
             log.debug { "[${getStepName()}] ━━━ All ${reranked.size} re-ranked results ━━━" }
             reranked.forEachIndexed { index, result ->
@@ -109,29 +121,9 @@ class ReRankingStep(
         } else {
             log.info {
                 "[${getStepName()}] Top 5: ${
-                reranked.take(5).joinToString(", ") { "${it.title}(${"%.4f".format(it.score.value)})" }
+                    reranked.take(5).joinToString(", ") { "${it.title}(${"%.4f".format(it.score.value)})" }
                 }"
             }
         }
-
-        return context.copy(
-            search = context.search.copy(results = finalResults)
-        )
     }
-
-    private fun cosineSimilarity(vec1: List<Float>, vec2: List<Float>): Double {
-        require(vec1.size == vec2.size) { "Vectors must have the same dimension" }
-
-        val dotProduct = vec1.zip(vec2) { a, b -> a * b }.sum()
-        val magnitude1 = sqrt(vec1.sumOf { (it * it).toDouble() })
-        val magnitude2 = sqrt(vec2.sumOf { (it * it).toDouble() })
-
-        return if (magnitude1 > 0 && magnitude2 > 0) {
-            dotProduct / (magnitude1 * magnitude2)
-        } else {
-            0.0
-        }
-    }
-
-    override fun getStepName(): String = "Re-Ranking"
 }

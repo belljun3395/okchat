@@ -1,5 +1,6 @@
 package com.okestro.okchat.chunking
 
+import com.okestro.okchat.ai.support.MathUtils
 import org.springframework.ai.document.Document
 import org.springframework.ai.embedding.EmbeddingModel
 import kotlin.math.sqrt
@@ -31,7 +32,7 @@ class SemanticChunkingStrategy(
         var currentChunk = mutableListOf(sentences[0])
 
         for (i in 1 until sentences.size) {
-            val similarity = cosineSimilarity(embeddings[i - 1], embeddings[i])
+            val similarity = MathUtils.cosineSimilarity(embeddings[i - 1], embeddings[i])
 
             if (similarity >= similarityThreshold && currentChunk.joinToString(" ").length < maxChunkSize) {
                 currentChunk.add(sentences[i])
@@ -63,20 +64,6 @@ class SemanticChunkingStrategy(
         return text.split(Regex("[.!?]+\\s+"))
             .map { it.trim() }
             .filter { it.isNotBlank() }
-    }
-
-    private fun cosineSimilarity(vec1: List<Float>, vec2: List<Float>): Double {
-        require(vec1.size == vec2.size) { "Vectors must have the same dimension" }
-
-        val dotProduct = vec1.zip(vec2) { a, b -> a * b }.sum()
-        val magnitude1 = sqrt(vec1.sumOf { (it * it).toDouble() })
-        val magnitude2 = sqrt(vec2.sumOf { (it * it).toDouble() })
-
-        return if (magnitude1 > 0 && magnitude2 > 0) {
-            dotProduct / (magnitude1 * magnitude2)
-        } else {
-            0.0
-        }
     }
 
     override fun getName() = "Semantic Chunking"

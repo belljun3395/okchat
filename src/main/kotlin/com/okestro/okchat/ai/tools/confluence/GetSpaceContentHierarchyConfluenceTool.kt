@@ -3,6 +3,7 @@ package com.okestro.okchat.ai.tools.confluence
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.GetSpaceContentHierarchyInput
 import com.okestro.okchat.ai.model.ToolOutput
+import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.confluence.model.ContentNode
 import com.okestro.okchat.confluence.service.ConfluenceService
 import kotlinx.coroutines.runBlocking
@@ -48,7 +49,11 @@ class GetSpaceContentHierarchyConfluenceTool(
     }
 
     override fun call(toolInput: String): String {
-        return try {
+        return ToolExecutor.execute(
+            toolName = "GetSpaceContentHierarchyConfluenceTool",
+            objectMapper = objectMapper,
+            errorThought = "An error occurred while retrieving the space hierarchy."
+        ) {
             // Parse input to type-safe object
             val input = objectMapper.readValue(toolInput, GetSpaceContentHierarchyInput::class.java)
             val thought = input.thought ?: "No thought provided."
@@ -70,14 +75,7 @@ class GetSpaceContentHierarchyConfluenceTool(
                 }
             }
 
-            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
-        } catch (e: Exception) {
-            objectMapper.writeValueAsString(
-                ToolOutput(
-                    thought = "An error occurred while retrieving the space hierarchy.",
-                    answer = "Error retrieving space hierarchy: ${e.message}"
-                )
-            )
+            ToolOutput(thought = thought, answer = answer)
         }
     }
 

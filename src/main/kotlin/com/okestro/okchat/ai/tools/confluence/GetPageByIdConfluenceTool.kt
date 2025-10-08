@@ -3,6 +3,7 @@ package com.okestro.okchat.ai.tools.confluence
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.GetPageByIdInput
 import com.okestro.okchat.ai.model.ToolOutput
+import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.confluence.client.ConfluenceClient
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
@@ -41,7 +42,11 @@ class GetPageByIdConfluenceTool(
     }
 
     override fun call(toolInput: String): String {
-        return try {
+        return ToolExecutor.execute(
+            toolName = "GetPageByIdConfluenceTool",
+            objectMapper = objectMapper,
+            errorThought = "An error occurred while retrieving the Confluence page."
+        ) {
             // Parse input to type-safe object
             val input = objectMapper.readValue(toolInput, GetPageByIdInput::class.java)
             val thought = input.thought ?: "No thought provided."
@@ -83,14 +88,7 @@ class GetPageByIdConfluenceTool(
                 }
             }
 
-            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
-        } catch (e: Exception) {
-            objectMapper.writeValueAsString(
-                ToolOutput(
-                    thought = "An error occurred while retrieving the page.",
-                    answer = "Error retrieving page: ${e.message}"
-                )
-            )
+            ToolOutput(thought = thought, answer = answer)
         }
     }
 }

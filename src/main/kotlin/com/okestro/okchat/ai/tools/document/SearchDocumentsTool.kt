@@ -3,6 +3,7 @@ package com.okestro.okchat.ai.tools.document
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.SearchDocumentsInput
 import com.okestro.okchat.ai.model.ToolOutput
+import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.search.model.SearchDocument
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
@@ -58,7 +59,11 @@ class SearchDocumentsTool(
     }
 
     override fun call(toolInput: String): String {
-        return try {
+        return ToolExecutor.execute(
+            toolName = "SearchDocumentsTool",
+            objectMapper = objectMapper,
+            errorThought = "An error occurred while searching documents."
+        ) {
             // Parse input to type-safe object
             val input = objectMapper.readValue(toolInput, SearchDocumentsInput::class.java)
             val thought = input.thought ?: "No thought provided."
@@ -134,15 +139,7 @@ class SearchDocumentsTool(
                 }
             }
 
-            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
-        } catch (e: Exception) {
-            log.error(e) { "Error searching OpenSearch: ${e.message}" }
-            objectMapper.writeValueAsString(
-                ToolOutput(
-                    thought = "An error occurred during the document search.",
-                    answer = "Error searching documents: ${e.message}"
-                )
-            )
+            ToolOutput(thought = thought, answer = answer)
         }
     }
 }

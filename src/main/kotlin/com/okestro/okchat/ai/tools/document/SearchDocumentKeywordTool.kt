@@ -3,6 +3,7 @@ package com.okestro.okchat.ai.tools.document
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.SearchByKeywordInput
 import com.okestro.okchat.ai.model.ToolOutput
+import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.search.model.SearchKeywords
 import com.okestro.okchat.search.strategy.KeywordSearchStrategy
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -58,7 +59,11 @@ class SearchDocumentKeywordTool(
     }
 
     override fun call(toolInput: String): String {
-        return try {
+        return ToolExecutor.execute(
+            toolName = "SearchDocumentKeywordTool",
+            objectMapper = objectMapper,
+            errorThought = "An error occurred while performing the keyword search."
+        ) {
             // Parse input to type-safe object
             val input = objectMapper.readValue(toolInput, SearchByKeywordInput::class.java)
             val thought = input.thought ?: "No thought provided."
@@ -99,15 +104,7 @@ class SearchDocumentKeywordTool(
                 }
             }
 
-            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
-        } catch (e: Exception) {
-            log.error(e) { "Error in keyword search: ${e.message}" }
-            objectMapper.writeValueAsString(
-                ToolOutput(
-                    thought = "An error occurred during the keyword search.",
-                    answer = "Error performing keyword search: ${e.message}"
-                )
-            )
+            ToolOutput(thought = thought, answer = answer)
         }
     }
 }

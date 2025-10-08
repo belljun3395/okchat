@@ -3,6 +3,7 @@ package com.okestro.okchat.ai.tools.confluence
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.GetPagesBySpaceIdInput
 import com.okestro.okchat.ai.model.ToolOutput
+import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.confluence.service.ContentCollector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -48,7 +49,11 @@ class GetPagesBySpaceIdConfluenceTool(
     }
 
     override fun call(toolInput: String): String {
-        return try {
+        return ToolExecutor.execute(
+            toolName = "GetPagesBySpaceIdConfluenceTool",
+            objectMapper = objectMapper,
+            errorThought = "An error occurred while retrieving pages from the Confluence space."
+        ) {
             // Parse input to type-safe object
             val input = objectMapper.readValue(toolInput, GetPagesBySpaceIdInput::class.java)
             val thought = input.thought ?: "No thought provided."
@@ -73,14 +78,7 @@ class GetPagesBySpaceIdConfluenceTool(
                 }
             }
 
-            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
-        } catch (e: Exception) {
-            objectMapper.writeValueAsString(
-                ToolOutput(
-                    thought = "An error occurred while retrieving pages from the space.",
-                    answer = "Error retrieving pages: ${e.message}"
-                )
-            )
+            ToolOutput(thought = thought, answer = answer)
         }
     }
 }

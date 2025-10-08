@@ -46,7 +46,6 @@ class GetDocumentSchemaInfoTool(
     override fun call(toolInput: String): String {
         return ToolExecutor.execute(
             toolName = "GetDocumentSchemaInfo",
-            log = log,
             objectMapper = objectMapper,
             errorThought = "An error occurred while retrieving the schema."
         ) {

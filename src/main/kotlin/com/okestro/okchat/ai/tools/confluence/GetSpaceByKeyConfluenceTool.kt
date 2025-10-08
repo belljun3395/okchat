@@ -3,6 +3,7 @@ package com.okestro.okchat.ai.tools.confluence
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.GetSpaceByKeyInput
 import com.okestro.okchat.ai.model.ToolOutput
+import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.confluence.service.ConfluenceService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -41,9 +42,12 @@ class GetSpaceByKeyConfluenceTool(
             )
             .build()
     }
-
     override fun call(toolInput: String): String {
-        return try {
+        return ToolExecutor.execute(
+            toolName = "GetSpaceByKeyConfluenceTool",
+            objectMapper = objectMapper,
+            errorThought = "An error occurred while retrieving the Confluence space."
+        ) {
             // Parse input to type-safe object
             val input = objectMapper.readValue(toolInput, GetSpaceByKeyInput::class.java)
             val thought = input.thought ?: "No thought provided."
@@ -54,22 +58,7 @@ class GetSpaceByKeyConfluenceTool(
                 confluenceService.getSpaceIdByKey(spaceKey)
             }
             val answer = "Successfully found space with key '$spaceKey'. Space ID: $spaceId"
-
-            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
-        } catch (e: IllegalArgumentException) {
-            objectMapper.writeValueAsString(
-                ToolOutput(
-                    thought = "An error occurred: the space key was not found.",
-                    answer = "Error: ${e.message}"
-                )
-            )
-        } catch (e: Exception) {
-            objectMapper.writeValueAsString(
-                ToolOutput(
-                    thought = "An error occurred while retrieving the space.",
-                    answer = "Error retrieving space: ${e.message}"
-                )
-            )
+            ToolOutput(thought = thought, answer = answer)
         }
     }
 }

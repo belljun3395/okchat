@@ -3,6 +3,7 @@ package com.okestro.okchat.ai.tools.document
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.SearchByQueryInput
 import com.okestro.okchat.ai.model.ToolOutput
+import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.search.model.SearchTitles
 import com.okestro.okchat.search.strategy.TitleSearchStrategy
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -58,7 +59,11 @@ class SearchDocumentTitleTool(
     }
 
     override fun call(toolInput: String): String {
-        return try {
+        return ToolExecutor.execute(
+            toolName = "SearchDocumentTitleTool",
+            objectMapper = objectMapper,
+            errorThought = "An error occurred while searching documents by title."
+        ) {
             // Parse input to type-safe object
             val input = objectMapper.readValue(toolInput, SearchByQueryInput::class.java)
             val thought = input.thought ?: "No thought provided."
@@ -96,15 +101,7 @@ class SearchDocumentTitleTool(
                 }
             }
 
-            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
-        } catch (e: Exception) {
-            log.error(e) { "Error in title search: ${e.message}" }
-            objectMapper.writeValueAsString(
-                ToolOutput(
-                    thought = "An error occurred during the title search.",
-                    answer = "Error performing title search: ${e.message}"
-                )
-            )
+            ToolOutput(thought = thought, answer = answer)
         }
     }
 }

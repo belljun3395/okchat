@@ -3,6 +3,7 @@ package com.okestro.okchat.ai.tools.confluence
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.GetAllChildPagesInput
 import com.okestro.okchat.ai.model.ToolOutput
+import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.confluence.client.ConfluenceClient
 import com.okestro.okchat.confluence.client.Page
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -70,7 +71,11 @@ class GetAllChildPagesConfluenceTool(
     }
 
     override fun call(toolInput: String): String {
-        return try {
+        return ToolExecutor.execute(
+            toolName = "GetAllChildPagesConfluenceTool",
+            objectMapper = objectMapper,
+            errorThought = "An error occurred while getting child pages."
+        ) {
             // Parse input to type-safe object
             val input = objectMapper.readValue(toolInput, GetAllChildPagesInput::class.java)
             val thought = input.thought ?: "No thought provided."
@@ -164,15 +169,7 @@ class GetAllChildPagesConfluenceTool(
                 append("Don't just list page titles, but extract and answer the main content covered on each page, completed tasks, ongoing tasks, etc.")
             }
 
-            objectMapper.writeValueAsString(ToolOutput(thought = thought, answer = answer))
-        } catch (e: Exception) {
-            log.error(e) { "Error getting child pages: ${e.message}" }
-            objectMapper.writeValueAsString(
-                ToolOutput(
-                    thought = "An error occurred while getting child pages.",
-                    answer = "Error retrieving child pages: ${e.message}"
-                )
-            )
+            ToolOutput(thought = thought, answer = answer)
         }
     }
 

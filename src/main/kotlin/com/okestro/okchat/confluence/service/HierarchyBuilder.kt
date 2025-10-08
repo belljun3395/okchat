@@ -6,6 +6,8 @@ import com.okestro.okchat.confluence.model.ContentHierarchy
 import com.okestro.okchat.confluence.model.ContentNode
 import com.okestro.okchat.confluence.model.ContentType
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Component
 
 private val log = KotlinLogging.logger {}
@@ -20,7 +22,7 @@ class HierarchyBuilder(
     /**
      * Build hierarchical structure from collected content
      */
-    fun buildHierarchy(allContent: List<Page>, spaceId: String): ContentHierarchy {
+    suspend fun  buildHierarchy(allContent: List<Page>, spaceId: String): ContentHierarchy {
         log.info { "Building hierarchy from ${allContent.size} items" }
 
         // Identify folders using parentType field
@@ -62,7 +64,7 @@ class HierarchyBuilder(
     /**
      * Fill missing parent nodes by fetching them from API
      */
-    private fun fillMissingParents(
+    private suspend fun fillMissingParents(
         allContent: List<Page>,
         knownFolderIds: MutableSet<String>,
         spaceId: String
@@ -125,16 +127,18 @@ class HierarchyBuilder(
     /**
      * Fetch a single missing parent
      */
-    private fun fetchMissingParent(
+    private suspend fun fetchMissingParent(
         parentId: String,
         knownFolderIds: MutableSet<String>,
         spaceId: String
     ): Page? {
         // Try folder first
         return try {
-            val folderResponse = confluenceClient.getFolderById(parentId)
+            val folderResponse = withContext(Dispatchers.IO) {
+                confluenceClient.getFolderById(parentId)
+            }
             knownFolderIds.add(folderResponse.id)
-            log.info { "  └─ Fetched folder: ${folderResponse.title} (ID: $parentId)" }
+            log.info { "└─ Fetched folder: ${folderResponse.title} (ID: $parentId)" }
             Page(
                 id = folderResponse.id,
                 title = folderResponse.title,
@@ -148,11 +152,13 @@ class HierarchyBuilder(
         } catch (_: Exception) {
             // Try page as fallback
             try {
-                val pageResponse = confluenceClient.getPageById(parentId)
-                log.info { "  └─ Fetched page: ${pageResponse.title} (ID: $parentId)" }
+                val pageResponse = withContext(Dispatchers.IO) {
+                    confluenceClient.getPageById(parentId)
+                }
+                log.info { "└─ Fetched page: ${pageResponse.title} (ID: $parentId)" }
                 pageResponse
             } catch (e: Exception) {
-                log.warn { "  └─ Failed to fetch parent $parentId: ${e.message}" }
+                log.warn { "└─ Failed to fetch parent $parentId: ${e.message}" }
                 null
             }
         }
@@ -223,7 +229,7 @@ class HierarchyBuilder(
         if (orphanNodes.isNotEmpty()) {
             log.warn { "Found ${orphanNodes.size} orphan nodes:" }
             orphanNodes.take(20).forEach { (node, parentId) ->
-                log.warn { "  - '${node.title}' (${node.id}) → missing parent: $parentId" }
+                log.warn { "- '${node.title}' (${node.id}) → missing parent: $parentId" }
             }
         }
 

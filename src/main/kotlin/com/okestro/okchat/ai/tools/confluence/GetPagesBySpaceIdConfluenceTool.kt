@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.GetPagesBySpaceIdInput
 import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.confluence.service.ContentCollector
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
 import org.springframework.context.annotation.Description
@@ -53,7 +55,7 @@ class GetPagesBySpaceIdConfluenceTool(
             val spaceId = input.spaceId
             val limit = input.getValidatedLimit()
 
-            val allPages = contentCollector.collectAllContent(spaceId)
+            val allPages = runBlocking(Dispatchers.IO) { contentCollector.collectAllContent(spaceId) }
             val limitedPages = allPages.take(limit)
 
             val answer = if (limitedPages.isEmpty()) {

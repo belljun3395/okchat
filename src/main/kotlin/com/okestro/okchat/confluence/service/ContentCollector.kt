@@ -3,6 +3,8 @@ package com.okestro.okchat.confluence.service
 import com.okestro.okchat.confluence.client.ConfluenceClient
 import com.okestro.okchat.confluence.client.Page
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Component
 
 private val log = KotlinLogging.logger {}
@@ -17,7 +19,7 @@ class ContentCollector(
     /**
      * Collect all pages and folders in a space, including nested children
      */
-    fun collectAllContent(spaceId: String): List<Page> {
+    suspend fun collectAllContent(spaceId: String): List<Page> {
         log.info { "Collecting all content for space ID: $spaceId" }
 
         // Step 1: Get top-level items
@@ -33,7 +35,7 @@ class ContentCollector(
             val children = collectChildrenRecursively(item)
             allItems.addAll(children)
             if (children.isNotEmpty()) {
-                log.info { "  Found ${children.size} descendant(s) under '${item.title}'" }
+                log.info { "Found ${children.size} descendant(s) under '${item.title}'" }
             }
         }
 
@@ -45,12 +47,14 @@ class ContentCollector(
     /**
      * Fetch top-level items in a space
      */
-    private fun fetchTopLevelItems(spaceId: String): List<Page> {
+    private suspend fun fetchTopLevelItems(spaceId: String): List<Page> {
         val items = mutableListOf<Page>()
         var cursor: String? = null
 
         do {
-            val response = confluenceClient.getPagesBySpaceId(spaceId, cursor)
+            val response = withContext(Dispatchers.IO) {
+                confluenceClient.getPagesBySpaceId(spaceId, cursor)
+            }
             items.addAll(response.results)
             cursor = response._links?.next?.substringAfter("cursor=")?.substringBefore("&")
             log.info { "Fetched ${response.results.size} top-level items, cursor: $cursor" }
@@ -63,7 +67,7 @@ class ContentCollector(
      * Recursively collect all children of a page or folder
      * Handles mixed hierarchies (pages can have folders, folders can have pages)
      */
-    private fun collectChildrenRecursively(item: Page): List<Page> {
+    private suspend fun collectChildrenRecursively(item: Page): List<Page> {
         val allChildren = mutableListOf<Page>()
 
         val knownFolder = item.type?.equals("folder", ignoreCase = true) == true
@@ -103,12 +107,14 @@ class ContentCollector(
      * Fetch children from a page
      * Sets parentId if API doesn't provide it
      */
-    private fun fetchPageChildren(pageId: String, title: String): List<Page> {
+    private suspend fun fetchPageChildren(pageId: String, title: String): List<Page> {
         val children = mutableListOf<Page>()
         try {
             var cursor: String? = null
             do {
-                val response = confluenceClient.getPageChildren(pageId, cursor)
+                val response = withContext(Dispatchers.IO) {
+                    confluenceClient.getPageChildren(pageId, cursor)
+                }
                 // Ensure parentId is set (API sometimes doesn't include it)
                 val childrenWithParent = response.results.map { child ->
                     if (child.parentId == null) {
@@ -122,16 +128,16 @@ class ContentCollector(
             } while (cursor != null)
 
             if (children.isNotEmpty()) {
-                log.info { "  └─ Page '$title' has ${children.size} child page(s)" }
+                log.info { "└─ Page '$title' has ${children.size} child page(s)" }
                 children.firstOrNull()?.let { firstChild ->
                     log.debug {
-                        "    First child: '${firstChild.title}' → " +
+                        "First child: '${firstChild.title}' → " +
                             "parentId: ${firstChild.parentId}, parentType: ${firstChild.parentType}"
                     }
                 }
             }
         } catch (e: Exception) {
-            log.debug { "  └─ No page children for '$title': ${e.message}" }
+            log.debug { "└─ No page children for '$title': ${e.message}" }
         }
         return children
     }
@@ -140,12 +146,14 @@ class ContentCollector(
      * Fetch children from a folder
      * Sets parentId if API doesn't provide it
      */
-    private fun fetchFolderChildren(folderId: String, title: String): List<Page> {
+    private suspend fun fetchFolderChildren(folderId: String, title: String): List<Page> {
         val children = mutableListOf<Page>()
         try {
             var cursor: String? = null
             do {
-                val response = confluenceClient.getFolderChildren(folderId, cursor)
+                val response = withContext(Dispatchers.IO) {
+                    confluenceClient.getFolderChildren(folderId, cursor)
+                }
                 // Ensure parentId is set (API sometimes doesn't include it)
                 val childrenWithParent = response.results.map { child ->
                     if (child.parentId == null) {
@@ -161,16 +169,16 @@ class ContentCollector(
             if (children.isNotEmpty()) {
                 val pageCount = children.count { it.type != "folder" }
                 val folderCount = children.count { it.type == "folder" }
-                log.info { "  └─ Folder '$title' has ${children.size} child(ren) ($folderCount folder(s), $pageCount page(s))" }
+                log.info { "└─ Folder '$title' has ${children.size} child(ren) ($folderCount folder(s), $pageCount page(s))" }
                 children.firstOrNull()?.let { firstChild ->
                     log.debug {
-                        "    First child: '${firstChild.title}' → " +
+                        "First child: '${firstChild.title}' → " +
                             "parentId: ${firstChild.parentId}, parentType: ${firstChild.parentType}"
                     }
                 }
             }
         } catch (e: Exception) {
-            log.debug { "  └─ No folder children for '$title': ${e.message}" }
+            log.debug { "└─ No folder children for '$title': ${e.message}" }
         }
         return children
     }

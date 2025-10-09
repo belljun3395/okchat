@@ -2,6 +2,7 @@ package com.okestro.okchat.confluence.service
 
 import com.okestro.okchat.confluence.client.Attachment
 import com.okestro.okchat.confluence.client.ConfluenceClient
+import com.okestro.okchat.confluence.config.ConfluenceProperties
 import com.okestro.okchat.search.model.metadata
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
@@ -9,7 +10,12 @@ import kotlinx.coroutines.withContext
 import org.springframework.ai.document.Document
 import org.springframework.ai.reader.pdf.PagePdfDocumentReader
 import org.springframework.core.io.ByteArrayResource
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
 import org.springframework.stereotype.Service
+import org.springframework.web.client.RestTemplate
+import java.util.Base64
 
 private val log = KotlinLogging.logger {}
 
@@ -19,7 +25,9 @@ private val log = KotlinLogging.logger {}
  */
 @Service
 class PdfAttachmentService(
-    private val confluenceClient: ConfluenceClient
+    private val confluenceClient: ConfluenceClient,
+    private val confluenceProperties: ConfluenceProperties,
+    private val restTemplate: RestTemplate = RestTemplate()
 ) {
     /**
      * Get all PDF attachments for a page and extract their text content
@@ -88,6 +96,45 @@ class PdfAttachmentService(
     }
 
     /**
+     * Download attachment file using downloadLink from API response
+     */
+    private fun downloadAttachmentFile(attachment: Attachment): ByteArray {
+        // Use downloadLink from API response
+        val downloadLink = attachment.downloadLink ?: attachment._links?.download
+            ?: throw IllegalStateException("No download link available for attachment: ${attachment.id}")
+
+        // Construct full URL: wiki base URL + download link
+        // baseUrl is like "https://okestro.atlassian.net/wiki/api/v2"
+        // downloadLink is like "/download/attachments/2164261392/file.pdf?..."
+        val wikiBaseUrl = confluenceProperties.baseUrl.removeSuffix("/api/v2").removeSuffix("/")
+        val fullUrl = "$wikiBaseUrl$downloadLink"
+
+        log.debug { "[PdfAttachment] Downloading from URL: $fullUrl" }
+
+        // Create authorization header
+        val headers = HttpHeaders()
+        val email = confluenceProperties.auth.email
+        val apiToken = confluenceProperties.auth.apiToken
+        if (email != null && apiToken != null) {
+            val credentials = "$email:$apiToken"
+            val encodedCredentials = Base64.getEncoder().encodeToString(credentials.toByteArray())
+            headers.set("Authorization", "Basic $encodedCredentials")
+        }
+
+        val entity = HttpEntity<String>(headers)
+
+        // Download file
+        val response = restTemplate.exchange(
+            fullUrl,
+            HttpMethod.GET,
+            entity,
+            ByteArray::class.java
+        )
+
+        return response.body ?: throw IllegalStateException("Empty response body for attachment: ${attachment.id}")
+    }
+
+    /**
      * Download PDF and extract text content
      */
     private suspend fun extractTextFromPdf(
@@ -100,8 +147,8 @@ class PdfAttachmentService(
             try {
                 log.info { "[PdfAttachment] Downloading PDF: ${attachment.title} (size=${attachment.fileSize} bytes)" }
 
-                // Download PDF binary data
-                val pdfBytes = confluenceClient.downloadAttachment(attachment.id)
+                // Download PDF binary data using downloadLink from API response
+                val pdfBytes = downloadAttachmentFile(attachment)
 
                 // Create ByteArrayResource for Spring AI PDF Reader
                 val resource = ByteArrayResource(pdfBytes)

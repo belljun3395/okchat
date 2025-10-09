@@ -51,6 +51,11 @@ data class Links(
     val base: String? = null
 )
 
+data class AttachmentLinks(
+    val download: String? = null,
+    val webui: String? = null
+)
+
 data class FolderResponse(
     val id: String,
     val type: String? = null,
@@ -75,9 +80,12 @@ data class Attachment(
     val id: String,
     val title: String,
     val mediaType: String,
+    val mediaTypeDescription: String? = null,
     val fileSize: Long? = null,
     val fileId: String? = null,
     val pageId: String? = null,
+    val downloadLink: String? = null,
+    val webuiLink: String? = null,
     val version: Version? = null,
-    val _links: Links? = null
+    val _links: AttachmentLinks? = null
 )

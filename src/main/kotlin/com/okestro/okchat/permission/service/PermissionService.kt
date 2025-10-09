@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional
 
 private val log = KotlinLogging.logger {}
 
+// TODO: refactor this class to can test it more easily
 /**
  * Service for document permission management and filtering (Path-based only)
  */

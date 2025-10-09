@@ -62,6 +62,13 @@ data class DocumentMetadata(
         }
     }
 
+    /**
+     * Get string value from additional properties
+     */
+    fun getStringValue(key: String): String {
+        return additionalProperties[key]?.toString() ?: ""
+    }
+
     companion object {
         /**
          * Create from nested map (without metadata prefix)

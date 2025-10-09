@@ -4,6 +4,7 @@ import com.okestro.okchat.email.event.EmailEventBus
 import com.okestro.okchat.email.event.EmailReceivedEvent
 import com.okestro.okchat.email.service.EmailChatService
 import com.okestro.okchat.email.service.EmailReplyService
+import com.okestro.okchat.email.service.PendingEmailReplyService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.CoroutineScope
@@ -17,13 +18,14 @@ private val logger = KotlinLogging.logger {}
 /**
  * Reactive email event handler
  * Subscribes to the email event bus and processes events in a non-blocking way
- * Automatically analyzes email content and sends AI-powered replies based on Confluence documentation
+ * Automatically analyzes email content and creates pending replies for review before sending
  */
 @Component
 class EmailReceivedEventHandler(
     private val emailEventBus: EmailEventBus,
     private val emailChatService: EmailChatService,
-    private val emailReplyService: EmailReplyService
+    private val emailReplyService: EmailReplyService,
+    private val pendingEmailReplyService: PendingEmailReplyService
 ) {
     @PostConstruct
     fun subscribeToEvents() {
@@ -64,7 +66,7 @@ class EmailReceivedEventHandler(
     }
 
     /**
-     * Process the email question and send an AI-powered reply based on Confluence documentation
+     * Process the email question and save pending reply for review instead of sending immediately
      */
     private suspend fun processAndReply(event: EmailReceivedEvent) {
         val message = event.message
@@ -75,8 +77,8 @@ class EmailReceivedEventHandler(
         val hasContent = message.content.isNotBlank()
 
         if (!hasSubject && !hasContent) {
-            logger.warn { "[EmailHandler] Email has no content: from=${message.from}, skip_reply=true" }
-            // Send a polite error response
+            logger.warn { "[EmailHandler] Email has no content: from=${message.from}, saving error response for review" }
+            // Create error response for review (instead of sending immediately)
             val errorResponse = buildString {
                 appendLine("Hello.")
                 appendLine()
@@ -85,8 +87,15 @@ class EmailReceivedEventHandler(
                 appendLine()
                 appendLine("Thank you.")
             }
-            emailReplyService.sendReply(message, errorResponse, event.providerType)
-            logger.info { "[EmailHandler] Empty content error response sent: to=${message.from}" }
+
+            // Save for review instead of sending
+            pendingEmailReplyService.savePendingReply(
+                originalMessage = message,
+                replyContent = errorResponse,
+                providerType = event.providerType,
+                toEmail = message.to.firstOrNull() ?: "unknown"
+            )
+            logger.info { "[EmailHandler] Empty content error response saved for review: from=${message.from}" }
             return
         }
 
@@ -117,9 +126,14 @@ class EmailReceivedEventHandler(
                 originalContent = message.content.ifBlank { "(No content)" }
             )
 
-            // Send reply email with provider type
-            emailReplyService.sendReply(message, replyContent, event.providerType)
-            logger.info { "Auto-reply sent successfully to: ${message.from}" }
+            // Save reply for review instead of sending immediately
+            pendingEmailReplyService.savePendingReply(
+                originalMessage = message,
+                replyContent = replyContent,
+                providerType = event.providerType,
+                toEmail = message.to.firstOrNull() ?: "unknown"
+            )
+            logger.info { "AI-generated reply saved for review: from=${message.from}, subject=${message.subject}" }
         } else {
             logger.warn { "No AI response generated for email: ${message.subject}" }
         }

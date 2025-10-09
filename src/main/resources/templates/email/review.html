@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Review - OKChat</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 28px; }
+        .header .subtitle { font-size: 14px; opacity: 0.9; margin-top: 5px; }
+        .back-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .back-btn:hover { background: rgba(255, 255, 255, 0.3); }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-number { font-size: 32px; font-weight: bold; color: #667eea; }
+        .stat-label { color: #666; font-size: 14px; margin-top: 5px; }
+        .section {
+            background: white;
+            padding: 0;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .section-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .filter-btn {
+            padding: 8px 16px;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .filter-btn:hover:not(.active) {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        .email-list {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .email-item {
+            padding: 20px 25px;
+            border-bottom: 1px solid #f3f4f6;
+            transition: background 0.2s;
+        }
+        .email-item:hover {
+            background: #f9fafb;
+        }
+        .email-item:last-child {
+            border-bottom: none;
+        }
+        .email-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        .email-meta {
+            flex: 1;
+        }
+        .email-from {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+        .email-subject {
+            font-size: 14px;
+            color: #4b5563;
+            margin-bottom: 4px;
+        }
+        .email-time {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        .status-sent { background: #dbeafe; color: #1e40af; }
+        .status-failed { background: #fecaca; color: #7f1d1d; }
+        .email-preview {
+            font-size: 13px;
+            color: #6b7280;
+            line-height: 1.6;
+            margin: 10px 0;
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 6px;
+            max-height: 80px;
+            overflow: hidden;
+            position: relative;
+        }
+        .email-preview.expanded {
+            max-height: none;
+        }
+        .email-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-approve {
+            background: #10b981;
+            color: white;
+        }
+        .btn-approve:hover {
+            background: #059669;
+        }
+        .btn-reject {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-reject:hover {
+            background: #dc2626;
+        }
+        .btn-view {
+            background: #6b7280;
+            color: white;
+        }
+        .btn-view:hover {
+            background: #4b5563;
+        }
+        .btn-expand {
+            background: transparent;
+            border: 1px solid #d1d5db;
+            color: #6b7280;
+            padding: 4px 12px;
+            font-size: 12px;
+        }
+        .btn-expand:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9ca3af;
+        }
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+        }
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        .modal-field {
+            margin-bottom: 16px;
+        }
+        .modal-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #4b5563;
+            margin-bottom: 6px;
+        }
+        .modal-value {
+            font-size: 14px;
+            color: #1a1a1a;
+            padding: 10px;
+            background: #f9fafb;
+            border-radius: 6px;
+        }
+        .modal-textarea {
+            font-size: 13px;
+            color: #1a1a1a;
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 6px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .input-field {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>📧 Email Review</h1>
+                <p class="subtitle">검토 대기 중인 이메일 답변을 확인하고 승인/거부하세요</p>
+            </div>
+            <a href="/admin/permissions" class="back-btn">← Back to Admin</a>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="pendingCount">0</div>
+                <div class="stat-label">대기 중</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="approvedCount">0</div>
+                <div class="stat-label">승인됨</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="sentCount">0</div>
+                <div class="stat-label">발송완료</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="rejectedCount">0</div>
+                <div class="stat-label">거부됨</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">이메일 목록</h2>
+                <div class="filter-group">
+                    <button class="filter-btn active" data-status="PENDING">대기</button>
+                    <button class="filter-btn" data-status="APPROVED">승인</button>
+                    <button class="filter-btn" data-status="SENT">발송</button>
+                    <button class="filter-btn" data-status="REJECTED">거부</button>
+                    <button class="filter-btn" data-status="FAILED">실패</button>
+                </div>
+            </div>
+            <div class="email-list" id="emailList">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Detail Modal -->
+    <div class="modal" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-header">이메일 상세</div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-actions">
+                <button class="btn btn-view" onclick="closeModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reject Reason Modal -->
+    <div class="modal" id="rejectModal">
+        <div class="modal-content">
+            <div class="modal-header">거부 사유 입력</div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <label class="modal-label">거부 사유 (선택사항)</label>
+                    <textarea class="input-field" id="rejectionReason" rows="4" placeholder="거부 사유를 입력하세요..."></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-view" onclick="closeRejectModal()">취소</button>
+                <button class="btn btn-reject" onclick="confirmReject()">거부 확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStatus = 'PENDING';
+        let currentRejectId = null;
+
+        // Load counts
+        async function loadCounts() {
+            try {
+                const response = await fetch('/api/email/pending/count');
+                const counts = await response.json();
+                document.getElementById('pendingCount').textContent = counts.pending || 0;
+                document.getElementById('approvedCount').textContent = counts.approved || 0;
+                document.getElementById('sentCount').textContent = counts.sent || 0;
+                document.getElementById('rejectedCount').textContent = counts.rejected || 0;
+            } catch (error) {
+                console.error('Failed to load counts:', error);
+            }
+        }
+
+        // Load emails by status
+        async function loadEmails(status) {
+            currentStatus = status;
+            const emailList = document.getElementById('emailList');
+            emailList.innerHTML = '<div class="loading">Loading...</div>';
+
+            try {
+                const response = await fetch(`/api/email/pending/status/${status}`);
+                const emails = await response.json();
+
+                if (emails.length === 0) {
+                    emailList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <div>해당 상태의 이메일이 없습니다</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                emailList.innerHTML = emails.map(email => createEmailItem(email)).join('');
+            } catch (error) {
+                console.error('Failed to load emails:', error);
+                emailList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❌</div>
+                        <div>이메일을 불러오는데 실패했습니다</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Create email item HTML
+        function createEmailItem(email) {
+            const statusClass = `status-${email.status.toLowerCase()}`;
+            const statusText = {
+                'PENDING': '대기 중',
+                'APPROVED': '승인됨',
+                'REJECTED': '거부됨',
+                'SENT': '발송완료',
+                'FAILED': '발송실패'
+            }[email.status] || email.status;
+
+            const createdDate = new Date(email.createdAt).toLocaleString('ko-KR');
+            const preview = email.replyContent.substring(0, 150) + (email.replyContent.length > 150 ? '...' : '');
+
+            const actions = email.status === 'PENDING' ? `
+                <button class="btn btn-approve" onclick="approveEmail(${email.id})">✓ 승인 및 발송</button>
+                <button class="btn btn-reject" onclick="openRejectModal(${email.id})">✗ 거부</button>
+            ` : '';
+
+            return `
+                <div class="email-item">
+                    <div class="email-header">
+                        <div class="email-meta">
+                            <div class="email-from">📨 ${email.fromEmail}</div>
+                            <div class="email-subject">제목: ${email.originalSubject}</div>
+                            <div class="email-time">${createdDate}</div>
+                        </div>
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="email-preview" id="preview-${email.id}">${preview}</div>
+                    <div class="email-actions">
+                        ${actions}
+                        <button class="btn btn-view" onclick="viewDetail(${email.id})">상세보기</button>
+                        <button class="btn-expand" onclick="togglePreview(${email.id})">전체보기</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Toggle preview expansion
+        function togglePreview(id) {
+            const preview = document.getElementById(`preview-${id}`);
+            preview.classList.toggle('expanded');
+            event.target.textContent = preview.classList.contains('expanded') ? '접기' : '전체보기';
+        }
+
+        // View email detail
+        async function viewDetail(id) {
+            try {
+                const response = await fetch(`/api/email/pending/${id}`);
+                const email = await response.json();
+
+                const modalBody = document.getElementById('modalBody');
+                modalBody.innerHTML = `
+                    <div class="modal-field">
+                        <label class="modal-label">보낸사람</label>
+                        <div class="modal-value">${email.fromEmail}</div>
+                    </div>
+                    <div class="modal-field">
+                        <label class="modal-label">받는사람</label>
+                        <div class="modal-value">${email.toEmail}</div>
+                    </div>
+                    <div class="modal-field">
+                        <label class="modal-label">제목</label>
+                        <div class="modal-value">${email.originalSubject}</div>
+                    </div>
+                    <div class="modal-field">
+                        <label class="modal-label">원본 내용</label>
+                        <div class="modal-textarea">${email.originalContent}</div>
+                    </div>
+                    <div class="modal-field">
+                        <label class="modal-label">생성된 답변</label>
+                        <div class="modal-textarea">${email.replyContent}</div>
+                    </div>
+                    <div class="modal-field">
+                        <label class="modal-label">상태</label>
+                        <div class="modal-value">${email.status}</div>
+                    </div>
+                    ${email.reviewedBy ? `
+                        <div class="modal-field">
+                            <label class="modal-label">검토자</label>
+                            <div class="modal-value">${email.reviewedBy}</div>
+                        </div>
+                    ` : ''}
+                    ${email.rejectionReason ? `
+                        <div class="modal-field">
+                            <label class="modal-label">거부 사유</label>
+                            <div class="modal-value">${email.rejectionReason}</div>
+                        </div>
+                    ` : ''}
+                `;
+
+                document.getElementById('detailModal').classList.add('active');
+            } catch (error) {
+                console.error('Failed to load email detail:', error);
+                alert('이메일 상세 정보를 불러오는데 실패했습니다.');
+            }
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('active');
+        }
+
+        // Approve email
+        async function approveEmail(id) {
+            if (!confirm('이 이메일을 승인하고 발송하시겠습니까?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/email/pending/${id}/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reviewedBy: 'admin' })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('이메일이 승인되고 발송되었습니다.');
+                    loadEmails(currentStatus);
+                    loadCounts();
+                } else {
+                    alert('실패: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Failed to approve email:', error);
+                alert('이메일 승인에 실패했습니다.');
+            }
+        }
+
+        // Open reject modal
+        function openRejectModal(id) {
+            currentRejectId = id;
+            document.getElementById('rejectionReason').value = '';
+            document.getElementById('rejectModal').classList.add('active');
+        }
+
+        // Close reject modal
+        function closeRejectModal() {
+            document.getElementById('rejectModal').classList.remove('active');
+            currentRejectId = null;
+        }
+
+        // Confirm reject
+        async function confirmReject() {
+            if (!currentRejectId) return;
+
+            const reason = document.getElementById('rejectionReason').value.trim();
+
+            try {
+                const response = await fetch(`/api/email/pending/${currentRejectId}/reject`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reviewedBy: 'admin',
+                        rejectionReason: reason || null
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('이메일이 거부되었습니다.');
+                    closeRejectModal();
+                    loadEmails(currentStatus);
+                    loadCounts();
+                } else {
+                    alert('실패: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Failed to reject email:', error);
+                alert('이메일 거부에 실패했습니다.');
+            }
+        }
+
+        // Filter button handlers
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                loadEmails(btn.dataset.status);
+            });
+        });
+
+        // Close modals on background click
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        });
+
+        // Initial load
+        loadCounts();
+        loadEmails('PENDING');
+
+        // Auto refresh every 30 seconds
+        setInterval(() => {
+            loadCounts();
+            loadEmails(currentStatus);
+        }, 30000);
+    </script>
+</body>
+</html>

@@ -59,3 +59,50 @@ CREATE TABLE IF NOT EXISTS prompts (
     INDEX idx_type_active (type, is_active),
     INDEX idx_type_version_active (type, version, is_active)
 );
+
+-- Users table for permission management
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    INDEX idx_user_email (email)
+);
+
+-- Document path permissions table
+CREATE TABLE IF NOT EXISTS document_path_permissions (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    document_path VARCHAR(500) NOT NULL,
+    space_key VARCHAR(50),
+    permission_level VARCHAR(20) NOT NULL DEFAULT 'READ',
+    granted_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    granted_by BIGINT,
+    INDEX idx_path_perm_user (user_id),
+    INDEX idx_path_perm_path (document_path),
+    INDEX idx_path_perm_user_path (user_id, document_path),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Pending email replies table for email review workflow
+CREATE TABLE IF NOT EXISTS pending_email_replies (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    from_email VARCHAR(255) NOT NULL,
+    to_email VARCHAR(255) NOT NULL,
+    original_subject VARCHAR(500) NOT NULL,
+    original_content TEXT,
+    reply_content TEXT NOT NULL,
+    provider_type VARCHAR(20) NOT NULL,
+    message_id VARCHAR(500),
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    reviewed_at DATETIME(6),
+    reviewed_by VARCHAR(255),
+    sent_at DATETIME(6),
+    rejection_reason TEXT,
+    INDEX idx_pending_email_status (status),
+    INDEX idx_pending_email_created (created_at),
+    INDEX idx_pending_email_from (from_email)
+);

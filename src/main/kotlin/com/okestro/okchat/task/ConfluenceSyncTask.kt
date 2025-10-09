@@ -5,6 +5,7 @@ import com.okestro.okchat.ai.support.extraction.KeywordExtractionService
 import com.okestro.okchat.confluence.model.ContentHierarchy
 import com.okestro.okchat.confluence.model.ContentNode
 import com.okestro.okchat.confluence.service.ConfluenceService
+import com.okestro.okchat.confluence.service.PdfAttachmentService
 import com.okestro.okchat.confluence.util.ContentHierarchyVisualizer
 import com.okestro.okchat.search.model.MetadataFields
 import com.okestro.okchat.search.model.metadata
@@ -42,6 +43,7 @@ import org.springframework.stereotype.Component
 )
 class ConfluenceSyncTask(
     private val confluenceService: ConfluenceService,
+    private val pdfAttachmentService: PdfAttachmentService,
     private val vectorStore: VectorStore,
     private val openSearchClient: OpenSearchClient,
     private val keywordExtractionService: KeywordExtractionService,
@@ -251,7 +253,7 @@ class ConfluenceSyncTask(
                     val baseDocument = Document(
                         node.id,
                         documentContent,
-                        baseMetadata.toFlatMap()
+                        baseMetadata.toMap()
                     )
 
                     // Split document into chunks if too large
@@ -293,14 +295,31 @@ class ConfluenceSyncTask(
                             Document(
                                 "${node.id}_chunk_$chunkIndex",
                                 chunk.text ?: "",
-                                chunk.metadata + chunkMetadata.toFlatMap()
+                                chunk.metadata + chunkMetadata.toMap()
                             )
                         }
                     }
 
+                    // Process PDF attachments for this page
+                    val pdfDocuments = try {
+                        pdfAttachmentService.processPdfAttachments(
+                            pageId = node.id,
+                            pageTitle = pageTitle,
+                            spaceKey = spaceKey,
+                            path = path
+                        )
+                    } catch (e: Exception) {
+                        log.warn { "[ConfluenceSync] Failed to process PDF attachments: page_title='$pageTitle', error=${e.message}" }
+                        emptyList()
+                    }
+
+                    if (pdfDocuments.isNotEmpty() && (pageNum % 10 == 0 || pageNum == 1 || pageNum == totalPages)) {
+                        log.info { "[ConfluenceSync][$pageNum/$totalPages] Found ${pdfDocuments.size} PDF document(s) for page: $pageTitle" }
+                    }
+
                     // Progress logged only every 10 pages above
 
-                    resultDocuments
+                    resultDocuments + pdfDocuments
                 }
             }.awaitAll().flatten()
         }

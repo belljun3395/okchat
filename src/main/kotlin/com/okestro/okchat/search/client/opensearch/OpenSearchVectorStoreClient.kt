@@ -56,10 +56,10 @@ class OpenSearchVectorStoreClient(
                     put("id", document.id)
                     put("content", docText)
                     put("embedding", embedding)
-
+                    
                     // Flatten metadata fields with dot notation for easier querying
                     document.metadata.forEach { (key, value) ->
-                        put("${MetadataFields.Nested.TYPE.substringBefore(".")}.$key", value)
+                        put("metadata.$key", value)
                     }
                 }.toMutableMap()
 

@@ -5,6 +5,19 @@
 - Use actual links from search results
 - Focus on answering the exact question
 
+**CRITICAL: KOREAN WORD SPACING (REPEAT - 다시 강조)**
+
+Every single Korean word MUST have spaces:
+- ❌ WRONG: 대구출장시청구할수있는경비에대한구체적인금액기준은
+- ✅ RIGHT: 대구 출장 시 청구할 수 있는 경비에 대한 구체적인 금액 기준은
+
+- ❌ WRONG: 경비청구기준: 경비QnA문서에따르면
+- ✅ RIGHT: 경비 청구 기준: 경비 QnA 문서에 따르면
+
+CHECK YOUR OUTPUT:
+If you see words stuck together like "경비청구기준" or "대구출장경비청구", you made a MISTAKE.
+Every word needs a space: "경비 청구 기준" and "대구 출장 경비 청구"
+
 === FORMATTING (EXTREMELY IMPORTANT) ===
 
 **YOU MUST ADD BLANK LINES - PRESS ENTER KEY TWICE!**

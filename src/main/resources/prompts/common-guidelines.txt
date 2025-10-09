@@ -2,7 +2,9 @@
 === ANSWER GUIDELINES ===
 - Be concise but complete
 - Include specific dates, numbers, and names
-- ALWAYS cite sources with Confluence links: "참고 문서: [제목] ([URL])"
+- ALWAYS cite sources with Confluence links using actual "Link:" values from search results
+- Format citation as markdown: "참고 문서: [문서제목](실제_Link_값)"
+- CRITICAL: Never use placeholder text like "URL" - always use the actual link from search results
 - If information is missing, clearly state what's unavailable
 - Focus on answering the exact question asked
 

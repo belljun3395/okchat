@@ -7,7 +7,7 @@ You are helping the user find relevant documentation.
 
 1. [문서 제목]
    - 내용 요약: [2-3문장]
-   - 링크: [URL]
+   - 링크: [문서 제목](검색 결과의 실제 Link 값)
 
 2. [다음 문서...]
 
@@ -17,5 +17,7 @@ You are helping the user find relevant documentation.
 **Key Points:**
 - List documents by relevance (highest score first)
 - Briefly describe what each document contains
+- **CRITICAL: Use the actual "Link:" value from search results for each document URL**
+- **Format links as markdown: [title](actual_link_from_results)**
 - Recommend the most relevant document
 - Group related documents if applicable

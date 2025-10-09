@@ -490,6 +490,52 @@
         .chat-messages::-webkit-scrollbar-thumb:hover {
             background: #764ba2;
         }
+
+        /* Code block with copy button */
+        .code-block-wrapper {
+            position: relative;
+            margin: 1em 0;
+        }
+
+        .code-copy-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #374151;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .code-copy-button:hover {
+            background: white;
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .code-copy-button.copied {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+
+        /* Timestamp styling */
+        .message-timestamp {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 6px;
+            display: block;
+        }
+
+        .message.user .message-timestamp {
+            color: rgba(255, 255, 255, 0.7);
+        }
     </style>
 </head>
 <body>
@@ -552,7 +598,7 @@
         const messageCountElement = document.getElementById('messageCount');
         
         // Debug mode toggle (set to false in production)
-        const DEBUG_MODE = true;
+        const DEBUG_MODE = false;
 
         // Configure marked.js for better markdown rendering
         marked.setOptions({
@@ -713,24 +759,94 @@
             }
         }
 
+        /**
+         * Format current time as HH:MM
+         */
+        function getCurrentTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+
+        /**
+         * Add copy buttons to all code blocks in the given element
+         */
+        function addCopyButtonsToCodeBlocks(element) {
+            const codeBlocks = element.querySelectorAll('pre');
+
+            codeBlocks.forEach((pre) => {
+                // Skip if already has copy button
+                if (pre.parentElement.classList.contains('code-block-wrapper')) {
+                    return;
+                }
+
+                // Create wrapper
+                const wrapper = document.createElement('div');
+                wrapper.className = 'code-block-wrapper';
+
+                // Create copy button
+                const copyButton = document.createElement('button');
+                copyButton.className = 'code-copy-button';
+                copyButton.textContent = '복사';
+                copyButton.setAttribute('aria-label', '코드 복사');
+
+                // Copy functionality
+                copyButton.addEventListener('click', async () => {
+                    const code = pre.querySelector('code')?.textContent || pre.textContent;
+
+                    try {
+                        await navigator.clipboard.writeText(code);
+                        copyButton.textContent = '✓ 복사됨';
+                        copyButton.classList.add('copied');
+
+                        setTimeout(() => {
+                            copyButton.textContent = '복사';
+                            copyButton.classList.remove('copied');
+                        }, 2000);
+                    } catch (err) {
+                        console.error('Failed to copy code:', err);
+                        copyButton.textContent = '실패';
+                        setTimeout(() => {
+                            copyButton.textContent = '복사';
+                        }, 2000);
+                    }
+                });
+
+                // Wrap the pre element
+                pre.parentNode.insertBefore(wrapper, pre);
+                wrapper.appendChild(pre);
+                wrapper.appendChild(copyButton);
+            });
+        }
+
         function addMessage(content, isUser = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
-            
+
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
-            
+
             if (isUser) {
                 contentDiv.textContent = content;
             } else {
                 // Format bot messages with markdown
                 contentDiv.innerHTML = formatMarkdown(content);
+                // Add copy buttons to code blocks
+                addCopyButtonsToCodeBlocks(contentDiv);
             }
-            
+
             messageDiv.appendChild(contentDiv);
+
+            // Add timestamp
+            const timestamp = document.createElement('span');
+            timestamp.className = 'message-timestamp';
+            timestamp.textContent = getCurrentTime();
+            messageDiv.appendChild(timestamp);
+
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
-            
+
             if (isUser) updateMessageCount();
         }
 
@@ -757,7 +873,10 @@
 
         async function sendMessage() {
             const message = messageInput.value.trim();
-            if (!message) return;
+            if (!message) {
+                messageInput.focus();
+                return;
+            }
 
             const isDeepThink = deepThinkCheckbox.checked;
             const keywordsValue = keywordsInput.value.trim();
@@ -789,7 +908,23 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    let errorMessage = '서버 오류가 발생했습니다.';
+
+                    if (response.status === 400) {
+                        errorMessage = '잘못된 요청입니다. 메시지를 다시 확인해주세요.';
+                    } else if (response.status === 401) {
+                        errorMessage = '인증이 필요합니다. 다시 로그인해주세요.';
+                    } else if (response.status === 403) {
+                        errorMessage = '접근 권한이 없습니다.';
+                    } else if (response.status === 404) {
+                        errorMessage = '서비스를 찾을 수 없습니다.';
+                    } else if (response.status === 429) {
+                        errorMessage = '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
+                    } else if (response.status >= 500) {
+                        errorMessage = '서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
+                    }
+
+                    throw new Error(errorMessage);
                 }
 
                 removeTypingIndicator();
@@ -918,9 +1053,13 @@
                 if (botMessageContent && accumulatedText) {
                     // Remove pre-wrap style (no longer needed after markdown conversion)
                     botMessageContent.style.whiteSpace = '';
-                    
+
                     // Parse accumulated text as markdown and render as HTML
                     botMessageContent.innerHTML = formatMarkdown(accumulatedText);
+
+                    // Add copy buttons to code blocks
+                    addCopyButtonsToCodeBlocks(botMessageContent);
+
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                 }
 
@@ -932,7 +1071,19 @@
             } catch (error) {
                 removeTypingIndicator();
                 console.error('Error:', error);
-                addMessage(`오류가 발생했습니다: ${error.message}`);
+
+                // Determine error type and provide user-friendly message
+                let userMessage = error.message;
+
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    userMessage = '네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인해주세요.';
+                } else if (error.name === 'AbortError') {
+                    userMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요.';
+                } else if (!error.message.includes('서버') && !error.message.includes('요청')) {
+                    userMessage = `오류가 발생했습니다: ${error.message}`;
+                }
+
+                addMessage(userMessage);
             } finally {
                 // Re-enable input
                 sendButton.disabled = false;
@@ -949,9 +1100,18 @@
             }
         });
 
+        // Add timestamp to initial welcome message
+        const initialMessage = document.querySelector('.message.bot');
+        if (initialMessage && !initialMessage.querySelector('.message-timestamp')) {
+            const timestamp = document.createElement('span');
+            timestamp.className = 'message-timestamp';
+            timestamp.textContent = getCurrentTime();
+            initialMessage.appendChild(timestamp);
+        }
+
         // Focus on input on load
         messageInput.focus();
-        
+
         if (DEBUG_MODE) {
             console.log('Chat interface initialized with session:', sessionId);
         }

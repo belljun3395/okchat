@@ -5,6 +5,18 @@ spring:
         ansi:
             enabled: ALWAYS  # Enable colored output
     
+    # SQL initialization
+    sql:
+        init:
+            mode: always
+            continue-on-error: false
+    
+    # JPA configuration
+    jpa:
+        hibernate:
+            ddl-auto: update
+        show-sql: false
+    
     # Database configuration (overridable by environment variables)
     datasource:
         url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:13306/okchat?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul}

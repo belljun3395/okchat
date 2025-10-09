@@ -15,6 +15,8 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
+import org.springframework.web.util.UriComponentsBuilder
+import java.net.URI
 import java.util.Base64
 
 private val log = KotlinLogging.logger {}
@@ -105,11 +107,15 @@ class PdfAttachmentService(
 
         // Construct full URL: wiki base URL + download link
         // baseUrl is like "https://okestro.atlassian.net/wiki/api/v2"
-        // downloadLink is like "/download/attachments/2164261392/file.pdf?..."
+        // downloadLink is like "/download/attachments/2164261392/file.pdf?..." (already URL-encoded)
         val wikiBaseUrl = confluenceProperties.baseUrl.removeSuffix("/api/v2").removeSuffix("/")
         val fullUrl = "$wikiBaseUrl$downloadLink"
 
         log.debug { "[PdfAttachment] Downloading from URL: $fullUrl" }
+
+        // Create URI directly to avoid double encoding
+        // downloadLink is already encoded by Confluence API, so we use it as-is
+        val uri = URI.create(fullUrl)
 
         // Create authorization header
         val headers = HttpHeaders()
@@ -123,9 +129,9 @@ class PdfAttachmentService(
 
         val entity = HttpEntity<String>(headers)
 
-        // Download file
+        // Download file using URI to prevent double encoding
         val response = restTemplate.exchange(
-            fullUrl,
+            uri,
             HttpMethod.GET,
             entity,
             ByteArray::class.java

@@ -41,13 +41,15 @@ dependencies {
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 
+    /** database - hybrid approach */
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa") // For domain entities (User, Prompt, Permissions)
+    implementation("org.springframework.boot:spring-boot-starter-data-jdbc") // For Spring Cloud Task tables (read-only access)
+    runtimeOnly("com.mysql:mysql-connector-j")
+
     /** spring cloud task */
     implementation("org.springframework.cloud:spring-cloud-starter-task")
-    implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.integration:spring-integration-core")
     implementation("org.springframework.integration:spring-integration-jdbc")
-    runtimeOnly("com.mysql:mysql-connector-j")
 
     /** spring ai */
     implementation("org.springframework.ai:spring-ai-advisors-vector-store")

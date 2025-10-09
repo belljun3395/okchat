@@ -1,10 +1,7 @@
 package com.okestro.okchat.permission.repository
 
 import com.okestro.okchat.permission.model.DocumentPathPermission
-import com.okestro.okchat.permission.model.PermissionLevel
 import org.springframework.data.jpa.repository.JpaRepository
-import org.springframework.data.jpa.repository.Query
-import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 
 @Repository

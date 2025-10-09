@@ -1,7 +1,6 @@
 package com.okestro.okchat.permission.controller
 
 import com.okestro.okchat.permission.model.DocumentPathPermission
-import com.okestro.okchat.permission.service.DocumentPermissionService
 import com.okestro.okchat.permission.service.PermissionService
 import com.okestro.okchat.user.model.User
 import com.okestro.okchat.user.service.UserService
@@ -28,7 +27,7 @@ private val log = KotlinLogging.logger {}
 @RequestMapping("/api/admin/permissions")
 class PermissionController(
     private val permissionService: PermissionService,
-    private val userService: UserService,
+    private val userService: UserService
 ) {
 
     /**

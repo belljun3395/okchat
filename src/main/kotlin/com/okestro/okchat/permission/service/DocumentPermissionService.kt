@@ -1,7 +1,6 @@
 package com.okestro.okchat.permission.service
 
 import com.okestro.okchat.search.model.Document
-import com.okestro.okchat.search.model.DocumentNode
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.service.DocumentSearchService
 import com.okestro.okchat.user.service.UserService

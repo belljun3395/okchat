@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OKChat - 챗봇</title>
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <!-- DOMPurify for XSS protection -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .chat-container {
+            width: 90%;
+            max-width: 1200px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-title {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .back-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .back-btn:hover { 
+            background: rgba(255, 255, 255, 0.3); 
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            background: #f5f7fa;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 14px 20px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .message.bot .message-content {
+            background: white;
+            color: #1a1a1a;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            line-height: 1.6;
+        }
+        
+        /* Headers */
+        .message.bot .message-content h1 {
+            font-size: 1.75em;
+            font-weight: 700;
+            margin: 1em 0 0.5em 0;
+            color: #1a1a1a;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 0.3em;
+        }
+        
+        .message.bot .message-content h2 {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin: 0.9em 0 0.5em 0;
+            color: #1a1a1a;
+            border-bottom: 2px solid #d1d5db;
+            padding-bottom: 0.3em;
+        }
+        
+        .message.bot .message-content h3 {
+            font-size: 1.25em;
+            font-weight: 700;
+            margin: 0.8em 0 0.5em 0;
+            color: #1a1a1a;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.3em;
+        }
+        
+        .message.bot .message-content h4 {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin: 0.7em 0 0.4em 0;
+            color: #374151;
+        }
+        
+        .message.bot .message-content h5,
+        .message.bot .message-content h6 {
+            font-size: 1em;
+            font-weight: 600;
+            margin: 0.6em 0 0.4em 0;
+            color: #4b5563;
+        }
+        
+        /* First element margin fix */
+        .message.bot .message-content > *:first-child {
+            margin-top: 0;
+        }
+        
+        .message.bot .message-content > *:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* Paragraphs */
+        .message.bot .message-content p {
+            margin: 0.8em 0;
+            line-height: 1.7;
+        }
+        
+        /* Lists */
+        .message.bot .message-content ul,
+        .message.bot .message-content ol {
+            margin: 0.8em 0;
+            padding-left: 2em;
+            line-height: 1.7;
+        }
+        
+        .message.bot .message-content ul {
+            list-style-type: disc;
+        }
+        
+        .message.bot .message-content ol {
+            list-style-type: decimal;
+        }
+        
+        .message.bot .message-content li {
+            margin: 0.4em 0;
+        }
+        
+        .message.bot .message-content li > p {
+            margin: 0.3em 0;
+        }
+        
+        .message.bot .message-content li > ul,
+        .message.bot .message-content li > ol {
+            margin: 0.4em 0;
+        }
+        
+        /* Links */
+        .message.bot .message-content a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .message.bot .message-content a:hover {
+            border-bottom-color: #667eea;
+            color: #764ba2;
+        }
+        
+        /* Text formatting */
+        .message.bot .message-content strong {
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        
+        .message.bot .message-content em {
+            font-style: italic;
+            color: #4b5563;
+        }
+        
+        .message.bot .message-content del {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+        
+        /* Code */
+        .message.bot .message-content code {
+            background: #f3f4f6;
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+        
+        .message.bot .message-content pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1em;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1em 0;
+            line-height: 1.5;
+        }
+        
+        .message.bot .message-content pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+            font-size: 0.9em;
+            border-radius: 0;
+        }
+        
+        /* Blockquote */
+        .message.bot .message-content blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 1em;
+            margin: 1em 0;
+            color: #6b7280;
+            font-style: italic;
+        }
+        
+        .message.bot .message-content blockquote > p {
+            margin: 0.5em 0;
+        }
+        
+        /* Horizontal rule */
+        .message.bot .message-content hr {
+            border: none;
+            border-top: 2px solid #e5e7eb;
+            margin: 1.5em 0;
+        }
+        
+        /* Tables (if needed) */
+        .message.bot .message-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+        
+        .message.bot .message-content table th,
+        .message.bot .message-content table td {
+            border: 1px solid #e5e7eb;
+            padding: 0.5em;
+            text-align: left;
+        }
+        
+        .message.bot .message-content table th {
+            background: #f3f4f6;
+            font-weight: 600;
+        }
+
+        .chat-input-container {
+            padding: 25px 30px;
+            background: white;
+            border-top: 2px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+
+        .options-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .checkbox-wrapper:hover {
+            background: #e5e7eb;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        .checkbox-wrapper label {
+            cursor: pointer;
+            font-size: 14px;
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .keywords-input {
+            flex: 1;
+            min-width: 250px;
+            padding: 10px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .keywords-input:focus {
+            border-color: #667eea;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 14px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-button {
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-button:active {
+            transform: translateY(0);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 12px 18px;
+            background: white;
+            border-radius: 18px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            max-width: 80px;
+        }
+
+        .typing-indicator.active {
+            display: inline-block;
+        }
+
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .session-info {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Scrollbar styling */
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="header-left">
+                <span>🤖</span>
+                <span class="header-title">OKChat</span>
+            </div>
+            <a href="/admin/permissions" class="back-btn">← Back to Admin</a>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot">
+                <div class="message-content">
+                    <p><strong>안녕하세요! 무엇을 도와드릴까요?</strong></p>
+                    <p>문서 검색, 회의록 조회 등 다양한 질문을 해주세요.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-input-container">
+            <div class="options-container">
+                <div class="checkbox-wrapper">
+                    <input type="checkbox" id="deepThinkCheckbox">
+                    <label for="deepThinkCheckbox">심층 분석</label>
+                </div>
+                <input type="text" 
+                       class="keywords-input" 
+                       id="keywordsInput" 
+                       placeholder="키워드 (쉼표로 구분, 예: 회의록, 2025년, 프로젝트)">
+            </div>
+            <div class="chat-input-wrapper">
+                <input type="text" 
+                       class="chat-input" 
+                       id="messageInput" 
+                       placeholder="메시지를 입력하세요..." 
+                       autocomplete="off">
+                <button class="send-button" id="sendButton">전송</button>
+            </div>
+            <div class="session-info">
+                <span id="sessionId">Session: Loading...</span>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span>💬</span>
+                        <span id="messageCount">0 messages</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="none">
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const deepThinkCheckbox = document.getElementById('deepThinkCheckbox');
+        const keywordsInput = document.getElementById('keywordsInput');
+        const sessionIdElement = document.getElementById('sessionId');
+        const messageCountElement = document.getElementById('messageCount');
+        
+        // Debug mode toggle (set to false in production)
+        const DEBUG_MODE = true;
+
+        // Configure marked.js for better markdown rendering
+        marked.setOptions({
+            breaks: true,        // Convert \n to <br>
+            gfm: true,          // GitHub Flavored Markdown
+            headerIds: false,   // Don't add IDs to headers
+            mangle: false,      // Don't escape autolinked email addresses
+            pedantic: false     // Don't conform to obscure parts of markdown.pl
+        });
+
+        // Generate a session ID
+        const sessionId = 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        sessionIdElement.textContent = `Session: ${sessionId}`;
+        
+        let messageCount = 0;
+
+        function updateMessageCount() {
+            messageCount++;
+            messageCountElement.textContent = `${messageCount} messages`;
+        }
+        
+        /**
+         * Normalize text by adding line breaks where markdown syntax indicates they should be.
+         * This fixes issues where AI generates markdown but without proper line breaks.
+         * 
+         * The function:
+         * 1. Checks if text is already well-formatted (has proper header spacing)
+         * 2. If not, applies normalization rules to add missing line breaks
+         * 3. Returns normalized text ready for markdown parsing
+         * 
+         * @param {string} text - Raw text that may contain markdown syntax
+         * @returns {string} - Normalized text with proper line breaks
+         */
+        function normalizeMarkdown(text) {
+            let normalized = text;
+            
+            // Check if already well-formatted (multiple line breaks exist)
+            const lineCount = (text.match(/\n/g) || []).length;
+            const doubleLineBreaks = (text.match(/\n\n/g) || []).length;
+            
+            if (DEBUG_MODE) {
+                console.log(`📊 Markdown analysis: ${text.length} chars, ${lineCount} newlines, ${doubleLineBreaks} double newlines`);
+            }
+            
+            // Check if markdown looks properly formatted
+            // Properly formatted markdown MUST have:
+            // 1. Space after # (e.g., "### 제목" not "###제목")
+            // 2. Double line breaks after headers
+            const hasProperHeaderFormat = text.match(/#{1,6}\s+[^\n]+\n\n/);  // Space after #
+            const hasProperSectionSpacing = doubleLineBreaks >= 3;
+            
+            // Only skip normalization if BOTH conditions are met
+            if (hasProperHeaderFormat && hasProperSectionSpacing) {
+                if (DEBUG_MODE) console.log('✅ Already well-formatted, skipping normalization');
+                return text;
+            }
+            
+            if (DEBUG_MODE) {
+                console.log('🔧 Normalizing markdown text without proper formatting...');
+                console.log('📥 Original text preview:', text.substring(0, 200).replace(/\n/g, '\\n'));
+            }
+            
+            // Step 1: Fix markdown headers - ensure space after # (###제목 → ### 제목)
+            // Use word boundary to prevent breaking Korean text
+            normalized = normalized.replace(/(^|\n)(#{1,6})([^\s#\n])/gm, '$1$2 $3');
+            
+            // Step 2: Ensure double newline after headers (### 제목\n → ### 제목\n\n)
+            normalized = normalized.replace(/(^|\n)(#{1,6}\s+.+?)(\n)(?!\n)/gm, '$1$2$3\n');
+            
+            // Step 3: Clean up any double spaces created
+            normalized = normalized.replace(/  +/g, ' ');
+            
+            // Step 4: Add line breaks before headers if needed
+            normalized = normalized.replace(/([^\n])\n(#{1,6}\s)/g, '$1\n\n$2');
+            
+            // Step 5: Fix "**text**:" patterns - ensure space after colon
+            normalized = normalized.replace(/(\*\*[^*]+\*\*):(?!\s)/g, '$1: ');
+            
+            // Step 6: Fix numbered lists - ensure space after number (1.항목 → 1. 항목)
+            normalized = normalized.replace(/(^|\n)(\d+\.)([^\s\n])/gm, '$1$2 $3');
+            
+            // Step 7: Fix bullet lists - ensure space after dash (-항목 → - 항목)  
+            normalized = normalized.replace(/(^|\n)([\s]*-)([^\s\n])/gm, '$1$2 $3');
+            
+            // Step 8: Remove stray code blocks at the end
+            normalized = normalized.replace(/```\s*$/g, '');
+            
+            // Step 9: Clean up excessive line breaks (more than 3 consecutive)
+            normalized = normalized.replace(/\n{4,}/g, '\n\n');
+            
+            if (DEBUG_MODE) {
+                const normalizedNewlines = (normalized.match(/\n/g) || []).length;
+                console.log('✅ Normalized result:', `${normalized.length} chars, ${normalizedNewlines} newlines`);
+                console.log('📤 Normalized preview:', normalized.substring(0, 200).replace(/\n/g, '\\n'));
+            }
+            
+            return normalized;
+        }
+
+        /**
+         * Format markdown text to HTML using marked.js with XSS protection.
+         * 
+         * Process:
+         * 1. Normalize markdown (add missing line breaks)
+         * 2. Parse markdown to HTML with marked.js
+         * 3. Sanitize HTML with DOMPurify to prevent XSS attacks
+         * 
+         * @param {string} text - Raw markdown text
+         * @returns {string} - Safe HTML string ready for innerHTML
+         */
+        function formatMarkdown(text) {
+            try {
+                // Step 1: Normalize markdown (add line breaks if needed)
+                const normalizedText = normalizeMarkdown(text);
+                
+                if (DEBUG_MODE) {
+                    console.log('🔄 Before marked.parse:', normalizedText.substring(0, 200));
+                }
+                
+                // Step 2: Parse markdown with marked.js
+                const rawHtml = marked.parse(normalizedText);
+                
+                if (DEBUG_MODE) {
+                    console.log('📄 After marked.parse:', rawHtml.substring(0, 300));
+                    console.log('📊 Detected tags:', {
+                        h1: (rawHtml.match(/<h1/g) || []).length,
+                        h2: (rawHtml.match(/<h2/g) || []).length,
+                        h3: (rawHtml.match(/<h3/g) || []).length,
+                        ul: (rawHtml.match(/<ul/g) || []).length,
+                        ol: (rawHtml.match(/<ol/g) || []).length,
+                        strong: (rawHtml.match(/<strong/g) || []).length
+                    });
+                }
+                
+                // Step 3: Sanitize HTML to prevent XSS attacks
+                const cleanHtml = DOMPurify.sanitize(rawHtml, {
+                    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'code', 'pre', 'a', 'ul', 'ol', 'li', 
+                                   'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'hr', 'del', 'table', 
+                                   'thead', 'tbody', 'tr', 'th', 'td', 'span', 'div'],
+                    ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
+                    ALLOW_DATA_ATTR: false
+                });
+                
+                if (DEBUG_MODE) {
+                    console.log('✨ After DOMPurify:', cleanHtml.substring(0, 300));
+                }
+                
+                return cleanHtml;
+            } catch (error) {
+                console.error('❌ Markdown parsing error:', error);
+                // Fallback: return safely escaped text with line breaks
+                return text.replace(/&/g, '&amp;')
+                          .replace(/</g, '&lt;')
+                          .replace(/>/g, '&gt;')
+                          .replace(/"/g, '&quot;')
+                          .replace(/'/g, '&#39;')
+                          .replace(/\n/g, '<br>');
+            }
+        }
+
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            if (isUser) {
+                contentDiv.textContent = content;
+            } else {
+                // Format bot messages with markdown
+                contentDiv.innerHTML = formatMarkdown(content);
+            }
+            
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            if (isUser) updateMessageCount();
+        }
+
+        function showTypingIndicator() {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot';
+            messageDiv.id = 'typingIndicator';
+            
+            const indicator = document.createElement('div');
+            indicator.className = 'typing-indicator active';
+            indicator.innerHTML = '<span></span><span></span><span></span>';
+            
+            messageDiv.appendChild(indicator);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            const isDeepThink = deepThinkCheckbox.checked;
+            const keywordsValue = keywordsInput.value.trim();
+            const keywords = keywordsValue ? keywordsValue.split(',').map(k => k.trim()).filter(k => k) : [];
+
+            // Add user message to chat
+            addMessage(message, true);
+            messageInput.value = '';
+            
+            // Disable input while processing
+            sendButton.disabled = true;
+            messageInput.disabled = true;
+            
+            // Show typing indicator
+            showTypingIndicator();
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        keywords: keywords.length > 0 ? keywords : null,
+                        sessionId: sessionId,
+                        isDeepThink: isDeepThink
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                removeTypingIndicator();
+
+                // Initialize SSE reader and text accumulation
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let botMessageDiv = null;
+                let botMessageContent = null;
+                let accumulatedText = ''; // Accumulate all streamed text
+                let buffer = ''; // Buffer for incomplete SSE lines
+
+                let chunkCount = 0;
+                let newlineChunks = 0;
+                
+                // Process SSE stream
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) break;
+                    
+                    // Decode the binary chunk to text
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // Split by newlines to process individual SSE messages
+                    const lines = buffer.split('\n');
+                    
+                    // Keep the last incomplete line in buffer for next iteration
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        const trimmedLine = line.trim();
+                        
+                        // Process SSE data lines (format: "data: content")
+                        if (trimmedLine.startsWith('data:') || line.startsWith('data:')) {
+                            // Extract data after 'data:' prefix
+                            // SSE standard: "data: " has space after colon, so remove it if present
+                            const dataStartIndex = line.indexOf('data:') + 5;
+                            let data = line.slice(dataStartIndex);
+                            
+                            // Remove leading space if present (SSE standard: "data: content")
+                            if (data.startsWith(' ')) {
+                                data = data.slice(1);
+                            }
+                            
+                            // IMPORTANT: If data is empty after removing space, it means this was a newline chunk
+                            // The server sends "data: \n" which becomes "data:" after split('\n')
+                            // We need to treat empty data as a newline character
+                            if (data === '' && !trimmedLine.includes('[DONE]')) {
+                                data = '\n';
+                            }
+                            
+                            // Process all chunks except [DONE] marker
+                            if (data !== '[DONE]') {
+                                chunkCount++;
+                                
+                                // Debug: Check if chunk contains newlines or is whitespace
+                                if (DEBUG_MODE) {
+                                    if (data.includes('\n') || data.match(/^\s+$/)) {
+                                        newlineChunks++;
+                                        console.log(`📦 Chunk #${chunkCount} has newlines/whitespace:`, JSON.stringify(data));
+                                    }
+                                }
+                                
+                                if (!botMessageDiv) {
+                                    // Create bot message container (first chunk)
+                                    botMessageDiv = document.createElement('div');
+                                    botMessageDiv.className = 'message bot';
+                                    botMessageContent = document.createElement('div');
+                                    botMessageContent.className = 'message-content';
+                                    // Use pre-wrap to preserve newlines during streaming
+                                    botMessageContent.style.whiteSpace = 'pre-wrap';
+                                    botMessageDiv.appendChild(botMessageContent);
+                                    chatMessages.appendChild(botMessageDiv);
+                                    updateMessageCount();
+                                }
+                                
+                                // During streaming: display as plain text to preserve all formatting
+                                // (Markdown parsing happens after streaming completes)
+                                accumulatedText += data;
+                                botMessageContent.textContent = accumulatedText;
+                                chatMessages.scrollTop = chatMessages.scrollHeight;
+                            }
+                        }
+                    }
+                }
+                
+                // Debug summary
+                if (DEBUG_MODE) {
+                    console.log(`📊 Stream complete: ${chunkCount} chunks, ${newlineChunks} had newlines`);
+                    const finalNewlines = accumulatedText.split('\n').length - 1;
+                    console.log(`📝 Final text: ${accumulatedText.length} chars, ${finalNewlines} newlines`);
+                    console.log(`📝 First 300 chars:`, accumulatedText.substring(0, 300).replace(/\n/g, '\\n'));
+                    if (finalNewlines < 3) {
+                        console.warn('⚠️ WARNING: Very few newlines in response! AI may not be following instructions.');
+                    } else if (finalNewlines >= 3 && finalNewlines < 10) {
+                        console.warn('⚠️ WARNING: Some newlines exist but may need normalization for proper markdown');
+                    }
+                }
+
+                // Process any remaining incomplete data in buffer
+                if (buffer) {
+                    const trimmedBuffer = buffer.trim();
+                    if (trimmedBuffer.startsWith('data:') || buffer.startsWith('data:')) {
+                        const dataStartIndex = buffer.indexOf('data:') + 5;
+                        let data = buffer.slice(dataStartIndex);
+                        
+                        // Remove leading space if present
+                        if (data.startsWith(' ')) {
+                            data = data.slice(1);
+                        }
+                        
+                        // Treat empty data as newline
+                        if (data === '' && !trimmedBuffer.includes('[DONE]')) {
+                            data = '\n';
+                        }
+                        
+                        if (data !== '[DONE]' && botMessageContent) {
+                            accumulatedText += data;
+                            botMessageContent.textContent = accumulatedText;
+                        }
+                    }
+                }
+
+                // After streaming completes: convert plain text to formatted markdown HTML
+                if (botMessageContent && accumulatedText) {
+                    // Remove pre-wrap style (no longer needed after markdown conversion)
+                    botMessageContent.style.whiteSpace = '';
+                    
+                    // Parse accumulated text as markdown and render as HTML
+                    botMessageContent.innerHTML = formatMarkdown(accumulatedText);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+
+                // Error handling: If no message was received at all
+                if (!botMessageDiv) {
+                    addMessage('응답을 받지 못했습니다. 다시 시도해주세요.');
+                }
+
+            } catch (error) {
+                removeTypingIndicator();
+                console.error('Error:', error);
+                addMessage(`오류가 발생했습니다: ${error.message}`);
+            } finally {
+                // Re-enable input
+                sendButton.disabled = false;
+                messageInput.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Focus on input on load
+        messageInput.focus();
+        
+        if (DEBUG_MODE) {
+            console.log('Chat interface initialized with session:', sessionId);
+        }
+    </script>
+</body>
+</html>

@@ -133,11 +133,19 @@ class ContextBuildingStep(
 
     private fun StringBuilder.appendDocumentInfo(index: Int, result: SearchResult, detailed: Boolean) {
         val pageUrl = buildConfluencePageUrl(result.spaceKey, result.id)
+        val isPdfAttachment = result.type == "confluence-pdf-attachment"
 
         append("\n")
         append("===================================\n")
-        append("Document $index: ${result.title}\n")
+        if (isPdfAttachment) {
+            append("Document $index: ${result.title} 📄 [PDF]\n")
+        } else {
+            append("Document $index: ${result.title}\n")
+        }
         append("===================================\n")
+        if (isPdfAttachment) {
+            append("   Type: PDF Attachment\n")
+        }
         append("   Link: $pageUrl\n")
         append("   Path: ${result.path}\n")
         append("   Relevance: ${"%.2f".format(result.score.value)}")

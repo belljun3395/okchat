@@ -165,30 +165,36 @@ class PdfAttachmentService(
 
                 log.info { "[PdfAttachment] Extracted ${extractedDocuments.size} page(s) from PDF: ${attachment.title}" }
 
-                // Enrich documents with Confluence metadata using DSL
-                extractedDocuments.mapIndexed { index, doc ->
-                    val pdfMetadata = metadata {
-                        this.id = attachment.id
-                        this.title = "$pageTitle - ${attachment.title} (Page ${index + 1})"
-                        this.type = "confluence-pdf-attachment"
-                        this.spaceKey = spaceKey
-                        this.path = "$path > ${attachment.title}"
-                        
-                        // Additional PDF-specific properties
-                        "pageId" to (attachment.pageId ?: "")
-                        "attachmentTitle" to attachment.title
-                        "pdfPageNumber" to (index + 1)
-                        "totalPdfPages" to extractedDocuments.size
-                        "fileSize" to (attachment.fileSize ?: 0)
-                        "mediaType" to attachment.mediaType
-                    }
+                // Merge all pages into a single document for better context
+                val fullText = extractedDocuments.mapIndexed { index, doc ->
+                    "=== Page ${index + 1} ===\n${doc.text ?: ""}"
+                }.joinToString("\n\n")
+
+                log.info { "[PdfAttachment] Merged PDF content: ${fullText.length} chars total" }
+
+                // Create single document with all PDF content
+                val pdfMetadata = metadata {
+                    this.id = attachment.id
+                    this.title = "$pageTitle - ${attachment.title}"
+                    this.type = "confluence-pdf-attachment"
+                    this.spaceKey = spaceKey
+                    this.path = "$path > ${attachment.title}"
                     
+                    // Additional PDF-specific properties
+                    "pageId" to (attachment.pageId ?: "")
+                    "attachmentTitle" to attachment.title
+                    "totalPdfPages" to extractedDocuments.size
+                    "fileSize" to (attachment.fileSize ?: 0)
+                    "mediaType" to attachment.mediaType
+                }
+                
+                listOf(
                     Document(
-                        "${attachment.id}_page_$index",
-                        doc.text ?: "",
+                        attachment.id,
+                        fullText,
                         pdfMetadata.toMap()
                     )
-                }
+                )
             } catch (e: Exception) {
                 log.error(e) { "[PdfAttachment] Failed to extract text from PDF: ${attachment.title} (id=${attachment.id}), error=${e.message}" }
                 emptyList()

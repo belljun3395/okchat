@@ -87,6 +87,13 @@ data class SearchDocument(
         return metadataId ?: metadata.id ?: id
     }
 
+    /**
+     * Get document type from either nested metadata or flattened field
+     */
+    fun getType(): String {
+        return metadataType ?: metadata.type ?: "confluence-page"
+    }
+
     companion object {
         private val objectMapper = jacksonObjectMapper()
 

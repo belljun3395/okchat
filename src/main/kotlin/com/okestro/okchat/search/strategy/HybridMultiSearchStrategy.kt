@@ -139,7 +139,7 @@ class HybridMultiSearchStrategy(
                         queryBy = fieldWeights.queryByList(),
                         weights = fieldWeights.weightsList()
                     ),
-                    filters = mapOf(MetadataFields.TYPE to "confluence-page"),
+                    filters = emptyMap(), // No type filter - search all document types (pages + PDF attachments)
                     limit = topK
                 ),
                 index = index

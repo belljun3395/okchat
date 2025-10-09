@@ -29,10 +29,11 @@ object HybridSearchUtils {
             val path = document.getPath()
             val spaceKey = document.getSpaceKey()
             val keywords = document.getKeywords()
+            val type = document.getType() // Get document type (page or PDF attachment)
 
             val combinedScore = scoresCombiner(hit.textScore, hit.vectorScore)
 
-            log.trace { "[Parse] id=$actualPageId, title=$title, textScore=${hit.textScore}, vectorScore=${hit.vectorScore}, combined=$combinedScore" }
+            log.trace { "[Parse] id=$actualPageId, title=$title, type=$type, textScore=${hit.textScore}, vectorScore=${hit.vectorScore}, combined=$combinedScore" }
 
             SearchResult.withSimilarity(
                 id = actualPageId,
@@ -41,7 +42,8 @@ object HybridSearchUtils {
                 path = path,
                 spaceKey = spaceKey,
                 keywords = keywords,
-                similarity = SearchScore.SimilarityScore(combinedScore)
+                similarity = SearchScore.SimilarityScore(combinedScore),
+                type = type
             )
         }.sortedByDescending { it.score.value }
     }

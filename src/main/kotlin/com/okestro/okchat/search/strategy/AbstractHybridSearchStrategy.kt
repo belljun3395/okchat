@@ -49,7 +49,7 @@ abstract class AbstractHybridSearchStrategy(
                 queryBy = getFieldWeights().queryByList(),
                 weights = getFieldWeights().weightsList()
             ),
-            mapOf(MetadataFields.TYPE to "confluence-page"),
+            emptyMap(), // No type filter - search all document types (pages + PDF attachments)
             topK
         )
 

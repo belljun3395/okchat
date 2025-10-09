@@ -3,13 +3,7 @@ package com.okestro.okchat.chat.controller
 
 import com.okestro.okchat.chat.service.ChatServiceRequest
 import com.okestro.okchat.chat.service.DocumentBaseChatService
-import io.github.oshai.kotlinlogging.KotlinLogging
-import jakarta.validation.Valid
-import jakarta.validation.constraints.NotBlank
-import jakarta.validation.constraints.Size
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.reactive.asFlow
 import org.springframework.http.MediaType
 import org.springframework.validation.annotation.Validated

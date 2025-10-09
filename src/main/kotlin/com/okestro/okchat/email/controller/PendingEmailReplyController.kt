@@ -7,7 +7,14 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import org.springframework.data.domain.Page
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RestController
 
 private val logger = KotlinLogging.logger {}
 
@@ -87,19 +94,23 @@ class PendingEmailReplyController(
 
         result.fold(
             onSuccess = { reply ->
-                ResponseEntity.ok(ApiResponse(
-                    success = true,
-                    message = "Email approved and sent successfully",
-                    data = reply
-                ))
+                ResponseEntity.ok(
+                    ApiResponse(
+                        success = true,
+                        message = "Email approved and sent successfully",
+                        data = reply
+                    )
+                )
             },
             onFailure = { error ->
                 logger.error(error) { "Failed to approve and send email: id=$id" }
-                ResponseEntity.badRequest().body(ApiResponse(
-                    success = false,
-                    message = error.message ?: "Failed to approve and send email",
-                    data = null
-                ))
+                ResponseEntity.badRequest().body(
+                    ApiResponse(
+                        success = false,
+                        message = error.message ?: "Failed to approve and send email",
+                        data = null
+                    )
+                )
             }
         )
     }
@@ -121,19 +132,23 @@ class PendingEmailReplyController(
 
         result.fold(
             onSuccess = { reply ->
-                ResponseEntity.ok(ApiResponse(
-                    success = true,
-                    message = "Email rejected successfully",
-                    data = reply
-                ))
+                ResponseEntity.ok(
+                    ApiResponse(
+                        success = true,
+                        message = "Email rejected successfully",
+                        data = reply
+                    )
+                )
             },
             onFailure = { error ->
                 logger.error(error) { "Failed to reject email: id=$id" }
-                ResponseEntity.badRequest().body(ApiResponse(
-                    success = false,
-                    message = error.message ?: "Failed to reject email",
-                    data = null
-                ))
+                ResponseEntity.badRequest().body(
+                    ApiResponse(
+                        success = false,
+                        message = error.message ?: "Failed to reject email",
+                        data = null
+                    )
+                )
             }
         )
     }
@@ -146,18 +161,22 @@ class PendingEmailReplyController(
         logger.info { "Deleting pending email reply: id=$id" }
         try {
             pendingEmailReplyService.delete(id)
-            return ResponseEntity.ok(ApiResponse(
-                success = true,
-                message = "Email reply deleted successfully",
-                data = null
-            ))
+            return ResponseEntity.ok(
+                ApiResponse(
+                    success = true,
+                    message = "Email reply deleted successfully",
+                    data = null
+                )
+            )
         } catch (e: Exception) {
             logger.error(e) { "Failed to delete email reply: id=$id" }
-            return ResponseEntity.badRequest().body(ApiResponse(
-                success = false,
-                message = e.message ?: "Failed to delete email reply",
-                data = null
-            ))
+            return ResponseEntity.badRequest().body(
+                ApiResponse(
+                    success = false,
+                    message = e.message ?: "Failed to delete email reply",
+                    data = null
+                )
+            )
         }
     }
 }

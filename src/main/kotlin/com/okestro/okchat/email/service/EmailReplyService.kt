@@ -99,7 +99,7 @@ class EmailReplyService(
      * Create SMTP session with OAuth2 authentication
      */
     private fun createSmtpSession(
-        config: EmailProperties.EmailProviderConfig,
+        config: EmailProperties.EmailProviderConfig
     ): Session {
         val props = Properties().apply {
             // SMTP configuration

@@ -65,3 +65,19 @@ data class FolderResponse(
     val version: Version? = null,
     val _links: Links? = null
 )
+
+data class AttachmentListResponse(
+    val results: List<Attachment>,
+    val _links: Links? = null
+)
+
+data class Attachment(
+    val id: String,
+    val title: String,
+    val mediaType: String,
+    val fileSize: Long? = null,
+    val fileId: String? = null,
+    val pageId: String? = null,
+    val version: Version? = null,
+    val _links: Links? = null
+)

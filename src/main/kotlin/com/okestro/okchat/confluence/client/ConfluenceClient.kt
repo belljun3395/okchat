@@ -82,4 +82,30 @@ interface ConfluenceClient {
         @Param("cursor") cursor: String? = null,
         @Param("limit") limit: Int = 100
     ): PageListResponse
+
+    /**
+     * Get attachments for a page
+     *
+     * @param pageId The page ID
+     * @param cursor Pagination cursor
+     * @param limit Maximum number of results (default: 100)
+     * @return List of attachments
+     * @see <a href="https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-attachment/#api-pages-id-attachments-get">Confluence REST API - Get attachments</a>
+     */
+    @RequestLine("GET /pages/{pageId}/attachments?limit={limit}&cursor={cursor}")
+    fun getPageAttachments(
+        @Param("pageId") pageId: String,
+        @Param("cursor") cursor: String? = null,
+        @Param("limit") limit: Int = 100
+    ): AttachmentListResponse
+
+    /**
+     * Download attachment
+     *
+     * @param attachmentId The attachment ID
+     * @return Attachment binary data as byte array
+     * @see <a href="https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-attachment/#api-attachments-id-download-get">Confluence REST API - Download attachment</a>
+     */
+    @RequestLine("GET /attachments/{attachmentId}/download")
+    fun downloadAttachment(@Param("attachmentId") attachmentId: String): ByteArray
 }

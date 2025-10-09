@@ -1,5 +1,6 @@
 package com.okestro.okchat.search.config
 
+import com.okestro.okchat.search.model.MetadataFields
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "search.hybrid")
@@ -30,19 +31,19 @@ data class SearchWeightConfig(
 @ConfigurationProperties(prefix = "search.fields")
 data class SearchFieldWeightConfig(
     var keyword: FieldWeights = FieldWeights(
-        queryBy = "metadata.keywords,metadata.title,content",
+        queryBy = "${MetadataFields.KEYWORDS},${MetadataFields.TITLE},content",
         weights = "10,5,1"
     ),
     var title: FieldWeights = FieldWeights(
-        queryBy = "metadata.title,content,metadata.keywords",
+        queryBy = "${MetadataFields.TITLE},content,${MetadataFields.KEYWORDS}",
         weights = "10,3,1"
     ),
     var content: FieldWeights = FieldWeights(
-        queryBy = "content,metadata.title,metadata.keywords",
+        queryBy = "content,${MetadataFields.TITLE},${MetadataFields.KEYWORDS}",
         weights = "10,5,3"
     ),
     var path: FieldWeights = FieldWeights(
-        queryBy = "metadata.path",
+        queryBy = MetadataFields.PATH,
         weights = "10"
     )
 ) {

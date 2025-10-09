@@ -2,6 +2,7 @@ package com.okestro.okchat.search.service
 
 import com.okestro.okchat.search.model.Document
 import com.okestro.okchat.search.model.DocumentNode
+import com.okestro.okchat.search.model.MetadataFields
 import com.okestro.okchat.search.model.MultiSearchResult
 import com.okestro.okchat.search.model.SearchContents
 import com.okestro.okchat.search.model.SearchKeywords
@@ -99,7 +100,7 @@ class DocumentSearchService(
                                 b.should { sh ->
                                     // Exact match
                                     sh.term { t ->
-                                        t.field("metadata.path")
+                                        t.field(MetadataFields.PATH)
                                             .value(FieldValue.of(documentPath))
                                     }
                                 }
@@ -110,9 +111,9 @@ class DocumentSearchService(
                                 f.includes(
                                     listOf(
                                         "id",
-                                        "metadata.id",
-                                        "metadata.title",
-                                        "metadata.path"
+                                        MetadataFields.ID,
+                                        MetadataFields.TITLE,
+                                        MetadataFields.PATH
                                     )
                                 )
                             }
@@ -126,14 +127,14 @@ class DocumentSearchService(
                     val source = hit.source()
                     if (source != null) {
                         // Get Confluence ID from metadata.id field
-                        val confluenceId = source["metadata.id"]?.toString()
+                        val confluenceId = source[MetadataFields.ID]?.toString()
 
                         if (confluenceId != null) {
                             val baseId = confluenceId.extractChunk()
 
                             if (!documents.containsKey(baseId)) {
-                                val title = source["metadata.title"]?.toString() ?: "Untitled"
-                                val path = source["metadata.path"]?.toString() ?: ""
+                                val title = source[MetadataFields.TITLE]?.toString() ?: "Untitled"
+                                val path = source[MetadataFields.PATH]?.toString() ?: ""
 
                                 documents[baseId] = Document(
                                     id = baseId,
@@ -172,7 +173,11 @@ class DocumentSearchService(
                     s.index(indexName)
                         .from(from)
                         .size(size)
-                        .source { src -> src.filter { f -> f.includes(listOf("metadata.path")) } }
+                        .source { src ->
+                            src.filter { f ->
+                                f.includes(listOf(MetadataFields.PATH))
+                            }
+                        }
                 }, Map::class.java)
 
                 val hits = searchResponse.hits().hits()
@@ -181,7 +186,7 @@ class DocumentSearchService(
                 // Extract paths
                 hits.forEach { hit ->
                     val source = hit.source()
-                    val path = source?.get("metadata.path")?.toString()
+                    val path = source?.get(MetadataFields.PATH)?.toString()
                     path?.let {
                         if (it.isNotBlank()) paths.add(it)
                     }

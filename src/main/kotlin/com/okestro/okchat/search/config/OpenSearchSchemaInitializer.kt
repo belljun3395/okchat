@@ -1,5 +1,6 @@
 package com.okestro.okchat.search.config
 
+import com.okestro.okchat.search.model.MetadataFields
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.opensearch.client.opensearch._types.mapping.Property
@@ -116,19 +117,19 @@ class OpenSearchSchemaInitializer(
             },
 
             // Metadata fields (using dot notation for nested fields)
-            "metadata.title" to Property.of { p ->
+            MetadataFields.TITLE to Property.of { p ->
                 p.text { text -> text } // Use default standard analyzer
             },
-            "metadata.keywords" to Property.of { p ->
+            MetadataFields.KEYWORDS to Property.of { p ->
                 p.text { text -> text } // Use default standard analyzer
             },
-            "metadata.type" to Property.of { p ->
+            MetadataFields.TYPE to Property.of { p ->
                 p.keyword { k -> k }
             },
-            "metadata.spaceKey" to Property.of { p ->
+            MetadataFields.SPACE_KEY to Property.of { p ->
                 p.keyword { k -> k }
             },
-            "metadata.path" to Property.of { p ->
+            MetadataFields.PATH to Property.of { p ->
                 p.text { text -> text.analyzer("keyword") }
             }
         )

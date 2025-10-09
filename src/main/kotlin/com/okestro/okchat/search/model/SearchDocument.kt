@@ -23,22 +23,22 @@ data class SearchDocument(
     val metadata: DocumentMetadata = DocumentMetadata(),
 
     // Flattened metadata fields (for backward compatibility with flat structure)
-    @JsonProperty("metadata.title")
+    @JsonProperty(MetadataFields.TITLE)
     val metadataTitle: String? = null,
 
-    @JsonProperty("metadata.path")
+    @JsonProperty(MetadataFields.PATH)
     val metadataPath: String? = null,
 
-    @JsonProperty("metadata.spaceKey")
+    @JsonProperty(MetadataFields.SPACE_KEY)
     val metadataSpaceKey: String? = null,
 
-    @JsonProperty("metadata.keywords")
+    @JsonProperty(MetadataFields.KEYWORDS)
     val metadataKeywords: String? = null,
 
-    @JsonProperty("metadata.id")
+    @JsonProperty(MetadataFields.ID)
     val metadataId: String? = null,
 
-    @JsonProperty("metadata.type")
+    @JsonProperty(MetadataFields.TYPE)
     val metadataType: String? = null
 ) {
     /**
@@ -134,12 +134,12 @@ data class SearchDocument(
                         @Suppress("UNCHECKED_CAST")
                         DocumentMetadata.fromMap(metaMap as Map<String, Any?>)
                     } ?: DocumentMetadata(),
-                    metadataTitle = map["metadata.title"]?.toString(),
-                    metadataPath = map["metadata.path"]?.toString(),
-                    metadataSpaceKey = map["metadata.spaceKey"]?.toString(),
-                    metadataKeywords = map["metadata.keywords"]?.toString(),
-                    metadataId = map["metadata.id"]?.toString(),
-                    metadataType = map["metadata.type"]?.toString()
+                    metadataTitle = map[MetadataFields.TITLE]?.toString(),
+                    metadataPath = map[MetadataFields.PATH]?.toString(),
+                    metadataSpaceKey = map[MetadataFields.SPACE_KEY]?.toString(),
+                    metadataKeywords = map[MetadataFields.KEYWORDS]?.toString(),
+                    metadataId = map[MetadataFields.ID]?.toString(),
+                    metadataType = map[MetadataFields.TYPE]?.toString()
                 )
             }
         }

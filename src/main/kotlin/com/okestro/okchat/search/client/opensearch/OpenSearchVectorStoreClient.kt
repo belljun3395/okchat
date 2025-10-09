@@ -1,5 +1,6 @@
 package com.okestro.okchat.search.client.opensearch
 
+import com.okestro.okchat.search.model.MetadataFields
 import com.okestro.okchat.search.model.SearchDocument
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
@@ -51,16 +52,16 @@ class OpenSearchVectorStoreClient(
                 }
 
                 // Create document with embedding (flatten metadata for better search)
-                val docMap = mutableMapOf(
-                    "id" to document.id,
-                    "content" to docText,
-                    "embedding" to embedding
-                )
+                val docMap = buildMap<String, Any> {
+                    put("id", document.id)
+                    put("content", docText)
+                    put("embedding", embedding)
 
-                // Flatten metadata fields with dot notation for easier querying
-                document.metadata.forEach { (key, value) ->
-                    docMap["metadata.$key"] = value
-                }
+                    // Flatten metadata fields with dot notation for easier querying
+                    document.metadata.forEach { (key, value) ->
+                        put("${MetadataFields.Nested.TYPE.substringBefore(".")}.$key", value)
+                    }
+                }.toMutableMap()
 
                 // Index document
                 client.index { idx ->

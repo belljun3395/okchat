@@ -25,29 +25,74 @@ data class DocumentMetadata(
     val id: String? = null,
 
     @JsonProperty("type")
-    val type: String? = null
+    val type: String? = null,
+
+    // Additional dynamic properties
+    val additionalProperties: Map<String, Any?> = emptyMap()
 ) {
-    companion object {
-        fun fromMap(map: Map<String, Any?>): DocumentMetadata {
-            return DocumentMetadata(
-                title = map["title"]?.toString(),
-                path = map["path"]?.toString(),
-                spaceKey = map["spaceKey"]?.toString(),
-                keywords = map["keywords"]?.toString(),
-                id = map["id"]?.toString(),
-                type = map["type"]?.toString()
-            )
+    /**
+     * Convert to nested map (without metadata prefix)
+     */
+    fun toMap(): Map<String, Any?> {
+        return buildMap {
+            title?.let { put(MetadataFields.Nested.TITLE, it) }
+            path?.let { put(MetadataFields.Nested.PATH, it) }
+            spaceKey?.let { put(MetadataFields.Nested.SPACE_KEY, it) }
+            keywords?.let { put(MetadataFields.Nested.KEYWORDS, it) }
+            id?.let { put(MetadataFields.Nested.ID, it) }
+            type?.let { put(MetadataFields.Nested.TYPE, it) }
+            putAll(additionalProperties)
         }
     }
 
-    fun toMap(): Map<String, Any?> {
-        return mapOf(
-            "title" to title,
-            "path" to path,
-            "spaceKey" to spaceKey,
-            "keywords" to keywords,
-            "id" to id,
-            "type" to type
-        ).filterValues { it != null }
+    /**
+     * Convert to flat map (with metadata. prefix for OpenSearch)
+     */
+    fun toFlatMap(): Map<String, Any?> {
+        return buildMap {
+            title?.let { put(MetadataFields.TITLE, it) }
+            path?.let { put(MetadataFields.PATH, it) }
+            spaceKey?.let { put(MetadataFields.SPACE_KEY, it) }
+            keywords?.let { put(MetadataFields.KEYWORDS, it) }
+            id?.let { put(MetadataFields.ID, it) }
+            type?.let { put(MetadataFields.TYPE, it) }
+            additionalProperties.forEach { (key, value) ->
+                put("metadata.$key", value)
+            }
+        }
+    }
+
+    companion object {
+        /**
+         * Create from nested map (without metadata prefix)
+         */
+        fun fromMap(map: Map<String, Any?>): DocumentMetadata {
+            return DocumentMetadata(
+                title = map[MetadataFields.Nested.TITLE]?.toString(),
+                path = map[MetadataFields.Nested.PATH]?.toString(),
+                spaceKey = map[MetadataFields.Nested.SPACE_KEY]?.toString(),
+                keywords = map[MetadataFields.Nested.KEYWORDS]?.toString(),
+                id = map[MetadataFields.Nested.ID]?.toString(),
+                type = map[MetadataFields.Nested.TYPE]?.toString(),
+                additionalProperties = map.filterKeys { it !in MetadataFields.ALL_NESTED }
+            )
+        }
+
+        /**
+         * Create from flat map (with metadata. prefix)
+         */
+        fun fromFlatMap(map: Map<String, Any?>): DocumentMetadata {
+            return DocumentMetadata(
+                title = map[MetadataFields.TITLE]?.toString(),
+                path = map[MetadataFields.PATH]?.toString(),
+                spaceKey = map[MetadataFields.SPACE_KEY]?.toString(),
+                keywords = map[MetadataFields.KEYWORDS]?.toString(),
+                id = map[MetadataFields.ID]?.toString(),
+                type = map[MetadataFields.TYPE]?.toString(),
+                additionalProperties = map
+                    .filterKeys { it.startsWith("metadata.") && it !in MetadataFields.ALL_FLAT }
+                    .mapKeys { it.key.removePrefix("metadata.") }
+            )
+        }
     }
 }

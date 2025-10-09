@@ -6,6 +6,8 @@ import com.okestro.okchat.confluence.model.ContentHierarchy
 import com.okestro.okchat.confluence.model.ContentNode
 import com.okestro.okchat.confluence.service.ConfluenceService
 import com.okestro.okchat.confluence.util.ContentHierarchyVisualizer
+import com.okestro.okchat.search.model.MetadataFields
+import com.okestro.okchat.search.model.metadata
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -233,18 +235,23 @@ class ConfluenceSyncTask(
                     // Create initial document with metadata including ALL keywords (content + path)
                     // For empty content, store at least the title and metadata
                     val documentContent = pageContent.ifBlank { pageTitle }
+                    val currentSpaceKey = spaceKey
+                    val currentPath = path
+
+                    val baseMetadata = metadata {
+                        this.id = node.id
+                        this.title = pageTitle
+                        this.type = "confluence-page"
+                        this.spaceKey = currentSpaceKey
+                        this.path = currentPath
+                        this.keywords = allKeywords
+                        "isEmpty" to pageContent.isBlank()
+                    }
+
                     val baseDocument = Document(
                         node.id,
                         documentContent,
-                        mapOf(
-                            "id" to node.id,
-                            "title" to pageTitle,
-                            "type" to "confluence-page",
-                            "spaceKey" to spaceKey,
-                            "path" to path,
-                            "keywords" to allKeywords.joinToString(", "),
-                            "isEmpty" to pageContent.isBlank()
-                        )
+                        baseMetadata.toFlatMap()
                     )
 
                     // Split document into chunks if too large
@@ -276,15 +283,17 @@ class ConfluenceSyncTask(
                             log.info { "[ConfluenceSync] Split into ${chunks.size} chunks: page_id=${node.id}" }
                         }
                         chunks.mapIndexed { chunkIndex, chunk ->
+                            val chunkMetadata = metadata {
+                                this.id = node.id
+                                this.keywords = allKeywords
+                                "chunkIndex" to chunkIndex
+                                "totalChunks" to chunks.size
+                            }
+
                             Document(
                                 "${node.id}_chunk_$chunkIndex",
                                 chunk.text ?: "",
-                                chunk.metadata + mapOf(
-                                    "id" to node.id,
-                                    "chunkIndex" to chunkIndex,
-                                    "totalChunks" to chunks.size,
-                                    "keywords" to allKeywords.joinToString(", ")
-                                )
+                                chunk.metadata + chunkMetadata.toFlatMap()
                             )
                         }
                     }
@@ -338,11 +347,11 @@ class ConfluenceSyncTask(
                         .query { q ->
                             q.term { t ->
                                 // Use flat field name (metadata is flattened with dot notation)
-                                t.field("metadata.spaceKey")
+                                t.field(MetadataFields.SPACE_KEY)
                                     .value(org.opensearch.client.opensearch._types.FieldValue.of(spaceKey))
                             }
                         }
-                        .source { src -> src.filter { f -> f.includes(listOf("id", "metadata.id")) } }
+                        .source { src -> src.filter { f -> f.includes(listOf("id", MetadataFields.ID)) } }
                 }, Map::class.java)
 
                 val hits = searchResponse.hits().hits()
@@ -353,7 +362,7 @@ class ConfluenceSyncTask(
                     val source = hit.source()
                     // 우선순위: metadata.id (실제 Confluence 페이지 ID) > id (청크 ID) > _id
                     val id = when {
-                        source?.containsKey("metadata.id") == true -> source["metadata.id"]?.toString()
+                        source?.containsKey(MetadataFields.ID) == true -> source[MetadataFields.ID]?.toString()
                         source?.containsKey("id") == true -> {
                             // id 필드에서 청크 suffix 제거 (예: "123_chunk_0" -> "123")
                             val rawId = source["id"]?.toString()

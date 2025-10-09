@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.SearchDocumentsInput
 import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.ai.tools.ToolExecutor
+import com.okestro.okchat.search.model.MetadataFields
 import com.okestro.okchat.search.model.SearchDocument
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
@@ -83,12 +84,12 @@ class SearchDocumentsTool(
                                 b.must { m ->
                                     m.multiMatch { mm ->
                                         mm.query(query)
-                                            .fields(listOf("content", "metadata.title"))
+                                            .fields(listOf("content", MetadataFields.TITLE))
                                     }
                                 }
                                     .filter { f ->
                                         f.term { t ->
-                                            t.field("metadata.spaceKey")
+                                            t.field(MetadataFields.SPACE_KEY)
                                                 .value(FieldValue.of(filterBySpace))
                                         }
                                     }
@@ -97,7 +98,7 @@ class SearchDocumentsTool(
                             // No filter
                             q.multiMatch { mm ->
                                 mm.query(query)
-                                    .fields(listOf("content", "metadata.title"))
+                                    .fields(listOf("content", MetadataFields.TITLE))
                             }
                         }
                     }

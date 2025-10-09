@@ -5,6 +5,7 @@ import com.okestro.okchat.search.client.HybridSearchResponse
 import com.okestro.okchat.search.client.SearchClient
 import com.okestro.okchat.search.client.SearchFields
 import com.okestro.okchat.search.config.SearchFieldWeightConfig
+import com.okestro.okchat.search.model.MetadataFields
 import com.okestro.okchat.search.model.MultiSearchResult
 import com.okestro.okchat.search.model.SearchCriteria
 import com.okestro.okchat.search.model.SearchResult
@@ -138,7 +139,7 @@ class HybridMultiSearchStrategy(
                         queryBy = fieldWeights.queryByList(),
                         weights = fieldWeights.weightsList()
                     ),
-                    filters = mapOf("metadata.type" to "confluence-page"),
+                    filters = mapOf(MetadataFields.TYPE to "confluence-page"),
                     limit = topK
                 ),
                 index = index

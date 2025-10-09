@@ -12,6 +12,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.web.reactive.function.client.WebClient
 import java.util.Base64
 
 @Configuration
@@ -52,5 +53,20 @@ class ConfluenceConfig {
             .logLevel(Logger.Level.FULL)
             .requestInterceptor(authInterceptor)
             .target(ConfluenceClient::class.java, properties.baseUrl)
+    }
+
+    @Bean(name = ["confluenceWebClient"])
+    fun webClient(properties: ConfluenceProperties): WebClient {
+        return WebClient.builder()
+            .defaultHeaders { headers ->
+                val email = properties.auth.email
+                val apiToken = properties.auth.apiToken
+                if (email != null && apiToken != null) {
+                    val credentials = "$email:$apiToken"
+                    val encodedCredentials = Base64.getEncoder().encodeToString(credentials.toByteArray())
+                    headers.set("Authorization", "Basic $encodedCredentials")
+                }
+            }
+            .build()
     }
 }

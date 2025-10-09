@@ -9,15 +9,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.springframework.ai.document.Document
 import org.springframework.ai.reader.pdf.PagePdfDocumentReader
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.io.ByteArrayResource
-import org.springframework.http.HttpEntity
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpMethod
 import org.springframework.stereotype.Service
-import org.springframework.web.client.RestTemplate
-import org.springframework.web.util.UriComponentsBuilder
+import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.awaitBody
 import java.net.URI
-import java.util.Base64
 
 private val log = KotlinLogging.logger {}
 
@@ -29,7 +26,8 @@ private val log = KotlinLogging.logger {}
 class PdfAttachmentService(
     private val confluenceClient: ConfluenceClient,
     private val confluenceProperties: ConfluenceProperties,
-    private val restTemplate: RestTemplate = RestTemplate()
+    @Qualifier("confluenceWebClient")
+    private val webClient: WebClient
 ) {
     /**
      * Get all PDF attachments for a page and extract their text content
@@ -100,7 +98,7 @@ class PdfAttachmentService(
     /**
      * Download attachment file using downloadLink from API response
      */
-    private fun downloadAttachmentFile(attachment: Attachment): ByteArray {
+    private suspend fun downloadAttachmentFile(attachment: Attachment): ByteArray {
         // Use downloadLink from API response
         val downloadLink = attachment.downloadLink ?: attachment._links?.download
             ?: throw IllegalStateException("No download link available for attachment: ${attachment.id}")
@@ -117,27 +115,11 @@ class PdfAttachmentService(
         // downloadLink is already encoded by Confluence API, so we use it as-is
         val uri = URI.create(fullUrl)
 
-        // Create authorization header
-        val headers = HttpHeaders()
-        val email = confluenceProperties.auth.email
-        val apiToken = confluenceProperties.auth.apiToken
-        if (email != null && apiToken != null) {
-            val credentials = "$email:$apiToken"
-            val encodedCredentials = Base64.getEncoder().encodeToString(credentials.toByteArray())
-            headers.set("Authorization", "Basic $encodedCredentials")
-        }
-
-        val entity = HttpEntity<String>(headers)
-
-        // Download file using URI to prevent double encoding
-        val response = restTemplate.exchange(
-            uri,
-            HttpMethod.GET,
-            entity,
-            ByteArray::class.java
-        )
-
-        return response.body ?: throw IllegalStateException("Empty response body for attachment: ${attachment.id}")
+        // Download file using WebClient (auth headers already configured in bean)
+        return webClient.get()
+            .uri(uri)
+            .retrieve()
+            .awaitBody<ByteArray>()
     }
 
     /**
@@ -175,7 +157,7 @@ class PdfAttachmentService(
                 // Create single document with all PDF content
                 val pdfMetadata = metadata {
                     this.id = attachment.id
-                    this.title = "$pageTitle - ${attachment.title}"
+                    this.title = "$pageTitle-${attachment.title}"
                     this.type = "confluence-pdf-attachment"
                     this.spaceKey = spaceKey
                     this.path = "$path > ${attachment.title}"

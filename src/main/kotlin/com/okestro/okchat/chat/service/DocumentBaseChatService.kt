@@ -6,7 +6,6 @@ import com.okestro.okchat.chat.pipeline.DocumentChatPipeline
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.prompt.Prompt
@@ -112,7 +111,6 @@ class DocumentBaseChatService(
                 log.info { "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
             }
     }
-    
 
     /**
      * Generate session ID if not provided

@@ -10,6 +10,8 @@ import com.okestro.okchat.search.model.SearchTitles
 import com.okestro.okchat.search.strategy.MultiSearchStrategy
 import com.okestro.okchat.search.util.extractChunk
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.opensearch.client.opensearch._types.FieldValue
 import org.springframework.beans.factory.annotation.Value
@@ -80,7 +82,7 @@ class DocumentSearchService(
      * @param documentPath The path to search for (e.g., "팀회의 > 2025")
      * @return List of document IDs that match or are under the specified path
      */
-    fun searchAllByPath(documentPath: String): List<Document> {
+    suspend fun searchAllByPath(documentPath: String): List<Document> = withContext(Dispatchers.IO) {
         val documents = mutableMapOf<String, Document>() // Use map to handle chunks and keep unique docs
 
         try {
@@ -152,7 +154,7 @@ class DocumentSearchService(
             log.error(e) { "Failed to fetch documents by path: $documentPath, error=${e.message}" }
         }
 
-        return documents.values.toList().sortedBy { it.title }
+        documents.values.toList().sortedBy { it.title }
     }
 
     /**

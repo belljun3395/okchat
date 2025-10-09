@@ -56,7 +56,7 @@ class DocumentPermissionService(
         return documentSearchService.searchAllPaths()
     }
 
-    fun searchAllByPath(documentPath: String): List<Document> {
+    suspend fun searchAllByPath(documentPath: String): List<Document> {
         return documentSearchService.searchAllByPath(documentPath)
     }
 }

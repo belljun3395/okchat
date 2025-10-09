@@ -6,9 +6,10 @@ import com.okestro.okchat.chat.service.DocumentBaseChatService
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.reactive.asFlow
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import reactor.core.publisher.Flux
 
 @RestController
 @RequestMapping("/api/chat")
@@ -17,7 +18,7 @@ class ChatController(
 ) {
 
     @PostMapping(produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
-    suspend fun chat(@RequestBody chatRequest: ChatRequest): Flux<String> {
+    suspend fun chat(@RequestBody chatRequest: ChatRequest): Flow<String> {
         return documentBaseChatService.chat(
             ChatServiceRequest(
                 message = chatRequest.message,
@@ -25,7 +26,7 @@ class ChatController(
                 keywords = chatRequest.keywords ?: emptyList(),
                 sessionId = chatRequest.sessionId
             )
-        )
+        ).asFlow()
     }
 }
 

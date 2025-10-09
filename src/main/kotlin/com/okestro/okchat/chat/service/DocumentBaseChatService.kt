@@ -6,6 +6,7 @@ import com.okestro.okchat.chat.pipeline.DocumentChatPipeline
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.prompt.Prompt
@@ -101,7 +102,7 @@ class DocumentBaseChatService(
                 if (newlineCount < 5) {
                     log.warn { "⚠️ WARNING: Response has few newlines ($newlineCount). Post-processing was applied." }
                 }
-                
+
                 CoroutineScope(Dispatchers.IO).launch {
                     saveConversationHistory(responseBuffer, actualSessionId, message, conversationHistory)
                 }

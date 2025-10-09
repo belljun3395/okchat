@@ -49,7 +49,7 @@ class ConfluenceSyncTask(
 
     private val log = KotlinLogging.logger {}
 
-    override fun run(vararg args: String?) {
+    override fun run(vararg args: String?) = runBlocking {
         log.info { "[ConfluenceSync] Starting Confluence sync task" }
 
         try {
@@ -63,14 +63,10 @@ class ConfluenceSyncTask(
 
             // 1. Fetch Confluence content hierarchy
             log.info { "1. Fetching Confluence content..." }
-            val spaceId = runBlocking(Dispatchers.IO) {
-                confluenceService.getSpaceIdByKey(spaceKey)
-            }
+            val spaceId = confluenceService.getSpaceIdByKey(spaceKey)
 
-            val hierarchy = runBlocking {
-                confluenceService.getSpaceContentHierarchy(spaceId).apply {
-                    log.info { "Content Hierarchy:\n${ContentHierarchyVisualizer.visualize(this)}" }
-                }
+            val hierarchy = confluenceService.getSpaceContentHierarchy(spaceId).apply {
+                log.info { "Content Hierarchy:\n${ContentHierarchyVisualizer.visualize(this)}" }
             }
 
             log.info { "[ConfluenceSync] Retrieved contents: total=${hierarchy.getTotalCount()}, folders=${hierarchy.getAllFolders().size}, pages=${hierarchy.getAllPages().size}" }
@@ -87,9 +83,7 @@ class ConfluenceSyncTask(
 
             // 3. Convert to vector store documents (parallel processing)
             log.info { "3. Converting to vector store documents (parallel processing)..." }
-            val documents = runBlocking {
-                convertToDocuments(hierarchy, spaceKey)
-            }
+            val documents = convertToDocuments(hierarchy, spaceKey)
             val currentIds = documents.map { it.id }.toSet()
             log.info { "[ConfluenceSync] Converted documents: count=${documents.size}" }
 
@@ -221,7 +215,7 @@ class ConfluenceSyncTask(
                         apiCallSemaphore.withPermit {
                             try {
                                 keywordExtractionService.extractKeywordsFromContentAndTitle(pageContent, pageTitle)
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 log.warn { "[ConfluenceSync] Keyword extraction failed: page_title='$pageTitle'" }
                                 emptyList()
                             }

@@ -10,6 +10,7 @@ import jakarta.mail.Session
 import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MimeMessage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import java.util.*
@@ -45,11 +46,11 @@ class EmailReplyService(
                 ?: throw IllegalStateException("Provider configuration not found for $providerType")
 
             // Get OAuth2 access token
-            val accessToken = oauth2TokenService.getAccessToken(providerConfig.username).block()
+            val accessToken = oauth2TokenService.getAccessToken(providerConfig.username).awaitSingle()
                 ?: throw IllegalStateException("OAuth2 token not available for ${providerConfig.username}")
 
             // Create SMTP session
-            val session = createSmtpSession(providerConfig, accessToken)
+            val session = createSmtpSession(providerConfig)
 
             // Create reply message
             val replyMessage = MimeMessage(session)
@@ -99,7 +100,6 @@ class EmailReplyService(
      */
     private fun createSmtpSession(
         config: EmailProperties.EmailProviderConfig,
-        accessToken: String
     ): Session {
         val props = Properties().apply {
             // SMTP configuration

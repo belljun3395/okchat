@@ -4,6 +4,7 @@ import com.okestro.okchat.permission.service.DocumentPermissionService
 import com.okestro.okchat.permission.service.PermissionService
 import com.okestro.okchat.user.service.UserService
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.runBlocking
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
@@ -89,7 +90,7 @@ class PermissionAdminWebController(
     fun pathDetail(@PathVariable("path") path: String, model: Model): String {
         log.info { "Loading path detail page: $path" }
 
-        val documents = documentPermissionService.searchAllByPath(path) // Efficiently get docs with titles
+        val documents = runBlocking { documentPermissionService.searchAllByPath(path) } // Efficiently get docs with titles
         val permissions = permissionService.getPathPermissions(path)
 
         // Get user details for each permission

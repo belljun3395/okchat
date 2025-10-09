@@ -87,8 +87,21 @@ class DocumentBaseChatService(
             .content() // Returns Flux<String> - streaming response!
             .doOnNext { chunk ->
                 responseBuffer.append(chunk)
+                // Log chunks with visible newline indicators for debugging
+                val debugChunk = chunk.replace("\n", "\\n").replace("\r", "\\r")
+                if (debugChunk.contains("\\n")) {
+                    log.debug { "[Chunk with newline] $debugChunk" }
+                }
             }
             .doOnComplete {
+                // Log final response to check if newlines are preserved
+                val finalResponse = responseBuffer.toString()
+                val newlineCount = finalResponse.count { it == '\n' }
+                log.info { "[Chat Completed] Total response length: ${finalResponse.length}, newlines: $newlineCount" }
+                if (newlineCount < 5) {
+                    log.warn { "⚠️ WARNING: Response has few newlines ($newlineCount). Post-processing was applied." }
+                }
+                
                 CoroutineScope(Dispatchers.IO).launch {
                     saveConversationHistory(responseBuffer, actualSessionId, message, conversationHistory)
                 }
@@ -98,6 +111,7 @@ class DocumentBaseChatService(
                 log.info { "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
             }
     }
+    
 
     /**
      * Generate session ID if not provided

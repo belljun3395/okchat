@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Paths</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: white; padding: 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        h1 { color: #333; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-secondary:hover { background: #4b5563; }
+        .section { background: white; padding: 25px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        /* Tree structure styles - same as manage.html */
+        .tree-node {
+            margin-bottom: 4px;
+        }
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            gap: 8px;
+        }
+        .tree-node-content:hover {
+            background: #f3f4f6;
+        }
+        .expand-icon {
+            width: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+            flex-shrink: 0;
+        }
+        .node-icon {
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .node-label {
+            flex: 1;
+            font-size: 14px;
+            color: #1a1a1a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tree-children {
+            margin-left: 28px;
+            display: none;
+        }
+        .tree-children.expanded {
+            display: block;
+        }
+        .tree-action { padding: 4px 12px; font-size: 12px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; opacity: 1; }
+        .tree-action:hover { background: #1d4ed8; }
+        .leaf-node { background: #fafafa; border-left: 2px solid #e5e7eb; }
+        .controls { margin-bottom: 15px; display: flex; gap: 10px; }
+        .controls button { padding: 8px 16px; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .controls button:hover { background: #f9fafb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>📁 Document Paths</h1>
+                <div style="font-size: 14px; color: #666; margin-top: 5px;">Total: <strong th:text="${totalPaths}">0</strong> paths</div>
+            </div>
+            <a href="/admin/permissions" class="btn btn-secondary">← Back to Dashboard</a>
+        </div>
+
+        <div class="section">
+            <div class="controls">
+                <button onclick="expandAll()">📂 Expand All</button>
+                <button onclick="collapseAll()">📁 Collapse All</button>
+            </div>
+            <ul class="tree" id="pathTree"></ul>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const paths = /*[[${paths}]]*/ [];
+        
+        // Build tree structure from flat path list
+        function buildTree(paths) {
+            const tree = {};
+            
+            paths.forEach(path => {
+                const parts = path.split(' > ').map(p => p.trim());
+                let current = tree;
+                
+                parts.forEach((part, index) => {
+                    if (!current[part]) {
+                        current[part] = {
+                            name: part,
+                            fullPath: parts.slice(0, index + 1).join(' > '),
+                            children: {},
+                            isLeaf: index === parts.length - 1
+                        };
+                    }
+                    current = current[part].children;
+                });
+            });
+            
+            return tree;
+        }
+        
+        // Render tree recursively - HTML string based (same pattern as manage.html)
+        function renderTree(node) {
+            const entries = Object.entries(node).sort((a, b) => a[0].localeCompare(b[0]));
+            
+            return entries.map(([key, value]) => {
+                const hasChildren = Object.keys(value.children).length > 0;
+                
+                return `
+                    <div class="tree-node" data-path="${value.fullPath}">
+                        <div class="tree-node-content">
+                            <span class="expand-icon">${hasChildren ? '▶' : ''}</span>
+                            <span class="node-icon">${hasChildren ? '📁' : '📄'}</span>
+                            <span class="node-label">${value.name}</span>
+                            <button class="tree-action" onclick="event.stopPropagation(); window.location.href='/admin/permissions/path/${encodeURIComponent(value.fullPath)}'">View Details</button>
+                        </div>
+                        ${hasChildren ? `
+                            <div class="tree-children">
+                                ${renderTree(value.children)}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Toggle functionality - same as manage.html
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('expand-icon') || e.target.closest('.tree-node-content')) {
+                const nodeContent = e.target.closest('.tree-node-content');
+                if (nodeContent && !e.target.classList.contains('tree-action')) {
+                    const treeNode = nodeContent.parentElement;
+                    const children = treeNode.querySelector('.tree-children');
+                    const icon = treeNode.querySelector('.expand-icon');
+                    
+                    if (children && icon && icon.textContent) {
+                        children.classList.toggle('expanded');
+                        icon.textContent = children.classList.contains('expanded') ? '▼' : '▶';
+                    }
+                }
+            }
+        });
+        
+        function expandAll() {
+            document.querySelectorAll('.tree-children').forEach(n => n.classList.add('expanded'));
+            document.querySelectorAll('.expand-icon').forEach(i => { if (i.textContent) i.textContent = '▼'; });
+        }
+        
+        function collapseAll() {
+            document.querySelectorAll('.tree-children').forEach(n => n.classList.remove('expanded'));
+            document.querySelectorAll('.expand-icon').forEach(i => { if (i.textContent) i.textContent = '▶'; });
+        }
+        
+        // Initialize tree
+        const tree = buildTree(paths);
+        const treeElement = document.getElementById('pathTree');
+        treeElement.innerHTML = renderTree(tree);
+        /*]]>*/
+    </script>
+</body>
+</html>

@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Permissions</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: white; padding: 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 10px; }
+        .user-info { color: #666; font-size: 14px; margin-top: 10px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 15px; }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-secondary:hover { background: #4b5563; }
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-delete:hover { background: #dc2626; }
+        .btn-delete:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .btn-success {
+            background: #10b981;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-success:hover { background: #059669; }
+        .node-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .section { background: white; padding: 25px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; }
+        .section-title { font-size: 18px; font-weight: 600; color: #333; margin: 0; }
+        .permission-list { list-style: none; }
+        .permission-item { padding: 15px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .permission-item:last-child { border-bottom: none; }
+        .permission-path { font-weight: 500; color: #333; }
+        .empty-state { text-align: center; padding: 40px; color: #9ca3af; }
+
+        /* Tree styles - same as manage.html */
+        .tree-node {
+            margin-bottom: 4px;
+        }
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            gap: 8px;
+        }
+        .tree-node-content:hover {
+            background: #f3f4f6;
+        }
+        .expand-icon {
+            width: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+            flex-shrink: 0;
+        }
+        .node-icon {
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .node-label {
+            flex: 1;
+            font-size: 14px;
+            color: #1a1a1a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .permission-badge {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 500;
+            background: #10b981;
+            color: white;
+            flex-shrink: 0;
+        }
+        .tree-children {
+            margin-left: 28px;
+            display: none;
+        }
+        .tree-children.expanded {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👤 User Permissions</h1>
+            <div class="user-info">
+                <strong th:text="${user.name}">User Name</strong> (<span th:text="${user.email}">email@example.com</span>)
+                <br>Total Permissions: <strong id="totalPermissions" th:text="${totalPermissions}">0</strong>
+            </div>
+            <a href="/admin/permissions/users" class="btn btn-secondary">← Back to Users</a>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">📁 Accessible Paths (<span id="pathPermsCount" th:text="${#lists.size(pathPermissions)}">0</span>)</h2>
+                <div style="display: flex; gap: 10px;">
+                    <button id="addPermissionBtn" class="btn-success">➕ Add Permission</button>
+                    <button id="expandAllBtn" class="btn btn-secondary" style="margin-top: 0;">⊕ Expand All</button>
+                    <button id="collapseAllBtn" class="btn btn-secondary" style="margin-top: 0;">⊖ Collapse All</button>
+                    <button id="deleteSelectedPaths" class="btn-delete">🗑️ Delete Selected</button>
+                </div>
+            </div>
+            <div class="info-box" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px; margin-bottom: 15px; font-size: 13px; color: #1e40af;">
+                ℹ️ Path-based permissions grant access to all documents under the selected path. Deleting a path will remove access to all documents within it.
+            </div>
+            <div id="pathTree"></div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const paths = /*[[${paths}]]*/ [];
+        let pathPermissions = /*[[${pathPermissions}]]*/ [];
+        let documentPermissions = /*[[${permissions}]]*/ [];
+        const userEmail = /*[[${user.email}]]*/ '';
+        /*]]>*/
+
+        // Ensure arrays are initialized
+        if (!pathPermissions) pathPermissions = [];
+        if (!documentPermissions) documentPermissions = [];
+
+        let grantedPaths = new Set();
+        let grantedDocuments = new Set();
+        let selectedPaths = new Set();
+
+        let deniedPaths = new Set();
+        
+        // Initialize with granted paths and documents
+        if (pathPermissions && pathPermissions.length > 0) {
+            pathPermissions.forEach(p => {
+                if (p.permissionLevel === 'DENY') {
+                    deniedPaths.add(p.documentPath);
+                } else {
+                    grantedPaths.add(p.documentPath);
+                }
+            });
+        }
+        
+        if (documentPermissions && documentPermissions.length > 0) {
+            grantedDocuments = new Set(documentPermissions.map(p => p.documentId));
+        }
+        
+        console.log('=== USER-DETAIL PAGE INITIALIZED ===');
+        console.log('Path permissions (raw):', pathPermissions);
+        console.log('Document permissions (raw):', documentPermissions);
+        console.log('Granted paths:', Array.from(grantedPaths));
+        console.log('Denied paths:', Array.from(deniedPaths));
+        console.log('Granted documents:', Array.from(grantedDocuments));
+        console.log('Total paths in system:', paths.length);
+        console.log('=====================================');
+        
+        // Check if a path has permission (directly or inherited from parent)
+        function hasPermission(path) {
+            // Direct permission
+            if (grantedPaths.has(path)) return true;
+            
+            // Check if any parent path has permission
+            for (const grantedPath of grantedPaths) {
+                if (path.startsWith(grantedPath + ' > ')) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // Check if a path has DIRECT permission (not inherited)
+        function hasDirectPermission(path) {
+            return grantedPaths.has(path);
+        }
+        
+        // Find the parent path that grants permission to this path
+        function findGrantingParentPath(path) {
+            const parts = path.split(' > ');
+            for (let i = parts.length - 1; i > 0; i--) {
+                const parentPath = parts.slice(0, i).join(' > ');
+                if (grantedPaths.has(parentPath)) {
+                    return parentPath;
+                }
+            }
+            return null;
+        }
+        
+        // Check if a document has DIRECT permission
+        function hasDocumentPermission(docId) {
+            return grantedDocuments.has(docId);
+        }
+
+        // Build tree structure from flat path list (same as paths.html)
+        function buildTree(paths) {
+            const tree = {};
+            
+            paths.forEach(path => {
+                const parts = path.split(' > ').map(p => p.trim());
+                let current = tree;
+                
+                parts.forEach((part, index) => {
+                    if (!current[part]) {
+                        current[part] = {
+                            name: part,
+                            fullPath: parts.slice(0, index + 1).join(' > '),
+                            children: {},
+                            isLeaf: index === parts.length - 1
+                        };
+                    }
+                    current = current[part].children;
+                });
+            });
+            
+            return tree;
+        }
+        
+        // Check if path is explicitly denied
+        function isDenied(path) {
+            // Direct DENY
+            if (deniedPaths.has(path)) return true;
+            
+            // Check if any parent path is denied
+            for (const deniedPath of deniedPaths) {
+                if (path.startsWith(deniedPath + ' > ')) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // Render tree recursively (same as paths.html with permission badges)
+        function renderTree(node) {
+            const entries = Object.entries(node).sort((a, b) => a[0].localeCompare(b[0]));
+            
+            return entries.map(([key, value]) => {
+                const hasChildren = Object.keys(value.children).length > 0;
+                const directPermission = hasDirectPermission(value.fullPath);
+                const inheritedPermission = !directPermission && hasPermission(value.fullPath);
+                const denied = isDenied(value.fullPath);
+                const hasAnyPermission = directPermission || inheritedPermission || denied;
+                
+                return `
+                    <div class="tree-node" data-path="${value.fullPath}">
+                        <div class="tree-node-content">
+                            <span class="expand-icon">${hasChildren ? '▶' : ''}</span>
+                            ${hasAnyPermission ? `<input type="checkbox" class="node-checkbox" data-path="${value.fullPath}" data-is-direct="${directPermission || denied}">` : '<span style="width: 18px; display: inline-block;"></span>'}
+                            <span class="node-icon">${hasChildren ? '📁' : '📄'}</span>
+                            <span class="node-label">${value.name}</span>
+                            ${directPermission ? '<span class="permission-badge">✓ Direct</span>' : ''}
+                            ${inheritedPermission && !denied ? '<span class="permission-badge" style="background: #6b7280;">✓ Inherited</span>' : ''}
+                            ${denied ? '<span class="permission-badge" style="background: #ef4444;">❌ Denied</span>' : ''}
+                        </div>
+                        ${hasChildren ? `
+                            <div class="tree-children">
+                                ${renderTree(value.children)}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle functionality (same as paths.html)
+        document.addEventListener('click', (e) => {
+            // Checkbox selection
+            if (e.target.classList.contains('node-checkbox')) {
+                const path = e.target.dataset.path;
+                const isDirect = e.target.dataset.isDirect === 'true';
+                
+                console.log('Checkbox clicked:', {path, isDirect, checked: e.target.checked});
+                
+                if (path) {
+                    if (e.target.checked) {
+                        // Always add the clicked path itself
+                        console.log('Adding path to selection:', path);
+                        selectedPaths.add(path);
+                    } else {
+                        // Remove the clicked path
+                        console.log('Removing path from selection:', path);
+                        selectedPaths.delete(path);
+                    }
+                }
+                
+                console.log('Selected paths now:', Array.from(selectedPaths));
+                updateDeleteButton();
+                e.stopPropagation();
+                return;
+            }
+            
+            // Tree node toggle
+            if (e.target.classList.contains('expand-icon') || e.target.closest('.tree-node-content')) {
+                const nodeContent = e.target.closest('.tree-node-content');
+                if (nodeContent && !e.target.classList.contains('node-checkbox')) {
+                    const treeNode = nodeContent.parentElement;
+                    const children = treeNode.querySelector('.tree-children');
+                    const icon = treeNode.querySelector('.expand-icon');
+                    
+                    if (children && icon && icon.textContent) {
+                        children.classList.toggle('expanded');
+                        icon.textContent = children.classList.contains('expanded') ? '▼' : '▶';
+                    }
+                }
+            }
+        });
+        
+        function expandAll() {
+            document.querySelectorAll('.tree-children').forEach(n => n.classList.add('expanded'));
+            document.querySelectorAll('.expand-icon').forEach(i => { if (i.textContent) i.textContent = '▼'; });
+        }
+        
+        function collapseAll() {
+            document.querySelectorAll('.tree-children').forEach(n => n.classList.remove('expanded'));
+            document.querySelectorAll('.expand-icon').forEach(i => { if (i.textContent) i.textContent = '▶'; });
+        }
+        
+        function updateDeleteButton() {
+            const deleteBtn = document.getElementById('deleteSelectedPaths');
+            const totalSelected = selectedPaths.size;
+            if (totalSelected > 0) {
+                deleteBtn.disabled = false;
+                deleteBtn.textContent = `🗑️ Delete Selected (${totalSelected})`;
+            } else {
+                deleteBtn.disabled = true;
+                deleteBtn.textContent = '🗑️ Delete Selected';
+            }
+        }
+        
+        async function deleteSelectedPermissions() {
+            console.log('=== DELETE BUTTON CLICKED ===');
+            console.log('Selected paths:', Array.from(selectedPaths));
+            console.log('Selected paths size:', selectedPaths.size);
+            
+            if (selectedPaths.size === 0) {
+                alert('Please select items to delete');
+                return;
+            }
+            
+            // Group selected paths into direct ALLOW, DENY, and inherited permissions
+            const directAllowPaths = [];
+            const denyPaths = [];
+            const inheritedPaths = [];
+            
+            selectedPaths.forEach(path => {
+                if (deniedPaths.has(path)) {
+                    denyPaths.push(path);
+                } else if (grantedPaths.has(path)) {
+                    directAllowPaths.push(path);
+                } else {
+                    inheritedPaths.push(path);
+                }
+            });
+            
+            let message = '';
+            const hasMultipleTypes = (directAllowPaths.length > 0 ? 1 : 0) + (denyPaths.length > 0 ? 1 : 0) + (inheritedPaths.length > 0 ? 1 : 0) > 1;
+            
+            if (hasMultipleTypes) {
+                message = `You have selected multiple types of permissions:\n\n`;
+                if (directAllowPaths.length > 0) {
+                    message += `✓ ${directAllowPaths.length} direct ALLOW permission(s) → will be DELETED\n`;
+                }
+                if (denyPaths.length > 0) {
+                    message += `❌ ${denyPaths.length} DENY permission(s) → will be REMOVED\n`;
+                }
+                if (inheritedPaths.length > 0) {
+                    message += `✓ ${inheritedPaths.length} inherited permission(s) → will be blocked (DENY)\n`;
+                }
+                message += `\nContinue?`;
+            } else if (directAllowPaths.length > 0) {
+                message = `Delete ${directAllowPaths.length} direct ALLOW permission(s)?\n\n${directAllowPaths.join('\n')}`;
+            } else if (denyPaths.length > 0) {
+                message = `Remove ${denyPaths.length} DENY permission(s)?\n\nThis will restore access to:\n${denyPaths.join('\n')}\n\nContinue?`;
+            } else if (inheritedPaths.length > 0) {
+                message = `Block access to ${inheritedPaths.length} inherited path(s)?\n\nThis will create DENY permissions for:\n${inheritedPaths.join('\n')}\n\nContinue?`;
+            }
+            
+            console.log('Showing confirmation dialog...');
+            if (!confirm(message)) {
+                console.log('User cancelled operation');
+                return;
+            }
+            
+            try {
+                // Delete direct ALLOW permissions
+                if (directAllowPaths.length > 0) {
+                    console.log('Deleting direct ALLOW permissions...');
+                    const deleteResponse = await fetch('/api/admin/permissions/path/bulk', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userEmail: userEmail,
+                            documentPaths: directAllowPaths
+                        })
+                    });
+                    
+                    if (!deleteResponse.ok) {
+                        throw new Error(`Failed to delete ALLOW permissions: HTTP ${deleteResponse.status}`);
+                    }
+                    console.log('Direct ALLOW permissions deleted successfully');
+                }
+                
+                // Remove DENY permissions
+                if (denyPaths.length > 0) {
+                    console.log('Removing DENY permissions...');
+                    const removeDenyResponse = await fetch('/api/admin/permissions/path/bulk', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userEmail: userEmail,
+                            documentPaths: denyPaths
+                        })
+                    });
+                    
+                    if (!removeDenyResponse.ok) {
+                        throw new Error(`Failed to remove DENY permissions: HTTP ${removeDenyResponse.status}`);
+                    }
+                    console.log('DENY permissions removed successfully');
+                }
+                
+                // Add DENY for inherited permissions
+                if (inheritedPaths.length > 0) {
+                    console.log('Adding DENY permissions...');
+                    const denyResponse = await fetch('/api/admin/permissions/path/bulk/deny', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userEmail: userEmail,
+                            documentPaths: inheritedPaths
+                        })
+                    });
+                    
+                    if (!denyResponse.ok) {
+                        throw new Error(`Failed to add DENY permissions: HTTP ${denyResponse.status}`);
+                    }
+                    console.log('DENY permissions added successfully');
+                }
+                
+                alert('Permissions updated successfully!\n\n' +
+                      `Deleted ALLOW: ${directAllowPaths.length}\n` +
+                      `Removed DENY: ${denyPaths.length}\n` +
+                      `Added DENY: ${inheritedPaths.length}`);
+                window.location.reload();
+            } catch (error) {
+                console.error('Error updating permissions:', error);
+                alert('Error updating permissions: ' + error.message);
+            }
+        }
+        
+        function addPermission() {
+            // Navigate to manage page with user pre-selected
+            window.location.href = '/admin/permissions/manage?user=' + encodeURIComponent(userEmail);
+        }
+        
+        // Initialize
+        // Initialize tree (same as paths.html)
+        console.log('Building tree from paths...');
+        const tree = buildTree(paths);
+        console.log('Tree structure:', tree);
+        console.log('Rendering tree...');
+        const treeElement = document.getElementById('pathTree');
+        const treeHtml = renderTree(tree);
+        console.log('Tree HTML length:', treeHtml.length);
+        treeElement.innerHTML = treeHtml;
+        console.log('Tree rendered to DOM');
+        
+        // Add button event listeners
+        document.getElementById('expandAllBtn').addEventListener('click', expandAll);
+        document.getElementById('collapseAllBtn').addEventListener('click', collapseAll);
+        document.getElementById('deleteSelectedPaths').addEventListener('click', deleteSelectedPermissions);
+        document.getElementById('addPermissionBtn').addEventListener('click', addPermission);
+        
+        // Initialize delete button state
+        updateDeleteButton();
+
+    </script>
+
+</body>
+</html>

@@ -2,7 +2,6 @@ package com.okestro.okchat.ai.support
 
 import com.okestro.okchat.ai.service.PromptService
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.runBlocking
 import org.springframework.stereotype.Component
 
 private val log = KotlinLogging.logger {}
@@ -15,7 +14,7 @@ private val log = KotlinLogging.logger {}
 class DynamicPromptBuilder(
     private val promptService: PromptService
 ) {
-    fun buildPrompt(queryType: QueryClassifier.QueryType): String = runBlocking {
+    suspend fun buildPrompt(queryType: QueryClassifier.QueryType): String {
         val basePrompt = promptService.getLatestPrompt(QueryClassifier.QueryType.BASE.name)
             ?: throw IllegalStateException("Base prompt not found in database")
 
@@ -24,7 +23,7 @@ class DynamicPromptBuilder(
         val commonGuidelines = promptService.getLatestPrompt(QueryClassifier.QueryType.COMMON_GUIDELINES.name)
             ?: throw IllegalStateException("Common guidelines prompt not found in database")
 
-        "$basePrompt\n\n$specificGuidance\n$commonGuidelines"
+        return "$basePrompt\n\n$specificGuidance\n$commonGuidelines"
     }
 
     private suspend fun loadSpecificPrompt(queryType: QueryClassifier.QueryType): String {

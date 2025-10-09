@@ -24,11 +24,13 @@ spring:
         username: ${SPRING_DATASOURCE_USERNAME:root}
         password: ${SPRING_DATASOURCE_PASSWORD:root}
         hikari:
-            maximum-pool-size: 10
-            minimum-idle: 2
-            connection-timeout: 30000
-            idle-timeout: 600000
+            maximum-pool-size: 20  # Increased for better concurrency
+            minimum-idle: 5        # Increased minimum idle connections
+            connection-timeout: 20000  # Reduced timeout for faster failure detection
+            idle-timeout: 300000   # Reduced idle timeout (5 minutes)
             max-lifetime: 1800000
+            leak-detection-threshold: 60000  # Enable leak detection
+            connection-test-query: SELECT 1  # Validation query
     
     # Redis configuration (overridable by environment variables)
     data:
@@ -176,6 +178,22 @@ search:
         path:
             query-by: "metadata.path,metadata.title,content"
             weights: "10,5,1"  # Heavy weight on path field
+
+# Performance configuration
+performance:
+    async:
+        core-pool-size: 10
+        max-pool-size: 20
+        queue-capacity: 500
+        await-termination-seconds: 60
+    cache:
+        default-ttl-minutes: 60
+        ttls:
+            users: 120
+            permissions: 30
+            prompts: 60
+            documents: 120
+            searchResults: 15
 
 # RAG configuration
 rag:

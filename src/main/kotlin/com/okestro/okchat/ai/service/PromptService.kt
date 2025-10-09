@@ -21,13 +21,13 @@ class PromptService(
      */
     suspend fun getPrompt(type: String, version: Int? = null): String? {
         val prompt = if (version != null) {
-            promptRepository.findByTypeAndVersionAndIsActive(type, version)
+            promptRepository.findByTypeAndVersionAndActive(type, version)
         } else {
             // Try to get latest from cache first
             promptCacheService.getLatestPrompt(type)?.let {
                 return it
             }
-            promptRepository.findLatestByTypeAndIsActive(type)
+            promptRepository.findLatestByTypeAndActive(type)
         }
 
         return prompt?.let {
@@ -57,7 +57,7 @@ class PromptService(
      */
     @Transactional("transactionManager")
     suspend fun createPrompt(type: String, content: String): Prompt {
-        val latestPrompt = promptRepository.findLatestByTypeAndIsActive(type)
+        val latestPrompt = promptRepository.findLatestByTypeAndActive(type)
         val version = if (latestPrompt == null) {
             1
         } else {
@@ -68,7 +68,7 @@ class PromptService(
             type = type,
             version = version,
             content = content,
-            isActive = true,
+            active = true,
             createdAt = LocalDateTime.now(),
             updatedAt = LocalDateTime.now()
         )
@@ -87,7 +87,7 @@ class PromptService(
      */
     @Transactional("transactionManager")
     suspend fun updateLatestPrompt(type: String, content: String): Prompt {
-        val latestPrompt = promptRepository.findLatestByTypeAndIsActive(type)
+        val latestPrompt = promptRepository.findLatestByTypeAndActive(type)
             ?: throw IllegalArgumentException("Prompt type '$type' does not exist. Use createPrompt first.")
 
         val newVersion = latestPrompt.version + 1
@@ -95,7 +95,7 @@ class PromptService(
             type = type,
             version = newVersion,
             content = content,
-            isActive = true,
+            active = true,
             createdAt = LocalDateTime.now(),
             updatedAt = LocalDateTime.now()
         )
@@ -112,10 +112,10 @@ class PromptService(
      */
     @Transactional("transactionManager")
     suspend fun deactivatePrompt(type: String, version: Int) {
-        val prompt = promptRepository.findByTypeAndVersionAndIsActive(type, version) ?: throw IllegalArgumentException("Prompt not found: type=$type, version=$version")
+        val prompt = promptRepository.findByTypeAndVersionAndActive(type, version) ?: throw IllegalArgumentException("Prompt not found: type=$type, version=$version")
         promptRepository.deactivatePrompt(prompt.id!!)
 
-        val latestPrompt = promptRepository.findLatestByTypeAndIsActive(type)
+        val latestPrompt = promptRepository.findLatestByTypeAndActive(type)
         if (latestPrompt != null && latestPrompt.id == prompt.id) {
             promptCacheService.evictLatestPromptCache(type)
         }
@@ -125,7 +125,7 @@ class PromptService(
      * Get all versions of a prompt type
      */
     suspend fun getAllVersions(type: String): List<Prompt> {
-        return promptRepository.findAllByTypeAndIsActive(type)
+        return promptRepository.findAllByTypeAndActiveOrderByVersionDesc(type)
     }
 
     /**
@@ -139,6 +139,6 @@ class PromptService(
      * Check if a prompt type exists
      */
     suspend fun exists(type: String): Boolean {
-        return promptRepository.findLatestByTypeAndIsActive(type) != null
+        return promptRepository.findLatestByTypeAndActive(type) != null
     }
 }

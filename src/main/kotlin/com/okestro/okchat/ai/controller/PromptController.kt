@@ -46,7 +46,7 @@ class PromptController(
                 type = prompt.type,
                 version = prompt.version,
                 content = prompt.content,
-                isActive = prompt.isActive
+                isActive = prompt.active
             )
         }
     }

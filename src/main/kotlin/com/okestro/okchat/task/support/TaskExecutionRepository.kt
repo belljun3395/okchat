@@ -2,15 +2,23 @@ package com.okestro.okchat.task.support
 
 import org.springframework.data.jdbc.repository.query.Query
 import org.springframework.data.repository.CrudRepository
+import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 
 /**
- * TODO: refactor to reactive repository
- * Spring Data JDBC Repository for Task Execution
+ * Spring Data JDBC Repository for Task Execution (Read-only access)
+ * * NOTE: Spring Cloud Task manages the TASK_EXECUTION table internally using JDBC.
+ * We use Spring Data JDBC (not JPA) to avoid conflicts:
+ * - JPA's caching and entity lifecycle management would conflict with Spring Cloud Task's direct JDBC writes
+ * - JDBC provides simple, cache-free access for querying task execution history
+ * * This repository is primarily for monitoring and reporting purposes.
  */
 @Repository
 interface TaskExecutionRepository : CrudRepository<TaskExecutionEntity, Long> {
 
+    /**
+     * Find recent task executions ordered by start time
+     */
     @Query(
         """
         SELECT * FROM TASK_EXECUTION
@@ -20,6 +28,9 @@ interface TaskExecutionRepository : CrudRepository<TaskExecutionEntity, Long> {
     )
     fun findRecentExecutions(): List<TaskExecutionEntity>
 
+    /**
+     * Get task execution statistics
+     */
     @Query(
         """
         SELECT
@@ -34,10 +45,14 @@ interface TaskExecutionRepository : CrudRepository<TaskExecutionEntity, Long> {
 
 /**
  * Repository for Task Execution Parameters
+ * * NOTE: Read-only access to Spring Cloud Task's parameter table
  */
 @Repository
 interface TaskExecutionParamsRepository : CrudRepository<TaskExecutionParamEntity, Long> {
 
+    /**
+     * Find task parameters by execution ID
+     */
     @Query(
         """
         SELECT TASK_PARAM
@@ -45,5 +60,5 @@ interface TaskExecutionParamsRepository : CrudRepository<TaskExecutionParamEntit
         WHERE TASK_EXECUTION_ID = :executionId
         """
     )
-    fun findParamsByExecutionId(executionId: Long): List<String>
+    fun findParamsByExecutionId(@Param("executionId") executionId: Long): List<String>
 }

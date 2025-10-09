@@ -1,57 +1,65 @@
 package com.okestro.okchat.ai.repository
 
 import com.okestro.okchat.ai.model.Prompt
-import org.springframework.data.jdbc.repository.query.Query
-import org.springframework.data.repository.CrudRepository
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
+import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 
 @Repository
-interface PromptRepository : CrudRepository<Prompt, Long> {
+interface PromptRepository : JpaRepository<Prompt, Long> {
 
-    @Query(
-        """
-        SELECT * FROM prompts
-        WHERE type = :type AND version = :version AND is_active = true
-        """
-    )
-    fun findByTypeAndVersionAndIsActive(
-        @Param("type") type: String,
-        @Param("version") version: Int
+    /**
+     * Find prompt by type, version and active status
+     */
+    fun findByTypeAndVersionAndActive(
+        type: String,
+        version: Int,
+        active: Boolean = true
     ): Prompt?
 
+    /**
+     * Find latest active prompt by type
+     */
     @Query(
         """
-        SELECT * FROM prompts
-        WHERE type = :type AND is_active = true
-        ORDER BY version DESC
+        SELECT p FROM Prompt p
+        WHERE p.type = :type AND p.active = true
+        ORDER BY p.version DESC
         LIMIT 1
         """
     )
-    fun findLatestByTypeAndIsActive(@Param("type") type: String): Prompt?
+    fun findLatestByTypeAndActive(@Param("type") type: String): Prompt?
 
+    /**
+     * Find all active prompts by type ordered by version descending
+     */
+    fun findAllByTypeAndActiveOrderByVersionDesc(
+        type: String,
+        active: Boolean = true
+    ): List<Prompt>
+
+    /**
+     * Find maximum version number for a prompt type
+     */
     @Query(
         """
-        SELECT * FROM prompts
-        WHERE type = :type AND is_active = true
-        ORDER BY version DESC
-        """
-    )
-    fun findAllByTypeAndIsActive(@Param("type") type: String): List<Prompt>
-
-    @Query(
-        """
-        SELECT MAX(version) FROM prompts
-        WHERE type = :type
+        SELECT MAX(p.version) FROM Prompt p
+        WHERE p.type = :type
         """
     )
     fun findLatestVersionByType(@Param("type") type: String): Int?
 
+    /**
+     * Deactivate a prompt by id
+     */
+    @Modifying
     @Query(
         """
-        UPDATE prompts
-        SET is_active = false, updated_at = CURRENT_TIMESTAMP
-        WHERE id = :id
+        UPDATE Prompt p
+        SET p.active = false, p.updatedAt = CURRENT_TIMESTAMP
+        WHERE p.id = :id
         """
     )
     fun deactivatePrompt(@Param("id") id: Long): Int

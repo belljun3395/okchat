@@ -43,7 +43,8 @@ open class ChatContext(
     data class UserInput(
         val message: String,
         val providedKeywords: List<String> = emptyList(),
-        val sessionId: String? = null
+        val sessionId: String? = null,
+        val userEmail: String? = null // For permission filtering (email-based requests)
     )
 
     /**

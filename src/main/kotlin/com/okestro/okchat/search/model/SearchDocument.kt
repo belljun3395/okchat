@@ -94,6 +94,19 @@ data class SearchDocument(
         return metadataType ?: metadata.type ?: "confluence-page"
     }
 
+    /**
+     * Get page ID for building Confluence links
+     * For PDF attachments, returns the parent page ID
+     * For regular pages, returns the actual page ID
+     */
+    fun getPageId(): String {
+        // For PDF attachments, use the pageId from metadata (the page it's attached to)
+        val pageId = metadata.getStringValue("pageId")
+        return pageId.ifBlank {
+            getActualPageId()
+        }
+    }
+
     companion object {
         private val objectMapper = jacksonObjectMapper()
 

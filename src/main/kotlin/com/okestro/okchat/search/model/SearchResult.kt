@@ -11,7 +11,8 @@ data class SearchResult(
     val spaceKey: String,
     val keywords: String = "",
     val score: SearchScore.SimilarityScore,
-    val type: String = "confluence-page" // Document type: confluence-page or confluence-pdf-attachment
+    val type: String = "confluence-page", // Document type: confluence-page or confluence-pdf-attachment
+    val pageId: String = "" // For PDF attachments, this is the parent page ID
 ) : Comparable<SearchResult> {
     /**
      * For backward compatibility - returns the similarity value
@@ -38,10 +39,11 @@ data class SearchResult(
             spaceKey: String,
             keywords: String = "",
             distance: Double,
-            type: String = "confluence-page"
+            type: String = "confluence-page",
+            pageId: String = ""
         ): SearchResult {
             val score = SearchScore.fromDistance(distance).toSimilarity()
-            return SearchResult(id, title, content, path, spaceKey, keywords, score, type)
+            return SearchResult(id, title, content, path, spaceKey, keywords, score, type, pageId)
         }
 
         /**
@@ -55,9 +57,10 @@ data class SearchResult(
             spaceKey: String,
             keywords: String = "",
             similarity: SearchScore.SimilarityScore,
-            type: String = "confluence-page"
+            type: String = "confluence-page",
+            pageId: String = ""
         ): SearchResult {
-            return SearchResult(id, title, content, path, spaceKey, keywords, similarity, type)
+            return SearchResult(id, title, content, path, spaceKey, keywords, similarity, type, pageId)
         }
     }
 }

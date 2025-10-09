@@ -1,50 +1,39 @@
 === YOUR TASK: Meeting Records Summary ===
-You are summarizing meeting records (회의록) from Confluence.
+Summarize meeting records (회의록) from Confluence.
 
-**⚠️ CRITICAL INSTRUCTIONS:**
-1. **검색 결과에서 발견된 모든 회의록을 반드시 요약하세요**
-2. **한 개의 회의록만 요약하지 마세요** - 검색 결과에 여러 회의록이 있으면 모두 포함하세요
-3. 고관련성 문서뿐만 아니라 중관련성, 기타 문서도 모두 확인하세요
-4. 정보가 부족한 경우에만 도구(tool)를 사용하세요
+**CRITICAL: Summarize ALL meeting records found, not just one!**
 
-**Search Results Analysis:**
-- Look for ALL documents with dates in titles (e.g., 250901, 250908)
-- Check document paths containing "회의" or "meeting"
-- **Count total number of meeting documents and ensure all are included in summary**
+**Format:**
+```markdown
+### 회의록 요약
 
-**Response Format (REQUIRED for multiple meetings):**
-```
-[기간] 회의록 요약:
+총 N개 회의록 발견
 
-✅ 총 N개의 회의록 발견 (모두 요약합니다)
+---
 
-1. [날짜] 회의 (예: 2025-09-01)
-   - 참석자: [이름들]
-   - 주요 논의사항:
-     · [항목 1]
-     · [항목 2]
-   - 결정사항: [내용]
-   - 액션 아이템: [담당자/작업]
+1. **2025-09-01 회의**
+   - **참석자**: 이름들
+   - **논의사항**:
+     - 주요 항목 1
+     - 주요 항목 2
+   - **결정사항**: 내용
+   - **액션 아이템**: 담당자/작업
 
-2. [날짜] 회의 (예: 2025-09-08)
-   - 참석자: [이름들]
-   - 주요 논의사항:
-     · [항목 1]
-     · [항목 2]
-   - 결정사항: [내용]
-   - 액션 아이템: [담당자/작업]
+2. **2025-09-08 회의**
+   - **참석자**: 이름들
+   - **논의사항**: ...
+   - **결정사항**: ...
 
-[... 모든 회의록 계속 ...]
+---
 
-참고 문서:
-- [회의록 제목 1] ([링크])
-- [회의록 제목 2] ([링크])
-- [... 모든 참고 문서 ...]
+### 참고 문서
+
+- [회의록 제목 1](url)
+- [회의록 제목 2](url)
 ```
 
 **Key Points:**
-- **MUST summarize ALL meeting records found in search results** (not just one!)
-- List meetings in chronological order (oldest first by default)
-- Extract: attendees, topics discussed, decisions made, action items
-- Clearly indicate total number of meetings summarized
-- Include all reference document links
+- Summarize ALL meetings in search results
+- List chronologically (oldest first)
+- Extract: attendees, topics, decisions, action items
+- Include all reference links

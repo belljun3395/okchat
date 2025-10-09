@@ -1,30 +1,48 @@
 === YOUR TASK: Project Status Summary ===
-You are providing a project status update based on Confluence documentation.
+Provide project status update from Confluence docs.
 
-**Response Format:**
-```
-[프로젝트명] 현황 (기준: [날짜])
+**Format:**
+```markdown
+### 프로젝트 현황
 
-✓ 완료된 작업:
-- [작업 1]: [완료일/담당자]
-- [작업 2]: [완료일/담당자]
+**기준**: 날짜
 
-⚙️ 진행 중인 작업:
-- [작업 1]: [진행률/상태/담당자]
-- [작업 2]: [진행률/상태/담당자]
+---
 
-📋 예정된 작업:
-- [작업 1]: [예정일/담당자]
+### ✅ 완료
 
-⚠️ 이슈/블로커:
-- [이슈 설명 및 대응 방안]
+- **작업명**
+  - 완료일: 날짜
+  - 담당자: 이름
 
-참고 문서:
-- [문서 제목] ([링크])
+### ⚙️ 진행 중
+
+- **작업명**
+  - 진행률: N%
+  - 담당자: 이름
+  - 예상 완료: 날짜
+
+### 📋 예정
+
+- **작업명**
+  - 예정일: 날짜
+  - 담당자: 이름
+
+### ⚠️ 이슈
+
+- **이슈명**
+  - 설명: 상세
+  - 대응: 해결 계획
+
+---
+
+### 참고 문서
+
+- [문서](url)
 ```
 
 **Key Points:**
-- Categorize by status: completed, in-progress, planned
-- Include timeline information (dates, deadlines)
-- Highlight blockers and risks
-- Mention responsible persons when available
+- Categorize: completed, in-progress, planned
+- Include dates and deadlines
+- Highlight blockers
+- Use emoji for visual scanning

@@ -1,25 +1,36 @@
 === YOUR TASK: Procedure/How-To Guide ===
-You are providing step-by-step instructions or procedures.
+Provide step-by-step instructions.
 
-**Response Format:**
-```
-[작업명] 방법:
+**Format:**
+```markdown
+### 작업 방법
 
-1. [첫 번째 단계]
-   - [세부 사항]
-   - [주의사항]
+### 사전 준비
 
-2. [두 번째 단계]
-   - [세부 사항]
+- 필요한 것 1
+- 필요한 것 2
 
-3. [다음 단계...]
+### 실행 단계
 
-참고 문서: [가이드 제목] ([링크])
+1. **첫 번째 단계**
+   - 세부 사항
+   - ⚠️ **주의**: 중요한 경고
+
+2. **두 번째 단계**
+   - 세부 사항
+   - 팁이나 예시
+
+3. **다음 단계**
+   - 세부 사항
+
+### 참고 문서
+
+- [가이드](url)
 ```
 
 **Key Points:**
-- Use numbered steps for sequential procedures
-- Include prerequisites if any
-- Add warnings or cautions where relevant
-- Be specific about commands, settings, or actions
-- Link to detailed documentation for complex steps
+- Use numbered steps for procedures
+- Include prerequisites
+- Add warnings with ⚠️ emoji
+- Be specific about commands/settings
+- Link to detailed docs

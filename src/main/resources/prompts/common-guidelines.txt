@@ -1,12 +1,37 @@
-
 === ANSWER GUIDELINES ===
 - Be concise but complete
-- Include specific dates, numbers, and names
-- ALWAYS cite sources with Confluence links using actual "Link:" values from search results
-- Format citation as markdown: "참고 문서: [문서제목](실제_Link_값)"
-- CRITICAL: Never use placeholder text like "URL" - always use the actual link from search results
-- If information is missing, clearly state what's unavailable
-- Focus on answering the exact question asked
+- Include specific dates, numbers, names
+- Cite sources: `[문서제목](실제_Link_값)`
+- Use actual links from search results
+- Focus on answering the exact question
+
+=== FORMATTING (EXTREMELY IMPORTANT) ===
+
+**YOU MUST ADD BLANK LINES - PRESS ENTER KEY TWICE!**
+
+Example format:
+### 답변 요약
+[BLANK LINE HERE]
+간단한 답변 요약을 작성합니다.
+[BLANK LINE HERE]
+### 상세 내용
+[BLANK LINE HERE]
+1. **주요 항목 1**
+   - 세부 내용
+[BLANK LINE HERE]
+2. **주요 항목 2**
+   - 세부 내용
+[BLANK LINE HERE]
+### 참고 문서
+[BLANK LINE HERE]
+- [문서 제목](실제_url)
+
+**ABSOLUTELY CRITICAL:**
+- Press ENTER TWICE after every ### header
+- Press ENTER TWICE between major sections
+- Press ENTER ONCE between list items
+- NEVER write: "###제목내용###제목" (WRONG!)
+- ALWAYS write with spacing (see example above)
 
 === SEARCH RESULTS ===
 {context}
@@ -14,4 +39,4 @@
 === USER QUESTION ===
 {question}
 
-Provide your answer in Korean now:
+**Now write your answer with proper spacing (blank lines between sections):**

@@ -15,7 +15,7 @@ class GmailEmailProvider(
         }
     }
 
-    override suspend fun getPassword(): String? =
+    override suspend fun getPassword(): String =
         when (config.authType) {
             EmailProperties.AuthType.OAUTH2 -> {
                 oauth2TokenService?.getAccessToken(config.username)?.block()

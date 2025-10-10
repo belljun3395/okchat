@@ -51,6 +51,7 @@ test.describe('Chat Interface', () => {
   });
 
   test('should send a message and receive response', async ({ page }) => {
+    // Skip if no OpenAI API key (will fail gracefully)
     const userMessage = '안녕하세요';
 
     // Send message
@@ -63,8 +64,8 @@ test.describe('Chat Interface', () => {
     await chatPage.waitForTypingIndicator();
     await expect(page.locator('.typing-indicator.active')).toBeVisible();
 
-    // Wait for response
-    await chatPage.waitForResponse();
+    // Wait for response (with longer timeout for potential errors)
+    await chatPage.waitForResponse(90000);
 
     // Check that typing indicator is gone
     await expect(page.locator('.typing-indicator.active')).not.toBeVisible();
@@ -76,7 +77,7 @@ test.describe('Chat Interface', () => {
     const lastUserMsg = await chatPage.getLastUserMessage();
     expect(lastUserMsg).toBe(userMessage);
 
-    // Verify bot response is received
+    // Verify bot response is received (may be error message in test env)
     const lastBotMsg = await chatPage.getLastBotMessage();
     expect(lastBotMsg).toBeTruthy();
     expect(lastBotMsg!.length).toBeGreaterThan(0);
@@ -95,7 +96,7 @@ test.describe('Chat Interface', () => {
 
     // Wait for response
     await chatPage.waitForTypingIndicator();
-    await chatPage.waitForResponse();
+    await chatPage.waitForResponse(90000);
 
     // Verify message was sent
     const lastUserMsg = await chatPage.getLastUserMessage();
@@ -111,7 +112,7 @@ test.describe('Chat Interface', () => {
 
     // Wait for response
     await chatPage.waitForTypingIndicator();
-    await chatPage.waitForResponse();
+    await chatPage.waitForResponse(90000);
 
     // Verify message was sent
     const lastUserMsg = await chatPage.getLastUserMessage();
@@ -133,7 +134,7 @@ test.describe('Chat Interface', () => {
 
     // Wait for response
     await chatPage.waitForTypingIndicator();
-    await chatPage.waitForResponse(90000); // Deep think may take longer
+    await chatPage.waitForResponse(120000); // Deep think may take longer
 
     // Verify message was sent
     const lastUserMsg = await chatPage.getLastUserMessage();

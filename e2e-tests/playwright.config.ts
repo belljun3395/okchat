@@ -88,10 +88,10 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'cd .. && ./gradlew bootRun',
+    command: 'cd .. && ./gradlew bootRun --args="--spring.profiles.active=e2e"',
     url: 'http://localhost:8080',
     reuseExistingServer: !process.env.CI,
-    timeout: 120000,
+    timeout: 180000, // Increased timeout for first build
     stdout: 'pipe',
     stderr: 'pipe',
   },

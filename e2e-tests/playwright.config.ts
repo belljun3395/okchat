@@ -52,27 +52,51 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testMatch: ['**/chat.spec.ts', '**/permissions.spec.ts'], // Core tests only
     },
 
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
+      testMatch: ['**/chat.spec.ts', '**/permissions.spec.ts'],
     },
 
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+      testMatch: ['**/chat.spec.ts', '**/permissions.spec.ts'],
     },
 
     /* Test against mobile viewports */
     {
       name: 'mobile-chrome',
       use: { ...devices['Pixel 5'] },
+      testMatch: ['**/chat.spec.ts', '**/permissions.spec.ts'],
     },
     
     {
       name: 'mobile-safari',
       use: { ...devices['iPhone 13'] },
+      testMatch: ['**/chat.spec.ts', '**/permissions.spec.ts'],
+    },
+
+    /* Extended tests - run separately */
+    {
+      name: 'accessibility',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: ['**/accessibility.spec.ts'],
+    },
+
+    {
+      name: 'performance',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: ['**/performance.spec.ts'],
+    },
+
+    {
+      name: 'visual',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: ['**/visual-regression.spec.ts'],
     },
 
     /* Test against branded browsers */

@@ -4,7 +4,8 @@
   "description": "Playwright E2E tests for OKChat frontend",
   "main": "index.js",
   "scripts": {
-    "test": "playwright test",
+    "test": "playwright test --project=chromium --project=firefox --project=webkit",
+    "test:all": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
@@ -14,6 +15,9 @@
     "test:firefox": "playwright test --project=firefox",
     "test:safari": "playwright test --project=webkit",
     "test:mobile": "playwright test --project=mobile-chrome",
+    "test:accessibility": "playwright test --project=accessibility",
+    "test:performance": "playwright test --project=performance",
+    "test:visual": "playwright test --project=visual",
     "report": "playwright show-report",
     "codegen": "playwright codegen http://localhost:8080"
   },

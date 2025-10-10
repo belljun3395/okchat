@@ -5,6 +5,8 @@ import com.okestro.okchat.permission.model.PermissionLevel
 import com.okestro.okchat.permission.repository.DocumentPathPermissionRepository
 import com.okestro.okchat.search.model.SearchResult
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -124,6 +126,7 @@ class PermissionService(
      * (keeps DENY permissions)
      */
     @Transactional("transactionManager")
+    @CacheEvict(value = ["permissions"], key = "'user-' + #userId")
     fun grantPathPermission(
         userId: Long,
         documentPath: String,
@@ -283,15 +286,18 @@ class PermissionService(
      * Revoke all permissions for a user
      */
     @Transactional("transactionManager")
+    @CacheEvict(value = ["permissions"], key = "'user-' + #userId")
     fun revokeAllPermissionsForUser(userId: Long) {
         documentPathPermissionRepository.deleteByUserId(userId)
         log.info { "All path permissions revoked for user: user_id=$userId" }
     }
 
     /**
-     * Get all path permissions for a user
+     * Get all path permissions for a user with caching
      */
+    @Cacheable(value = ["permissions"], key = "'user-' + #userId")
     fun getUserPathPermissions(userId: Long): List<DocumentPathPermission> {
+        log.debug { "Fetching path permissions from database for user: $userId" }
         return documentPathPermissionRepository.findByUserId(userId)
     }
 

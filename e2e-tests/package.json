@@ -1,0 +1,41 @@
+{
+  "name": "okchat-e2e-tests",
+  "version": "1.0.0",
+  "description": "End-to-end tests for OKChat application",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:chrome": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "test:webkit": "playwright test --project=webkit",
+    "test:mobile": "playwright test --project='Mobile Chrome'",
+    "test:chat": "playwright test tests/chat",
+    "test:permissions": "playwright test tests/permissions",
+    "test:report": "playwright show-report",
+    "test:trace": "playwright show-trace",
+    "playwright:install": "playwright install --with-deps",
+    "playwright:install-deps": "playwright install-deps",
+    "format": "prettier --write '**/*.{js,ts,json,yml,yaml}'",
+    "lint": "eslint . --ext .ts,.js"
+  },
+  "keywords": ["e2e", "playwright", "testing", "qa"],
+  "author": "OKChat Team",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.40.1",
+    "@types/node": "^20.10.5",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "dotenv": "^16.3.1",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-playwright": "^0.20.0",
+    "prettier": "^3.1.1",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

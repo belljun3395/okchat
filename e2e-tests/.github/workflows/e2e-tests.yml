@@ -1,0 +1,174 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run tests daily at 2 AM
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+        include:
+          - browser: chromium
+            project: chromium
+          - browser: firefox
+            project: firefox
+          - browser: webkit
+            project: webkit
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Cache Gradle packages
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+    
+    - name: Build Spring Boot application
+      run: ./gradlew build -x test
+    
+    - name: Start Spring Boot application
+      run: |
+        nohup ./gradlew bootRun &
+        echo $! > app.pid
+        # Wait for app to start
+        timeout 60 bash -c 'until curl -f http://localhost:8080/actuator/health 2>/dev/null; do sleep 2; done'
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: e2e-tests/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: e2e-tests
+      run: npm ci
+    
+    - name: Install Playwright Browsers
+      working-directory: e2e-tests
+      run: npx playwright install --with-deps ${{ matrix.browser }}
+    
+    - name: Run Playwright tests
+      working-directory: e2e-tests
+      env:
+        CI: true
+        BASE_URL: http://localhost:8080
+      run: npx playwright test --project=${{ matrix.project }}
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: playwright-results-${{ matrix.browser }}
+        path: e2e-tests/test-results/
+        retention-days: 30
+    
+    - name: Upload test report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: playwright-report-${{ matrix.browser }}
+        path: e2e-tests/playwright-report/
+        retention-days: 30
+    
+    - name: Stop Spring Boot application
+      if: always()
+      run: |
+        if [ -f app.pid ]; then
+          kill $(cat app.pid) || true
+        fi
+
+  smoke-tests:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Build and start application
+      run: |
+        ./gradlew build -x test
+        nohup ./gradlew bootRun &
+        echo $! > app.pid
+        timeout 60 bash -c 'until curl -f http://localhost:8080/actuator/health 2>/dev/null; do sleep 2; done'
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Install dependencies
+      working-directory: e2e-tests
+      run: npm ci
+    
+    - name: Install Playwright
+      working-directory: e2e-tests
+      run: npx playwright install --with-deps chromium
+    
+    - name: Run smoke tests
+      working-directory: e2e-tests
+      env:
+        CI: true
+        BASE_URL: http://localhost:8080
+      run: npx playwright test tests/smoke --project=chromium
+    
+    - name: Upload smoke test results
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: smoke-test-results
+        path: e2e-tests/test-results/
+    
+    - name: Stop application
+      if: always()
+      run: |
+        if [ -f app.pid ]; then
+          kill $(cat app.pid) || true
+        fi
+
+  test-report:
+    name: Publish Test Report
+    needs: [test]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: artifacts
+    
+    - name: Publish test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      with:
+        files: |
+          artifacts/playwright-results-*/junit.xml
+        check_name: E2E Test Results
+        comment_title: E2E Test Results

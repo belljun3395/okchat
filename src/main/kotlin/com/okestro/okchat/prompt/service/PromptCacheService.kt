@@ -3,6 +3,7 @@ package com.okestro.okchat.prompt.service
 import com.okestro.okchat.prompt.config.PromptCacheConfig.Companion.PROMPT_LATEST_CACHE_PREFIX
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.reactor.awaitSingleOrNull
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.data.redis.core.ReactiveRedisTemplate
 import org.springframework.stereotype.Service
 import java.time.Duration
@@ -10,6 +11,7 @@ import java.time.Duration
 private val log = KotlinLogging.logger {}
 
 @Service
+@ConditionalOnBean(ReactiveRedisTemplate::class)
 class PromptCacheService(
     private val redisTemplate: ReactiveRedisTemplate<String, String>
 ) {

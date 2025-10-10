@@ -7,6 +7,7 @@ import com.okestro.okchat.email.oauth2.strategy.OAuth2ProviderStrategy
 import com.okestro.okchat.email.oauth2.support.OAuth2Constants
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.reactor.awaitSingleOrNull
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.data.redis.core.ReactiveRedisTemplate
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
@@ -15,6 +16,7 @@ import java.time.Duration
 private val logger = KotlinLogging.logger {}
 
 @Service
+@ConditionalOnBean(ReactiveRedisTemplate::class)
 class OAuth2TokenService(
     private val emailProperties: EmailProperties,
     private val reactiveRedisTemplate: ReactiveRedisTemplate<String, String>

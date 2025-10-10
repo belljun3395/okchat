@@ -171,7 +171,7 @@ class DocumentBaseChatService(
             log.debug { "Session management not available (Redis disabled), skipping history save" }
             return
         }
-        
+
         try {
             val assistantResponse = responseBuffer.toString()
             sessionManagementService.saveConversationHistory(

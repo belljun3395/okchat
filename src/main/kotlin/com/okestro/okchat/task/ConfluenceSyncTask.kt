@@ -252,8 +252,10 @@ class ConfluenceSyncTask(
                         this.spaceKey = currentSpaceKey
                         this.path = currentPath
                         this.keywords = allKeywords
-                        "isEmpty" to pageContent.isBlank()
-                        "webUrl" to pageUrl
+
+                        // Additional page properties
+                        property(MetadataFields.Additional.IS_EMPTY, pageContent.isBlank())
+                        property(MetadataFields.Additional.WEB_URL, pageUrl)
                     }
 
                     val baseDocument = Document(
@@ -294,8 +296,10 @@ class ConfluenceSyncTask(
                             val chunkMetadata = metadata {
                                 this.id = node.id
                                 this.keywords = allKeywords
-                                "chunkIndex" to chunkIndex
-                                "totalChunks" to chunks.size
+
+                                // Chunk information
+                                property(MetadataFields.Additional.CHUNK_INDEX, chunkIndex)
+                                property(MetadataFields.Additional.TOTAL_CHUNKS, chunks.size)
                             }
 
                             Document(

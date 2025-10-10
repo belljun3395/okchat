@@ -23,6 +23,25 @@ object MetadataFields {
         const val TYPE = "type"
     }
 
+    // Additional property field names (for dynamic metadata)
+    object Additional {
+        // Common properties
+        const val WEB_URL = "webUrl"
+        const val IS_EMPTY = "isEmpty"
+
+        // PDF attachment properties
+        const val PAGE_ID = "pageId"
+        const val ATTACHMENT_TITLE = "attachmentTitle"
+        const val TOTAL_PDF_PAGES = "totalPdfPages"
+        const val FILE_SIZE = "fileSize"
+        const val MEDIA_TYPE = "mediaType"
+        const val DOWNLOAD_URL = "downloadUrl"
+
+        // Chunk properties
+        const val CHUNK_INDEX = "chunkIndex"
+        const val TOTAL_CHUNKS = "totalChunks"
+    }
+
     // All flat field names as a list
     val ALL_FLAT = listOf(TITLE, PATH, SPACE_KEY, KEYWORDS, ID, TYPE)
 

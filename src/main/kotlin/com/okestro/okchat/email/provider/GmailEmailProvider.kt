@@ -2,6 +2,7 @@ package com.okestro.okchat.email.provider
 
 import com.okestro.okchat.email.config.EmailProperties
 import com.okestro.okchat.email.oauth2.OAuth2TokenService
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 
 class GmailEmailProvider(
     config: EmailProperties.EmailProviderConfig,
@@ -18,7 +19,7 @@ class GmailEmailProvider(
     override suspend fun getPassword(): String =
         when (config.authType) {
             EmailProperties.AuthType.OAUTH2 -> {
-                oauth2TokenService?.getAccessToken(config.username)?.block()
+                oauth2TokenService?.getAccessToken(config.username)?.awaitSingleOrNull()
                     ?: throw IllegalStateException("OAuth2 token not available for ${config.username}. Please authenticate first.")
             }
         }

@@ -310,6 +310,10 @@
                         <span>✏️</span>
                         <span>수정</span>
                     </a>
+                    <a th:href="@{/admin/prompts/analytics/{type}(type=${entry.key})}" class="btn btn-secondary btn-small">
+                        <span>📊</span>
+                        <span>분석</span>
+                    </a>
                     <a th:href="@{/admin/prompts/history/{type}(type=${entry.key})}" class="btn btn-secondary btn-small">
                         <span>📜</span>
                         <span>히스토리</span>

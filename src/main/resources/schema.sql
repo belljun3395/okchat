@@ -60,6 +60,33 @@ CREATE TABLE IF NOT EXISTS prompts (
     INDEX idx_type_version_active (type, version, is_active)
 );
 
+-- Prompt executions table for tracking usage and performance
+CREATE TABLE IF NOT EXISTS prompt_executions (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    prompt_type VARCHAR(100) NOT NULL,
+    prompt_version INT NOT NULL,
+    prompt_content TEXT NOT NULL,
+    session_id VARCHAR(100),
+    user_email VARCHAR(255),
+    input_variables TEXT,
+    user_input TEXT,
+    generated_output TEXT,
+    response_time_ms BIGINT,
+    input_tokens INT,
+    output_tokens INT,
+    total_tokens INT,
+    status VARCHAR(20) NOT NULL DEFAULT 'SUCCESS',
+    error_message TEXT,
+    user_rating INT,
+    user_feedback TEXT,
+    metadata TEXT,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    INDEX idx_execution_prompt (prompt_type, prompt_version),
+    INDEX idx_execution_session (session_id),
+    INDEX idx_execution_created (created_at),
+    INDEX idx_execution_status (status)
+);
+
 -- Users table for permission management
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,

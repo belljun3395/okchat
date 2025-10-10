@@ -21,7 +21,8 @@ private val log = KotlinLogging.logger {}
 @RestController
 @RequestMapping("/api/prompts")
 class PromptController(
-    private val promptService: PromptService
+    private val promptService: PromptService,
+    private val promptExecutionService: com.okestro.okchat.ai.service.PromptExecutionService
 ) {
 
     data class CreatePromptRequest(
@@ -333,6 +334,204 @@ class PromptController(
         
         return if (union > 0) intersection.toDouble() / union else 0.0
     }
+
+    // ========== Execution Tracking APIs ==========
+
+    /**
+     * Get execution history for a prompt type
+     */
+    @GetMapping("/{type}/executions")
+    suspend fun getExecutionHistory(
+        @PathVariable type: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "50") size: Int
+    ): ExecutionHistoryResponse {
+        log.info { "Getting execution history for prompt: $type" }
+        val history = promptExecutionService.getExecutionHistory(type, page, size)
+        
+        return ExecutionHistoryResponse(
+            executions = history.content.map { ExecutionDto.from(it) },
+            totalElements = history.totalElements,
+            totalPages = history.totalPages,
+            currentPage = page
+        )
+    }
+
+    /**
+     * Get execution statistics for a prompt type
+     */
+    @GetMapping("/{type}/statistics")
+    suspend fun getExecutionStatistics(@PathVariable type: String): StatisticsResponse {
+        log.info { "Getting statistics for prompt: $type" }
+        val stats = promptExecutionService.getStatistics(type)
+        
+        return StatisticsResponse(
+            totalExecutions = stats.totalExecutions,
+            successCount = stats.successCount,
+            failureCount = stats.failureCount,
+            successRate = stats.successRate,
+            averageRating = stats.averageRating,
+            averageResponseTimeMs = stats.averageResponseTimeMs
+        )
+    }
+
+    /**
+     * Get version comparison
+     */
+    @GetMapping("/{type}/versions/compare")
+    suspend fun compareVersions(@PathVariable type: String): VersionComparisonResponse {
+        log.info { "Comparing versions for prompt: $type" }
+        val comparison = promptExecutionService.compareVersions(type)
+        
+        return VersionComparisonResponse(
+            versions = comparison.map { VersionStatsDto.from(it) }
+        )
+    }
+
+    /**
+     * Get execution trends
+     */
+    @GetMapping("/{type}/trends")
+    suspend fun getExecutionTrends(
+        @PathVariable type: String,
+        @RequestParam(defaultValue = "30") days: Int
+    ): TrendsResponse {
+        log.info { "Getting execution trends for prompt: $type" }
+        val trends = promptExecutionService.getDailyTrends(type, days)
+        
+        return TrendsResponse(
+            trends = trends.map { TrendDto(it.date, it.count) }
+        )
+    }
+
+    /**
+     * Get executions with user feedback
+     */
+    @GetMapping("/{type}/feedback")
+    suspend fun getExecutionsWithFeedback(
+        @PathVariable type: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ExecutionHistoryResponse {
+        log.info { "Getting executions with feedback for prompt: $type" }
+        val history = promptExecutionService.getExecutionsWithFeedback(type, page, size)
+        
+        return ExecutionHistoryResponse(
+            executions = history.content.map { ExecutionDto.from(it) },
+            totalElements = history.totalElements,
+            totalPages = history.totalPages,
+            currentPage = page
+        )
+    }
+
+    /**
+     * Add feedback to an execution
+     */
+    @PostMapping("/executions/{executionId}/feedback")
+    suspend fun addFeedback(
+        @PathVariable executionId: Long,
+        @RequestBody request: FeedbackRequest
+    ): ExecutionDto {
+        log.info { "Adding feedback to execution: $executionId" }
+        val execution = promptExecutionService.addFeedback(
+            executionId,
+            request.rating,
+            request.feedback
+        )
+        
+        return ExecutionDto.from(execution)
+    }
+
+    // DTOs for execution tracking
+    data class ExecutionHistoryResponse(
+        val executions: List<ExecutionDto>,
+        val totalElements: Long,
+        val totalPages: Int,
+        val currentPage: Int
+    )
+
+    data class ExecutionDto(
+        val id: Long,
+        val promptType: String,
+        val promptVersion: Int,
+        val sessionId: String?,
+        val userEmail: String?,
+        val userInput: String?,
+        val generatedOutput: String?,
+        val responseTimeMs: Long?,
+        val totalTokens: Int?,
+        val status: String,
+        val userRating: Int?,
+        val userFeedback: String?,
+        val createdAt: String
+    ) {
+        companion object {
+            fun from(execution: com.okestro.okchat.ai.model.PromptExecution) = ExecutionDto(
+                id = execution.id!!,
+                promptType = execution.promptType,
+                promptVersion = execution.promptVersion,
+                sessionId = execution.sessionId,
+                userEmail = execution.userEmail,
+                userInput = execution.userInput,
+                generatedOutput = execution.generatedOutput,
+                responseTimeMs = execution.responseTimeMs,
+                totalTokens = execution.totalTokens,
+                status = execution.status.name,
+                userRating = execution.userRating,
+                userFeedback = execution.userFeedback,
+                createdAt = execution.createdAt.toString()
+            )
+        }
+    }
+
+    data class StatisticsResponse(
+        val totalExecutions: Long,
+        val successCount: Long,
+        val failureCount: Long,
+        val successRate: Double,
+        val averageRating: Double,
+        val averageResponseTimeMs: Double
+    )
+
+    data class VersionComparisonResponse(
+        val versions: List<VersionStatsDto>
+    )
+
+    data class VersionStatsDto(
+        val version: Int,
+        val totalExecutions: Long,
+        val successCount: Long,
+        val successRate: Double,
+        val averageRating: Double,
+        val averageResponseTimeMs: Double,
+        val averageTokens: Double
+    ) {
+        companion object {
+            fun from(stats: com.okestro.okchat.ai.service.VersionStatistics) = VersionStatsDto(
+                version = stats.version,
+                totalExecutions = stats.totalExecutions,
+                successCount = stats.successCount,
+                successRate = stats.successRate,
+                averageRating = stats.averageRating,
+                averageResponseTimeMs = stats.averageResponseTimeMs,
+                averageTokens = stats.averageTokens
+            )
+        }
+    }
+
+    data class TrendsResponse(
+        val trends: List<TrendDto>
+    )
+
+    data class TrendDto(
+        val date: String,
+        val count: Long
+    )
+
+    data class FeedbackRequest(
+        val rating: Int?,
+        val feedback: String?
+    )
 
     data class ErrorResponse(
         val message: String,

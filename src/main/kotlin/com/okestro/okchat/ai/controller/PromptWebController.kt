@@ -100,4 +100,23 @@ class PromptWebController(
 
         return@runBlocking "prompts/history"
     }
+
+    /**
+     * View prompt analytics and execution history
+     */
+    @GetMapping("/analytics/{type}")
+    fun analytics(@PathVariable type: String, model: Model): String = runBlocking {
+        log.info { "Loading prompt analytics: $type" }
+
+        val prompt = promptRepository.findLatestByTypeAndActive(type)
+        if (prompt == null) {
+            model.addAttribute("error", "Prompt type not found: $type")
+            return@runBlocking "error"
+        }
+
+        model.addAttribute("type", type)
+        model.addAttribute("prompt", prompt)
+
+        return@runBlocking "prompts/analytics"
+    }
 }

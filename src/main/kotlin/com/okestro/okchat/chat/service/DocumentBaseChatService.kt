@@ -32,7 +32,8 @@ private val log = KotlinLogging.logger {}
 class DocumentBaseChatService(
     private val chatClient: ChatClient,
     private val documentChatPipeline: DocumentChatPipeline,
-    private val sessionManagementService: SessionManagementService,
+    @Autowired(required = false)
+    private val sessionManagementService: SessionManagementService?,
     private val toolCallbacks: List<ToolCallback>,
     @Autowired(required = false) private val mcpToolCallbackProvider: SyncMcpToolCallbackProvider?
 ) : ChatService {
@@ -117,17 +118,17 @@ class DocumentBaseChatService(
      */
     private fun generateSessionIdIfNotProvided(chatServiceRequest: ChatServiceRequest): String {
         val sessionId = chatServiceRequest.sessionId
-        val actualSessionId = sessionId ?: sessionManagementService.generateSessionId()
+        val actualSessionId = sessionId ?: sessionManagementService?.generateSessionId() ?: java.util.UUID.randomUUID().toString()
         log.info { "Processing chat request - SessionId: ${sessionId ?: "NEW"}" }
         log.info { "Using session: $actualSessionId" }
         return actualSessionId
     }
 
     /**
-     * Load conversation history from Redis using coroutine
+     * Load conversation history from Redis using coroutine (if Redis is available)
      */
     private suspend fun loadConversationHistory(actualSessionId: String): ChatContext.ConversationHistory? {
-        return sessionManagementService.loadConversationHistory(actualSessionId)
+        return sessionManagementService?.loadConversationHistory(actualSessionId)
     }
 
     /**
@@ -166,6 +167,11 @@ class DocumentBaseChatService(
         message: String,
         conversationHistory: ChatContext.ConversationHistory?
     ) {
+        if (sessionManagementService == null) {
+            log.debug { "Session management not available (Redis disabled), skipping history save" }
+            return
+        }
+        
         try {
             val assistantResponse = responseBuffer.toString()
             sessionManagementService.saveConversationHistory(

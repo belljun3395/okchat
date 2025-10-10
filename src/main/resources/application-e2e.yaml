@@ -8,6 +8,12 @@ spring:
     compose:
       enabled: false
   
+  # Redis 자동 설정 제외
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
+  
   # H2 인메모리 데이터베이스 사용
   datasource:
     url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
@@ -36,11 +42,7 @@ spring:
     init:
       mode: never  # E2E 테스트에서는 스키마 자동 생성
   
-  # Redis - 임베디드 또는 비활성화
-  data:
-    redis:
-      host: localhost
-      port: 16379
+  # Redis - 비활성화 (autoconfigure.exclude로 제외됨)
   
   # Spring Cloud Task 비활성화
   cloud:

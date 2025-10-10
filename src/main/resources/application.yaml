@@ -129,13 +129,29 @@ email:
             enabled: true
             trust: "*"
     providers:
+        outlook:
+            type: OUTLOOK
+            host: outlook.office365.com
+            port: 993
+            username: ${EMAIL_PROVIDERS_OUTLOOK_USERNAME:your-email.@outlook.com}
+            auth-type: OAUTH2
+            enabled: ${EMAIL_PROVIDERS_OUTLOOK_ENABLED:false}
+            oauth2:
+                client-id: ${EMAIL_PROVIDERS_OUTLOOK_OAUTH2_CLIENT_ID:-}
+                client-secret: ${EMAIL_PROVIDERS_OUTLOOK_OAUTH2_CLIENT_SECRET:-}
+                tenant-id: ${EMAIL_PROVIDERS_OUTLOOK_OAUTH2_TENANT_ID:-}
+                scopes:
+                    - https://outlook.office365.com/IMAP.AccessAsUser.All  # 이메일 받기
+                    - https://outlook.office365.com/SMTP.Send              # 이메일 보내기 (새로 추가)
+                    - offline_access                                        # 리프레시 토큰
+                redirect-uri: ${EMAIL_PROVIDERS_OUTLOOK_OAUTH2_REDIRECT_URI:http://localhost:8080/oauth2/callback}
         gmail:
             type: GMAIL
             host: imap.gmail.com
             port: 993
             username: ${EMAIL_PROVIDERS_GMAIL_USERNAME:dummy@gmail.com}
             auth-type: OAUTH2
-            enabled: false  # Disabled by default for Kubernetes
+            enabled: ${EMAIL_PROVIDERS_GMAIL_ENABLED:false}
             oauth2:
                 client-id: ${EMAIL_PROVIDERS_GMAIL_OAUTH2_CLIENT_ID:dummy-client-id}
                 client-secret: ${EMAIL_PROVIDERS_GMAIL_OAUTH2_CLIENT_SECRET:dummy-secret}

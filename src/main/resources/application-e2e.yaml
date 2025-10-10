@@ -3,6 +3,11 @@ spring:
   application:
     name: ok-chat-e2e
   
+  # Docker Compose 비활성화
+  docker:
+    compose:
+      enabled: false
+  
   # H2 인메모리 데이터베이스 사용
   datasource:
     url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE

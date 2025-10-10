@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${mode == 'create' ? 'Create Prompt' : 'Edit Prompt'}">Prompt Editor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px; 
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        .header { 
+            background: white; 
+            padding: 25px 30px; 
+            border-radius: 12px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-left h1 { 
+            color: #333; 
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: #666; font-size: 14px; }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+        }
+        
+        .editor-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 24px;
+        }
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus {
+            border-color: #667eea;
+        }
+        .form-input:disabled {
+            background: #f3f4f6;
+            cursor: not-allowed;
+        }
+        .form-textarea {
+            min-height: 400px;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            resize: vertical;
+        }
+        
+        .char-count {
+            text-align: right;
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+        
+        .btn { 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 14px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            text-decoration: none; 
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s; 
+        }
+        .btn-primary { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        .btn-primary:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-secondary { 
+            background: #f3f4f6; 
+            color: #374151; 
+        }
+        .btn-secondary:hover { background: #e5e7eb; }
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        
+        /* AI Assistant Panel */
+        .assistant-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .assistant-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .assistant-desc {
+            color: #6b7280;
+            font-size: 13px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .suggestion-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 12px;
+        }
+        .suggestion-input:focus {
+            border-color: #667eea;
+        }
+        
+        .template-section {
+            margin-top: 24px;
+        }
+        .template-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+        .template-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .template-item {
+            padding: 12px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+        .template-item:hover {
+            background: #f3f4f6;
+            border-color: #667eea;
+        }
+        .template-name {
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+        .template-desc {
+            color: #6b7280;
+            font-size: 12px;
+        }
+        
+        .tips-section {
+            margin-top: 24px;
+            padding: 16px;
+            background: #eff6ff;
+            border-left: 4px solid #667eea;
+            border-radius: 6px;
+        }
+        .tips-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e40af;
+            margin-bottom: 8px;
+        }
+        .tips-list {
+            list-style: none;
+            padding: 0;
+        }
+        .tips-list li {
+            color: #1e40af;
+            font-size: 12px;
+            margin-bottom: 6px;
+            padding-left: 16px;
+            position: relative;
+        }
+        .tips-list li::before {
+            content: '💡';
+            position: absolute;
+            left: 0;
+        }
+        
+        .ai-suggestion-box {
+            margin-top: 16px;
+            padding: 16px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            display: none;
+        }
+        .ai-suggestion-box.show {
+            display: block;
+        }
+        .ai-suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .ai-suggestion-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #166534;
+        }
+        .ai-suggestion-content {
+            color: #166534;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e5e7eb;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .stat-box {
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        
+        .error-message {
+            padding: 12px 16px;
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            color: #991b1b;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .error-message.show {
+            display: block;
+        }
+        
+        .success-message {
+            padding: 12px 16px;
+            background: #d1fae5;
+            border: 1px solid #a7f3d0;
+            border-radius: 8px;
+            color: #065f46;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .success-message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <h1>
+                    <span th:text="${mode == 'create' ? '➕' : '✏️'}">✏️</span>
+                    <span th:text="${mode == 'create' ? '새 프롬프트 만들기' : '프롬프트 수정'}">Prompt Editor</span>
+                </h1>
+                <p class="subtitle" th:text="${mode == 'create' ? 'AI 어시스턴트의 도움을 받아 효과적인 프롬프트를 작성하세요' : '프롬프트를 수정하면 새 버전이 생성됩니다'}">Create or edit prompts</p>
+            </div>
+            <a href="/admin/prompts" class="btn btn-secondary">
+                <span>← 목록으로</span>
+            </a>
+        </div>
+
+        <div class="main-content">
+            <!-- Editor Section -->
+            <div class="editor-section">
+                <div id="errorMessage" class="error-message"></div>
+                <div id="successMessage" class="success-message"></div>
+                
+                <form id="promptForm">
+                    <div class="form-group">
+                        <label class="form-label" for="promptType">프롬프트 타입 *</label>
+                        <input 
+                            type="text" 
+                            id="promptType" 
+                            class="form-input" 
+                            placeholder="예: general, document-search, meeting-records"
+                            th:value="${prompt?.type}"
+                            th:disabled="${mode == 'edit'}"
+                            required>
+                        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
+                            프롬프트의 고유 식별자입니다. 소문자와 하이픈(-)만 사용하세요.
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="promptContent">프롬프트 내용 *</label>
+                        <textarea 
+                            id="promptContent" 
+                            class="form-input form-textarea" 
+                            placeholder="프롬프트 내용을 입력하세요...&#10;&#10;팁: 명확하고 구체적인 지시사항을 작성하세요.&#10;변수는 {{variable}} 형식으로 사용할 수 있습니다."
+                            required
+                        >[[${prompt?.content}]]</textarea>
+                        <div class="char-count">
+                            <span id="charCount">0</span> characters
+                        </div>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary" id="saveBtn">
+                            <span>💾</span>
+                            <span th:text="${mode == 'create' ? '프롬프트 생성' : '변경사항 저장'}">Save</span>
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="previewBtn">
+                            <span>👁️</span>
+                            <span>미리보기</span>
+                        </button>
+                        <a href="/admin/prompts" class="btn btn-secondary">
+                            <span>취소</span>
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- AI Assistant Panel -->
+            <div class="assistant-panel">
+                <div class="assistant-title">
+                    <span>🤖</span>
+                    <span>AI 어시스턴트</span>
+                </div>
+                <p class="assistant-desc">
+                    AI의 도움을 받아 효과적인 프롬프트를 작성하세요. 원하는 기능을 설명하면 적절한 프롬프트를 제안해드립니다.
+                </p>
+                
+                <textarea 
+                    id="aiSuggestionInput" 
+                    class="suggestion-input" 
+                    style="min-height: 100px;"
+                    placeholder="예: 문서 검색 시 사용자의 질문을 분석하고 관련 키워드를 추출하는 프롬프트를 만들어줘"></textarea>
+                
+                <button type="button" class="btn btn-primary" id="generateBtn" style="width: 100%;">
+                    <span>✨</span>
+                    <span>AI로 프롬프트 생성</span>
+                </button>
+                
+                <div id="aiSuggestionBox" class="ai-suggestion-box">
+                    <div class="ai-suggestion-header">
+                        <span class="ai-suggestion-title">AI 제안</span>
+                        <button type="button" class="btn btn-secondary" id="applySuggestionBtn" style="padding: 6px 12px; font-size: 12px;">
+                            <span>적용</span>
+                        </button>
+                    </div>
+                    <div id="aiSuggestionContent" class="ai-suggestion-content"></div>
+                </div>
+                
+                <div class="template-section">
+                    <div class="template-title">프롬프트 템플릿</div>
+                    <div class="template-list">
+                        <div class="template-item" data-template="classification">
+                            <div class="template-name">분류 프롬프트</div>
+                            <div class="template-desc">사용자 입력을 카테고리로 분류</div>
+                        </div>
+                        <div class="template-item" data-template="extraction">
+                            <div class="template-name">추출 프롬프트</div>
+                            <div class="template-desc">텍스트에서 정보 추출</div>
+                        </div>
+                        <div class="template-item" data-template="generation">
+                            <div class="template-name">생성 프롬프트</div>
+                            <div class="template-desc">새로운 콘텐츠 생성</div>
+                        </div>
+                        <div class="template-item" data-template="analysis">
+                            <div class="template-name">분석 프롬프트</div>
+                            <div class="template-desc">데이터 분석 및 요약</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" id="wordCount">0</div>
+                        <div class="stat-label">단어 수</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="lineCount">0</div>
+                        <div class="stat-label">줄 수</div>
+                    </div>
+                </div>
+                
+                <div class="tips-section">
+                    <div class="tips-title">효과적인 프롬프트 작성 팁</div>
+                    <ul class="tips-list">
+                        <li>명확하고 구체적인 지시사항을 포함하세요</li>
+                        <li>원하는 출력 형식을 명시하세요</li>
+                        <li>예시를 포함하면 더 좋은 결과를 얻을 수 있습니다</li>
+                        <li>변수는 {{variable}} 형식으로 사용하세요</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const promptContent = document.getElementById('promptContent');
+        const promptType = document.getElementById('promptType');
+        const charCount = document.getElementById('charCount');
+        const wordCount = document.getElementById('wordCount');
+        const lineCount = document.getElementById('lineCount');
+        const promptForm = document.getElementById('promptForm');
+        const saveBtn = document.getElementById('saveBtn');
+        const generateBtn = document.getElementById('generateBtn');
+        const aiSuggestionInput = document.getElementById('aiSuggestionInput');
+        const aiSuggestionBox = document.getElementById('aiSuggestionBox');
+        const aiSuggestionContent = document.getElementById('aiSuggestionContent');
+        const applySuggestionBtn = document.getElementById('applySuggestionBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const mode = '[[${mode}]]';
+        
+        // Template definitions
+        const templates = {
+            classification: `당신은 사용자의 질문을 분류하는 AI 어시스턴트입니다.
+
+다음 카테고리 중 하나로 질문을 분류하세요:
+- DOCUMENT_SEARCH: 문서 검색 요청
+- MEETING_RECORDS: 회의록 조회
+- GENERAL_QUESTION: 일반적인 질문
+- OTHER: 기타
+
+사용자 질문: {{query}}
+
+분류 결과를 JSON 형식으로 반환하세요:
+{
+  "category": "DOCUMENT_SEARCH",
+  "confidence": 0.95,
+  "reason": "분류 이유"
+}`,
+            extraction: `당신은 텍스트에서 핵심 정보를 추출하는 AI 어시스턴트입니다.
+
+다음 텍스트에서 중요한 정보를 추출하세요:
+{{text}}
+
+다음 항목을 추출하세요:
+- 주요 엔티티 (사람, 장소, 조직)
+- 날짜 및 시간
+- 핵심 키워드
+- 요약
+
+결과를 JSON 형식으로 반환하세요.`,
+            generation: `당신은 창의적인 콘텐츠를 생성하는 AI 어시스턴트입니다.
+
+주제: {{topic}}
+톤: {{tone}}
+길이: {{length}}
+
+위 조건에 맞는 콘텐츠를 생성하세요.
+명확하고 이해하기 쉬운 문장을 사용하세요.`,
+            analysis: `당신은 데이터를 분석하고 인사이트를 제공하는 AI 어시스턴트입니다.
+
+다음 데이터를 분석하세요:
+{{data}}
+
+분석 결과에 포함할 내용:
+1. 주요 패턴 및 트렌드
+2. 이상치 또는 특이사항
+3. 실행 가능한 인사이트
+4. 요약 및 결론
+
+분석 결과를 구조화된 형식으로 제공하세요.`
+        };
+        
+        // Update stats
+        function updateStats() {
+            const content = promptContent.value;
+            const chars = content.length;
+            const words = content.trim() ? content.trim().split(/\s+/).length : 0;
+            const lines = content.split('\n').length;
+            
+            charCount.textContent = chars.toLocaleString();
+            wordCount.textContent = words.toLocaleString();
+            lineCount.textContent = lines.toLocaleString();
+        }
+        
+        // Initialize stats
+        updateStats();
+        
+        // Update stats on input
+        promptContent.addEventListener('input', updateStats);
+        
+        // Template selection
+        document.querySelectorAll('.template-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const template = item.dataset.template;
+                if (templates[template]) {
+                    promptContent.value = templates[template];
+                    updateStats();
+                    promptContent.focus();
+                }
+            });
+        });
+        
+        // AI suggestion generation
+        generateBtn.addEventListener('click', async () => {
+            const suggestion = aiSuggestionInput.value.trim();
+            if (!suggestion) {
+                showError('AI 어시스턴트에게 원하는 기능을 설명해주세요.');
+                return;
+            }
+            
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="loading-spinner"></span><span>생성 중...</span>';
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: `다음 요구사항에 맞는 효과적인 AI 프롬프트를 작성해주세요. 프롬프트만 작성하고 다른 설명은 필요없습니다:\n\n${suggestion}`,
+                        sessionId: 'prompt-gen-' + Date.now()
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('AI 응답을 받지 못했습니다.');
+                }
+                
+                // Read streaming response
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let accumulatedText = '';
+                let buffer = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data:')) {
+                            let data = line.slice(5).trim();
+                            if (data && data !== '[DONE]') {
+                                accumulatedText += data;
+                            }
+                        }
+                    }
+                }
+                
+                if (accumulatedText) {
+                    aiSuggestionContent.textContent = accumulatedText.trim();
+                    aiSuggestionBox.classList.add('show');
+                } else {
+                    throw new Error('AI 응답이 비어있습니다.');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError('AI 제안 생성 중 오류가 발생했습니다: ' + error.message);
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '<span>✨</span><span>AI로 프롬프트 생성</span>';
+            }
+        });
+        
+        // Apply AI suggestion
+        applySuggestionBtn.addEventListener('click', () => {
+            const suggestion = aiSuggestionContent.textContent;
+            if (suggestion) {
+                promptContent.value = suggestion;
+                updateStats();
+                promptContent.focus();
+                showSuccess('AI 제안이 적용되었습니다!');
+            }
+        });
+        
+        // Form submission
+        promptForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const type = promptType.value.trim();
+            const content = promptContent.value.trim();
+            
+            if (!type || !content) {
+                showError('프롬프트 타입과 내용을 모두 입력해주세요.');
+                return;
+            }
+            
+            // Validate type format
+            if (!/^[a-z0-9-]+$/.test(type)) {
+                showError('프롬프트 타입은 소문자, 숫자, 하이픈(-)만 사용할 수 있습니다.');
+                return;
+            }
+            
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="loading-spinner"></span><span>저장 중...</span>';
+            
+            try {
+                const url = mode === 'create' ? '/api/prompts' : `/api/prompts/${type}`;
+                const method = mode === 'create' ? 'POST' : 'PUT';
+                const body = mode === 'create' 
+                    ? { type, content }
+                    : { content };
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(body)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || '프롬프트 저장에 실패했습니다.');
+                }
+                
+                showSuccess('프롬프트가 성공적으로 저장되었습니다!');
+                
+                // Redirect after a short delay
+                setTimeout(() => {
+                    window.location.href = '/admin/prompts';
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError('프롬프트 저장 중 오류가 발생했습니다: ' + error.message);
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<span>💾</span><span>' + (mode === 'create' ? '프롬프트 생성' : '변경사항 저장') + '</span>';
+            }
+        });
+        
+        // Preview button
+        document.getElementById('previewBtn').addEventListener('click', () => {
+            const content = promptContent.value;
+            if (!content.trim()) {
+                showError('미리볼 내용이 없습니다.');
+                return;
+            }
+            
+            // Open preview in new window
+            const previewWindow = window.open('', '_blank', 'width=800,height=600');
+            previewWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Prompt Preview</title>
+                    <style>
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            padding: 40px;
+                            max-width: 800px;
+                            margin: 0 auto;
+                            line-height: 1.6;
+                        }
+                        pre {
+                            background: #f3f4f6;
+                            padding: 20px;
+                            border-radius: 8px;
+                            white-space: pre-wrap;
+                            word-wrap: break-word;
+                        }
+                        h1 {
+                            color: #333;
+                            border-bottom: 2px solid #667eea;
+                            padding-bottom: 10px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>프롬프트 미리보기</h1>
+                    <pre>${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                </body>
+                </html>
+            `);
+        });
+        
+        // Utility functions
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+            successMessage.classList.remove('show');
+            setTimeout(() => {
+                errorMessage.classList.remove('show');
+            }, 5000);
+        }
+        
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.classList.add('show');
+            errorMessage.classList.remove('show');
+            setTimeout(() => {
+                successMessage.classList.remove('show');
+            }, 5000);
+        }
+        
+        // Auto-save to localStorage
+        let autoSaveTimeout;
+        promptContent.addEventListener('input', () => {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                localStorage.setItem('prompt-draft', JSON.stringify({
+                    type: promptType.value,
+                    content: promptContent.value,
+                    timestamp: new Date().toISOString()
+                }));
+            }, 1000);
+        });
+        
+        // Restore draft on load (only for create mode)
+        if (mode === 'create') {
+            const draft = localStorage.getItem('prompt-draft');
+            if (draft) {
+                try {
+                    const data = JSON.parse(draft);
+                    const draftAge = Date.now() - new Date(data.timestamp).getTime();
+                    // Restore if draft is less than 1 hour old
+                    if (draftAge < 3600000) {
+                        if (confirm('저장되지 않은 초안이 있습니다. 복원하시겠습니까?')) {
+                            promptType.value = data.type || '';
+                            promptContent.value = data.content || '';
+                            updateStats();
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to restore draft:', e);
+                }
+            }
+        }
+        
+        // Clear draft on successful save
+        window.addEventListener('beforeunload', (e) => {
+            if (promptContent.value.trim() && !saveBtn.disabled) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+    </script>
+</body>
+</html>

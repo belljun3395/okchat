@@ -12,6 +12,8 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.codec.ClientCodecConfigurer
+import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
 import java.util.Base64
 
@@ -55,9 +57,23 @@ class ConfluenceConfig {
             .target(ConfluenceClient::class.java, properties.baseUrl)
     }
 
+    @Bean
+    fun confluenceExchangeStrategies(): ExchangeStrategies {
+        // Configure exchange strategies to handle large PDF files (50MB)
+        return ExchangeStrategies.builder()
+            .codecs { configurer: ClientCodecConfigurer ->
+                configurer.defaultCodecs().maxInMemorySize(50 * 1024 * 1024)
+            }
+            .build()
+    }
+
     @Bean(name = ["confluenceWebClient"])
-    fun webClient(properties: ConfluenceProperties): WebClient {
+    fun webClient(
+        properties: ConfluenceProperties,
+        exchangeStrategies: ExchangeStrategies
+    ): WebClient {
         return WebClient.builder()
+            .exchangeStrategies(exchangeStrategies)
             .defaultHeaders { headers ->
                 val email = properties.auth.email
                 val apiToken = properties.auth.apiToken

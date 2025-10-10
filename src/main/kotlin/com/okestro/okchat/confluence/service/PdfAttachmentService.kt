@@ -6,14 +6,15 @@ import com.okestro.okchat.confluence.config.ConfluenceProperties
 import com.okestro.okchat.search.model.metadata
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.withContext
 import org.springframework.ai.document.Document
 import org.springframework.ai.reader.pdf.PagePdfDocumentReader
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.stereotype.Service
+import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.awaitBody
 import java.net.URI
 
 private val log = KotlinLogging.logger {}
@@ -27,7 +28,8 @@ class PdfAttachmentService(
     private val confluenceClient: ConfluenceClient,
     private val confluenceProperties: ConfluenceProperties,
     @Qualifier("confluenceWebClient")
-    private val webClient: WebClient
+    private val webClient: WebClient,
+    private val exchangeStrategies: ExchangeStrategies
 ) {
     /**
      * Get all PDF attachments for a page and extract their text content
@@ -99,27 +101,65 @@ class PdfAttachmentService(
      * Download attachment file using downloadLink from API response
      */
     private suspend fun downloadAttachmentFile(attachment: Attachment): ByteArray {
-        // Use downloadLink from API response
-        val downloadLink = attachment.downloadLink ?: attachment._links?.download
-            ?: throw IllegalStateException("No download link available for attachment: ${attachment.id}")
+        return withContext(Dispatchers.IO) {
+            // Use downloadLink from API response
+            val downloadLink = attachment.downloadLink ?: attachment._links?.download
+                ?: throw IllegalStateException("No download link available for attachment: ${attachment.id}")
 
-        // Construct full URL: wiki base URL + download link
-        // baseUrl is like "https://okestro.atlassian.net/wiki/api/v2"
-        // downloadLink is like "/download/attachments/2164261392/file.pdf?..." (already URL-encoded)
-        val wikiBaseUrl = confluenceProperties.baseUrl.removeSuffix("/api/v2").removeSuffix("/")
-        val fullUrl = "$wikiBaseUrl$downloadLink"
+            // Construct full URL: wiki base URL + download link
+            // baseUrl is like "https://okestro.atlassian.net/wiki/api/v2"
+            // downloadLink is like "/download/attachments/2164261392/file.pdf?..." (already URL-encoded)
+            val wikiBaseUrl = confluenceProperties.baseUrl.removeSuffix("/api/v2").removeSuffix("/")
+            val fullUrl = "$wikiBaseUrl$downloadLink"
 
-        log.debug { "[PdfAttachment] Downloading from URL: $fullUrl" }
+            log.debug { "[PdfAttachment] Downloading from URL: $fullUrl" }
 
-        // Create URI directly to avoid double encoding
-        // downloadLink is already encoded by Confluence API, so we use it as-is
-        val uri = URI.create(fullUrl)
+            // Create URI directly to avoid double encoding
+            // downloadLink is already encoded by Confluence API, so we use it as-is
+            val uri = URI.create(fullUrl)
 
-        // Download file using WebClient (auth headers already configured in bean)
-        return webClient.get()
-            .uri(uri)
-            .retrieve()
-            .awaitBody<ByteArray>()
+            try {
+                // Download file using WebClient (auth headers already configured in bean)
+                // Handle redirects manually since Confluence returns 302 to media.atlassian.com
+                val responseEntity = webClient.get()
+                    .uri(uri)
+                    .exchangeToMono { response ->
+                        log.debug { "[PdfAttachment] Response status: ${response.statusCode()}" }
+
+                        if (response.statusCode().is3xxRedirection) {
+                            // Handle redirect manually
+                            val location = response.headers().asHttpHeaders().location
+                            log.debug { "[PdfAttachment] Following redirect to: $location" }
+
+                            if (location != null) {
+                                // Create a new WebClient without auth headers but with same buffer size config
+                                WebClient.builder()
+                                    .exchangeStrategies(exchangeStrategies)
+                                    .build()
+                                    .get()
+                                    .uri(location)
+                                    .retrieve()
+                                    .toEntity(ByteArray::class.java)
+                            } else {
+                                throw IllegalStateException("Redirect response without Location header for attachment: ${attachment.id}")
+                            }
+                        } else {
+                            response.toEntity(ByteArray::class.java)
+                        }
+                    }
+                    .awaitSingle()
+
+                log.debug { "[PdfAttachment] Download completed: status=${responseEntity.statusCode}, body size=${responseEntity.body?.size ?: 0}" }
+
+                responseEntity.body ?: throw IllegalStateException("Empty response body for attachment: ${attachment.id}")
+            } catch (e: NoSuchElementException) {
+                log.error(e) { "[PdfAttachment] Empty response from server for URL: $fullUrl" }
+                throw IllegalStateException("No content received for attachment: ${attachment.id}", e)
+            } catch (e: Exception) {
+                log.error(e) { "[PdfAttachment] Failed to download PDF from URL: $fullUrl" }
+                throw e
+            }
+        }
     }
 
     /**
@@ -161,7 +201,7 @@ class PdfAttachmentService(
                     this.type = "confluence-pdf-attachment"
                     this.spaceKey = spaceKey
                     this.path = "$path > ${attachment.title}"
-                    
+
                     // Additional PDF-specific properties
                     "pageId" to (attachment.pageId ?: "")
                     "attachmentTitle" to attachment.title
@@ -169,7 +209,7 @@ class PdfAttachmentService(
                     "fileSize" to (attachment.fileSize ?: 0)
                     "mediaType" to attachment.mediaType
                 }
-                
+
                 listOf(
                     Document(
                         attachment.id,

@@ -28,7 +28,7 @@ class PdfAttachmentServiceTest {
             this.type = "confluence-pdf-attachment"
             this.spaceKey = spaceKey
             this.path = "$path > $attachmentTitle"
-            
+
             // Additional PDF-specific properties
             "pageId" to pageId
             "attachmentTitle" to attachmentTitle
@@ -44,7 +44,7 @@ class PdfAttachmentServiceTest {
         assertEquals("confluence-pdf-attachment", pdfMetadata.type)
         assertEquals(spaceKey, pdfMetadata.spaceKey)
         assertEquals("$path > $attachmentTitle", pdfMetadata.path)
-        
+
         // Check additional properties
         assertEquals(pageId, pdfMetadata.additionalProperties["pageId"])
         assertEquals(attachmentTitle, pdfMetadata.additionalProperties["attachmentTitle"])
@@ -63,7 +63,7 @@ class PdfAttachmentServiceTest {
             this.type = "confluence-pdf-attachment"
             this.spaceKey = "TEST"
             this.path = "Test > PDF"
-            
+
             "pageId" to "page456"
             "attachmentTitle" to "test.pdf"
             "pdfPageNumber" to 1
@@ -81,7 +81,7 @@ class PdfAttachmentServiceTest {
         assertEquals("confluence-pdf-attachment", flatMap[MetadataFields.TYPE])
         assertEquals("TEST", flatMap[MetadataFields.SPACE_KEY])
         assertEquals("Test > PDF", flatMap[MetadataFields.PATH])
-        
+
         // Check flattened additional properties
         assertEquals("page456", flatMap["metadata.pageId"])
         assertEquals("test.pdf", flatMap["metadata.attachmentTitle"])
@@ -105,7 +105,7 @@ class PdfAttachmentServiceTest {
                 this.id = attachmentId
                 this.title = "$pageTitle - $attachmentTitle (Page ${index + 1})"
                 this.type = "confluence-pdf-attachment"
-                
+
                 "pdfPageNumber" to (index + 1)
                 "totalPdfPages" to totalPages
             }
@@ -130,7 +130,7 @@ class PdfAttachmentServiceTest {
             this.id = "large-att"
             this.title = "Large PDF Document"
             this.type = "confluence-pdf-attachment"
-            
+
             "fileSize" to largeFileSize
             "mediaType" to "application/pdf"
         }
@@ -149,7 +149,7 @@ class PdfAttachmentServiceTest {
             this.id = "att123"
             this.title = "Test PDF"
             this.type = "confluence-pdf-attachment"
-            
+
             "pageId" to emptyPageId
             "attachmentTitle" to "test.pdf"
         }
@@ -182,7 +182,7 @@ class PdfAttachmentServiceTest {
     @Test
     fun `PDF metadata DSL should be readable and maintainable`() {
         // This test demonstrates the readability improvement over map-based approach
-        
+
         // Old approach (for comparison)
         val oldStyleMap = mapOf(
             "id" to "att123",
@@ -205,7 +205,7 @@ class PdfAttachmentServiceTest {
             this.type = "confluence-pdf-attachment"
             this.spaceKey = "DOC"
             this.path = "Path > file.pdf"
-            
+
             "pageId" to "page456"
             "attachmentTitle" to "file.pdf"
             "pdfPageNumber" to 1
@@ -216,7 +216,7 @@ class PdfAttachmentServiceTest {
 
         // Both should produce equivalent results
         val flatMap = newStyleMetadata.toFlatMap()
-        
+
         // Verify they contain the same information
         assertEquals(oldStyleMap["id"], newStyleMetadata.id)
         assertEquals(oldStyleMap["title"], newStyleMetadata.title)
@@ -229,8 +229,7 @@ class PdfAttachmentServiceTest {
     fun `PDF metadata should support dynamic values`() {
         // Given
         fun calculatePageNumber(index: Int) = index + 1
-        fun formatTitle(base: String, attachment: String, page: Int) = 
-            "$base - $attachment (Page $page)"
+        fun formatTitle(base: String, attachment: String, page: Int) = "$base - $attachment (Page $page)"
 
         // When
         val index = 2
@@ -238,7 +237,7 @@ class PdfAttachmentServiceTest {
             this.id = "att-dynamic"
             this.title = formatTitle("Documentation", "guide.pdf", calculatePageNumber(index))
             this.type = "confluence-pdf-attachment"
-            
+
             "pdfPageNumber" to calculatePageNumber(index)
             "computedValue" to (index * 100)
         }

@@ -1,0 +1,108 @@
+# E2E 테스트용 Spring Boot 설정
+spring:
+  application:
+    name: ok-chat-e2e
+  
+  # H2 인메모리 데이터베이스 사용
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 10000
+  
+  # H2 콘솔 비활성화
+  h2:
+    console:
+      enabled: false
+  
+  # JPA 설정
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    database-platform: org.hibernate.dialect.H2Dialect
+  
+  # SQL 초기화
+  sql:
+    init:
+      mode: never  # E2E 테스트에서는 스키마 자동 생성
+  
+  # Redis - 임베디드 또는 비활성화
+  data:
+    redis:
+      host: localhost
+      port: 16379
+  
+  # Spring Cloud Task 비활성화
+  cloud:
+    task:
+      enabled: false
+  
+  # Spring AI 설정
+  ai:
+    retry:
+      max-attempts: 1  # 테스트 환경에서는 재시도 최소화
+    vectorstore:
+      opensearch:
+        host: localhost
+        port: 9200
+        scheme: http
+        username: ""
+        password: ""
+        index-name: vector_store_test
+        embedding-dimension: 1536
+    openai:
+      api-key: ${OPENAI_API_KEY:sk-test-mock-key}
+      embedding:
+        model: text-embedding-3-small
+      chat:
+        options:
+          model: gpt-4.1-mini
+
+# Confluence 설정 - 테스트용 더미 값
+confluence:
+  base-url: http://localhost:9999
+  auth:
+    type: BASIC
+    email: test@example.com
+    api-token: test-token
+
+# Email 설정 - 비활성화
+email:
+  polling:
+    enabled: false
+    interval: 600000
+  providers:
+    outlook:
+      enabled: false
+    gmail:
+      enabled: false
+
+# Task 비활성화
+task:
+  confluence-sync:
+    enabled: false
+  email-polling:
+    enabled: false
+
+# 액추에이터
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+# 로깅 레벨
+logging:
+  level:
+    root: INFO
+    com.okestro.okchat: INFO
+    org.springframework: WARN
+    org.hibernate: WARN

@@ -195,6 +195,7 @@ class PdfAttachmentService(
                 log.info { "[PdfAttachment] Merged PDF content: ${fullText.length} chars total" }
 
                 // Create single document with all PDF content
+                val wikiBaseUrl = confluenceProperties.baseUrl.removeSuffix("/api/v2").removeSuffix("/")
                 val pdfMetadata = metadata {
                     this.id = attachment.id
                     this.title = "$pageTitle-${attachment.title}"
@@ -208,6 +209,10 @@ class PdfAttachmentService(
                     "totalPdfPages" to extractedDocuments.size
                     "fileSize" to (attachment.fileSize ?: 0)
                     "mediaType" to attachment.mediaType
+
+                    // Links for user access
+                    "downloadUrl" to (attachment.downloadLink?.let { "$wikiBaseUrl$it" } ?: "")
+                    "webUrl" to (attachment.webuiLink?.let { "$wikiBaseUrl$it" } ?: "")
                 }
 
                 listOf(

@@ -31,6 +31,10 @@ object HybridSearchUtils {
             val keywords = document.getKeywords()
             val type = document.getType() // Get document type (page or PDF attachment)
 
+            // Extract link information from metadata
+            val webUrl = document.metadata.getStringValue("webUrl")
+            val downloadUrl = document.metadata.getStringValue("downloadUrl")
+
             val combinedScore = scoresCombiner(hit.textScore, hit.vectorScore)
 
             log.trace { "[Parse] id=$actualPageId, title=$title, type=$type, textScore=${hit.textScore}, vectorScore=${hit.vectorScore}, combined=$combinedScore" }
@@ -43,7 +47,9 @@ object HybridSearchUtils {
                 spaceKey = spaceKey,
                 keywords = keywords,
                 similarity = SearchScore.SimilarityScore(combinedScore),
-                type = type
+                type = type,
+                webUrl = webUrl,
+                downloadUrl = downloadUrl
             )
         }.sortedByDescending { it.score.value }
     }

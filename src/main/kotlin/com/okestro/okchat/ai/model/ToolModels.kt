@@ -91,3 +91,15 @@ data class SearchByKeywordInput(
 ) {
     fun getValidatedTopK(): Int = topK.coerceIn(1, 50)
 }
+
+/**
+ * Input for SearchPagePdfAttachmentsTool
+ */
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SearchPagePdfAttachmentsInput(
+    @JsonProperty("thought")
+    val thought: String? = null,
+
+    @JsonProperty("pageId")
+    val pageId: String
+)

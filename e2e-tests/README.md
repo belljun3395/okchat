@@ -53,8 +53,11 @@ npx playwright install --with-deps
 ### 기본 실행
 
 ```bash
-# 모든 테스트 실행
+# 핵심 테스트만 실행 (chat, permissions) - 추천!
 npm test
+
+# 모든 테스트 실행 (확장 테스트 포함)
+npm run test:all
 
 # UI 모드로 실행 (디버깅에 유용)
 npm run test:ui
@@ -66,6 +69,8 @@ npm run test:headed
 npm run test:debug
 ```
 
+> **💡 Tip**: 개발 중에는 `npm test`로 핵심 기능만 빠르게 테스트하고, PR 전에 `npm run test:all`로 전체 테스트를 실행하세요.
+
 ### 특정 테스트 실행
 
 ```bash
@@ -74,6 +79,11 @@ npm run test:chat
 
 # 권한 관리 테스트만 실행
 npm run test:permissions
+
+# 확장 테스트 (별도 실행)
+npm run test:accessibility  # 접근성 테스트
+npm run test:performance    # 성능 테스트
+npm run test:visual         # 시각적 회귀 테스트
 ```
 
 ### 브라우저별 실행

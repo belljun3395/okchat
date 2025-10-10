@@ -2,6 +2,7 @@ package com.okestro.okchat.task
 
 import com.okestro.okchat.ai.support.chunking.ChunkingStrategy
 import com.okestro.okchat.ai.support.extraction.KeywordExtractionService
+import com.okestro.okchat.confluence.config.ConfluenceProperties
 import com.okestro.okchat.confluence.model.ContentHierarchy
 import com.okestro.okchat.confluence.model.ContentNode
 import com.okestro.okchat.confluence.service.ConfluenceService
@@ -48,6 +49,7 @@ class ConfluenceSyncTask(
     private val openSearchClient: OpenSearchClient,
     private val keywordExtractionService: KeywordExtractionService,
     private val chunkingStrategy: ChunkingStrategy,
+    private val confluenceProperties: ConfluenceProperties,
     @Value("\${spring.ai.vectorstore.opensearch.index-name}") private val indexName: String
 ) : CommandLineRunner {
 
@@ -240,6 +242,9 @@ class ConfluenceSyncTask(
                     val currentSpaceKey = spaceKey
                     val currentPath = path
 
+                    val wikiBaseUrl = confluenceProperties.baseUrl.removeSuffix("/api/v2").removeSuffix("/")
+                    val pageUrl = "$wikiBaseUrl/wiki/spaces/$currentSpaceKey/pages/${node.id}"
+
                     val baseMetadata = metadata {
                         this.id = node.id
                         this.title = pageTitle
@@ -248,6 +253,7 @@ class ConfluenceSyncTask(
                         this.path = currentPath
                         this.keywords = allKeywords
                         "isEmpty" to pageContent.isBlank()
+                        "webUrl" to pageUrl
                     }
 
                     val baseDocument = Document(

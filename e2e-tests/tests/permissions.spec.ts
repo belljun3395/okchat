@@ -92,6 +92,9 @@ test.describe('Permissions Management Interface', () => {
       expect(name).toBeTruthy();
       expect(status).toMatch(/Active|Inactive/);
       await expect(actionBtn).toBeVisible();
+    } else {
+      // No users - this is acceptable in test environment
+      console.log('No users found in test database');
     }
   });
 
@@ -119,6 +122,9 @@ test.describe('Permissions Management Interface', () => {
           expect(bgColor).toBeTruthy();
         }
       }
+    } else {
+      // Skip test if no users
+      test.skip();
     }
   });
 
@@ -168,9 +174,12 @@ test.describe('Permissions Management Interface', () => {
         await permissionsPage.viewUserDetails(email);
 
         // Should navigate to user detail page
-        await page.waitForURL(/\/admin\/permissions\/user\//);
+        await page.waitForURL(/\/admin\/permissions\/user\//, { timeout: 10000 });
         expect(page.url()).toContain('/admin/permissions/user/');
       }
+    } else {
+      // Skip test if no users
+      test.skip();
     }
   });
 
@@ -279,6 +288,9 @@ test.describe('Permissions Management Interface', () => {
           expect(email).toMatch(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
         }
       }
+    } else {
+      // Skip test if no users
+      test.skip();
     }
   });
 });

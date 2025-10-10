@@ -1,6 +1,5 @@
 package com.okestro.okchat.search.client.opensearch
 
-import com.okestro.okchat.search.model.MetadataFields
 import com.okestro.okchat.search.model.SearchDocument
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
@@ -56,7 +55,7 @@ class OpenSearchVectorStoreClient(
                     put("id", document.id)
                     put("content", docText)
                     put("embedding", embedding)
-                    
+
                     // Flatten metadata fields with dot notation for easier querying
                     document.metadata.forEach { (key, value) ->
                         put("metadata.$key", value)

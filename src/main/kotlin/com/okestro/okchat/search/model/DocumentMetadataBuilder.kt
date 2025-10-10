@@ -100,11 +100,11 @@ fun metadata(block: DocumentMetadataBuilder.() -> Unit): DocumentMetadata {
 fun org.springframework.ai.document.Document.buildMetadata(block: DocumentMetadataBuilder.() -> Unit): org.springframework.ai.document.Document {
     val documentMetadata = metadata(block)
     val metadataMap = documentMetadata.toMap()
-    
+
     // Merge with existing metadata
     val mergedMetadata = this.metadata.toMutableMap().apply {
         putAll(metadataMap)
     }
-    
+
     return org.springframework.ai.document.Document(this.id, this.text ?: "", mergedMetadata)
 }

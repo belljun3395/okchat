@@ -122,11 +122,8 @@ class ContextBuildingStep(
         if (documents.isEmpty()) return
 
         append("Other Related Documents (${documents.size}):\n")
-        documents.take(MAX_OTHER_RESULTS_PREVIEW).forEach { result ->
-            append("- ${result.title} (score: ${"%.2f".format(result.score.value)})\n")
-        }
-        if (documents.size > MAX_OTHER_RESULTS_PREVIEW) {
-            append("... and ${documents.size - MAX_OTHER_RESULTS_PREVIEW} more\n")
+        documents.forEachIndexed { index, result ->
+            appendDocumentInfo(index + 1, result, detailed = true)
         }
         append("\n")
     }

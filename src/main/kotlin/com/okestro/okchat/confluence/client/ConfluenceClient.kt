@@ -98,14 +98,4 @@ interface ConfluenceClient {
         @Param("cursor") cursor: String? = null,
         @Param("limit") limit: Int = 100
     ): AttachmentListResponse
-
-    /**
-     * Download attachment
-     *
-     * @param attachmentId The attachment ID
-     * @return Attachment binary data as byte array
-     * @see <a href="https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-attachment/#api-attachments-id-download-get">Confluence REST API - Download attachment</a>
-     */
-    @RequestLine("GET /attachments/{attachmentId}/download")
-    fun downloadAttachment(@Param("attachmentId") attachmentId: String): ByteArray
 }

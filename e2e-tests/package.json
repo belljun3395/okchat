@@ -1,0 +1,33 @@
+{
+  "name": "okchat-e2e-tests",
+  "version": "1.0.0",
+  "description": "Playwright E2E tests for OKChat frontend",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:chat": "playwright test tests/chat.spec.ts",
+    "test:permissions": "playwright test tests/permissions.spec.ts",
+    "test:chrome": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "test:safari": "playwright test --project=webkit",
+    "test:mobile": "playwright test --project=mobile-chrome",
+    "report": "playwright show-report",
+    "codegen": "playwright codegen http://localhost:8080"
+  },
+  "keywords": [
+    "playwright",
+    "e2e",
+    "testing",
+    "qa"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}

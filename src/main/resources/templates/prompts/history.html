@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt History</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px; 
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        .header { 
+            background: white; 
+            padding: 25px 30px; 
+            border-radius: 12px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-left h1 { 
+            color: #333; 
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+        .prompt-type-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .subtitle { color: #666; font-size: 14px; margin-top: 8px; }
+        
+        .stats { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 15px; 
+            margin-bottom: 20px; 
+        }
+        .stat-card { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+        }
+        .stat-number { 
+            font-size: 32px; 
+            font-weight: bold; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stat-label { color: #666; font-size: 14px; margin-top: 5px; }
+        
+        .btn { 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 14px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            text-decoration: none; 
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s; 
+        }
+        .btn-primary { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+        }
+        .btn-primary:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary { 
+            background: #f3f4f6; 
+            color: #374151; 
+        }
+        .btn-secondary:hover { background: #e5e7eb; }
+        
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #667eea, #764ba2);
+        }
+        
+        .version-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+            transition: all 0.3s;
+        }
+        .version-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+        .version-card::before {
+            content: '';
+            position: absolute;
+            left: -33px;
+            top: 24px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: white;
+            border: 4px solid #667eea;
+            box-shadow: 0 0 0 4px white;
+        }
+        .version-card.active::before {
+            background: #667eea;
+            box-shadow: 0 0 0 4px white, 0 0 0 8px rgba(102, 126, 234, 0.2);
+        }
+        
+        .version-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 16px;
+        }
+        .version-info {
+            flex: 1;
+        }
+        .version-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+        .version-date {
+            color: #6b7280;
+            font-size: 13px;
+        }
+        .version-badge {
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .badge-inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .version-content {
+            background: #f9fafb;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .version-text {
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #374151;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .version-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .version-stat {
+            text-align: center;
+            padding: 8px;
+            background: #f3f4f6;
+            border-radius: 6px;
+        }
+        .version-stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .version-stat-label {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+        
+        .version-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+        
+        .compare-mode {
+            background: #eff6ff;
+            border: 2px solid #667eea;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .compare-mode.active {
+            display: block;
+        }
+        .compare-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .compare-title {
+            font-weight: 600;
+            color: #1e40af;
+        }
+        .compare-info {
+            color: #1e40af;
+            font-size: 13px;
+        }
+        
+        .diff-view {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .diff-view.active {
+            display: block;
+        }
+        .diff-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #1a1a1a;
+        }
+        .diff-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .diff-panel {
+            background: #f9fafb;
+            padding: 16px;
+            border-radius: 8px;
+        }
+        .diff-panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        .diff-content {
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #1a1a1a;
+        }
+        
+        .scrollbar-custom::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .scrollbar-custom::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .scrollbar-custom::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+        .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <h1>
+                    <span>📜</span>
+                    <span>프롬프트 히스토리</span>
+                    <span class="prompt-type-badge" th:text="${type}">Type</span>
+                </h1>
+                <p class="subtitle" th:text="'총 ' + ${totalVersions} + '개의 버전이 있습니다'">Version history</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <a th:href="@{/admin/prompts/edit/{type}(type=${type})}" class="btn btn-primary">
+                    <span>✏️</span>
+                    <span>수정</span>
+                </a>
+                <a href="/admin/prompts" class="btn btn-secondary">
+                    <span>← 목록으로</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" th:text="${totalVersions}">0</div>
+                <div class="stat-label">전체 버전</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" th:text="${versions[0].version}">0</div>
+                <div class="stat-label">최신 버전</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" th:text="${#lists.size(#lists.toList(versions).?[active]))}">0</div>
+                <div class="stat-label">활성 버전</div>
+            </div>
+        </div>
+
+        <div class="compare-mode" id="compareMode">
+            <div class="compare-header">
+                <div class="compare-title">비교 모드</div>
+                <button type="button" class="btn btn-secondary btn-small" id="cancelCompareBtn">
+                    <span>취소</span>
+                </button>
+            </div>
+            <div class="compare-info" id="compareInfo">
+                2개의 버전을 선택하여 비교하세요
+            </div>
+        </div>
+
+        <div class="diff-view" id="diffView">
+            <div class="diff-title">버전 비교</div>
+            <div class="diff-container">
+                <div class="diff-panel">
+                    <div class="diff-panel-title" id="version1Title">Version 1</div>
+                    <div class="diff-content scrollbar-custom" id="version1Content"></div>
+                </div>
+                <div class="diff-panel">
+                    <div class="diff-panel-title" id="version2Title">Version 2</div>
+                    <div class="diff-content scrollbar-custom" id="version2Content"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="timeline">
+            <div th:each="version : ${versions}" 
+                 class="version-card" 
+                 th:classappend="${version.active} ? 'active' : ''"
+                 th:data-version="${version.version}"
+                 th:data-content="${version.content}">
+                
+                <div class="version-header">
+                    <div class="version-info">
+                        <div class="version-number" th:text="'Version ' + ${version.version}">Version 1</div>
+                        <div class="version-date" th:text="${#temporals.format(version.updatedAt, 'yyyy년 MM월 dd일 HH:mm:ss')}">2025-01-01 00:00:00</div>
+                    </div>
+                    <div>
+                        <span th:if="${version.active}" class="version-badge badge-active">활성</span>
+                        <span th:unless="${version.active}" class="version-badge badge-inactive">비활성</span>
+                    </div>
+                </div>
+                
+                <div class="version-stats">
+                    <div class="version-stat">
+                        <div class="version-stat-value" th:text="${version.content.length()}">0</div>
+                        <div class="version-stat-label">문자 수</div>
+                    </div>
+                    <div class="version-stat">
+                        <div class="version-stat-value" th:text="${#strings.length(#strings.replace(version.content, ' ', ''))}">0</div>
+                        <div class="version-stat-label">공백 제외</div>
+                    </div>
+                    <div class="version-stat">
+                        <div class="version-stat-value" th:text="${#strings.arrayLen(#strings.arraySplit(version.content, '\n'))}">0</div>
+                        <div class="version-stat-label">줄 수</div>
+                    </div>
+                </div>
+                
+                <div class="version-content scrollbar-custom">
+                    <div class="version-text" th:text="${version.content}">Prompt content</div>
+                </div>
+                
+                <div class="version-actions">
+                    <button type="button" class="btn btn-primary btn-small compare-btn" th:data-version="${version.version}">
+                        <span>⚖️</span>
+                        <span>비교</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-small view-btn">
+                        <span>👁️</span>
+                        <span>전체보기</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-small copy-btn">
+                        <span>📋</span>
+                        <span>복사</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let compareVersions = [];
+        const compareMode = document.getElementById('compareMode');
+        const compareInfo = document.getElementById('compareInfo');
+        const diffView = document.getElementById('diffView');
+        const cancelCompareBtn = document.getElementById('cancelCompareBtn');
+        
+        // Compare button handlers
+        document.querySelectorAll('.compare-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const version = parseInt(btn.dataset.version);
+                const card = btn.closest('.version-card');
+                const content = card.dataset.content;
+                
+                if (compareVersions.find(v => v.version === version)) {
+                    // Remove from comparison
+                    compareVersions = compareVersions.filter(v => v.version !== version);
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-secondary');
+                } else if (compareVersions.length < 2) {
+                    // Add to comparison
+                    compareVersions.push({ version, content });
+                    btn.classList.remove('btn-secondary');
+                    btn.classList.add('btn-primary');
+                }
+                
+                updateCompareView();
+            });
+        });
+        
+        // Cancel compare
+        cancelCompareBtn.addEventListener('click', () => {
+            compareVersions = [];
+            compareMode.classList.remove('active');
+            diffView.classList.remove('active');
+            document.querySelectorAll('.compare-btn').forEach(btn => {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+            });
+        });
+        
+        // Update compare view
+        function updateCompareView() {
+            if (compareVersions.length === 0) {
+                compareMode.classList.remove('active');
+                diffView.classList.remove('active');
+            } else if (compareVersions.length === 1) {
+                compareMode.classList.add('active');
+                compareInfo.textContent = `Version ${compareVersions[0].version} 선택됨. 비교할 다른 버전을 선택하세요.`;
+                diffView.classList.remove('active');
+            } else if (compareVersions.length === 2) {
+                compareMode.classList.add('active');
+                compareInfo.textContent = `Version ${compareVersions[0].version}과 Version ${compareVersions[1].version}을 비교 중입니다.`;
+                diffView.classList.add('active');
+                
+                // Sort versions by number
+                const sorted = [...compareVersions].sort((a, b) => a.version - b.version);
+                
+                document.getElementById('version1Title').textContent = `Version ${sorted[0].version}`;
+                document.getElementById('version1Content').textContent = sorted[0].content;
+                document.getElementById('version2Title').textContent = `Version ${sorted[1].version}`;
+                document.getElementById('version2Content').textContent = sorted[1].content;
+            }
+        }
+        
+        // View full content
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const card = btn.closest('.version-card');
+                const content = card.dataset.content;
+                const version = card.dataset.version;
+                
+                const viewWindow = window.open('', '_blank', 'width=800,height=600');
+                viewWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Version ${version} - Full View</title>
+                        <style>
+                            body {
+                                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                                padding: 40px;
+                                max-width: 1000px;
+                                margin: 0 auto;
+                            }
+                            h1 {
+                                color: #333;
+                                border-bottom: 2px solid #667eea;
+                                padding-bottom: 10px;
+                                margin-bottom: 20px;
+                            }
+                            pre {
+                                background: #f3f4f6;
+                                padding: 20px;
+                                border-radius: 8px;
+                                white-space: pre-wrap;
+                                word-wrap: break-word;
+                                font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+                                font-size: 13px;
+                                line-height: 1.6;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>Version ${version} - 전체 내용</h1>
+                        <pre>${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                    </body>
+                    </html>
+                `);
+            });
+        });
+        
+        // Copy content
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const card = btn.closest('.version-card');
+                const content = card.dataset.content;
+                
+                try {
+                    await navigator.clipboard.writeText(content);
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<span>✓</span><span>복사됨</span>';
+                    btn.style.background = '#10b981';
+                    btn.style.color = 'white';
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.style.background = '';
+                        btn.style.color = '';
+                    }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy:', err);
+                    alert('복사에 실패했습니다.');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

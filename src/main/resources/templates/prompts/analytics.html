@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px; 
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        
+        .header { 
+            background: white; 
+            padding: 25px 30px; 
+            border-radius: 12px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-left h1 { 
+            color: #333; 
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+        .prompt-type-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .subtitle { color: #666; font-size: 14px; margin-top: 8px; }
+        
+        .btn { 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 14px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            text-decoration: none; 
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s; 
+        }
+        .btn-primary { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+        }
+        .btn-primary:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary { 
+            background: #f3f4f6; 
+            color: #374151; 
+        }
+        .btn-secondary:hover { background: #e5e7eb; }
+        
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 20px; 
+        }
+        .stat-card { 
+            background: white; 
+            padding: 24px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .stat-number { 
+            font-size: 36px; 
+            font-weight: bold; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stat-label { color: #666; font-size: 14px; margin-top: 8px; font-weight: 500; }
+        .stat-sublabel { color: #9ca3af; font-size: 12px; margin-top: 4px; }
+        
+        .chart-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .execution-list {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .execution-item {
+            padding: 16px;
+            border-bottom: 1px solid #e5e7eb;
+            transition: background 0.2s;
+        }
+        .execution-item:last-child {
+            border-bottom: none;
+        }
+        .execution-item:hover {
+            background: #f9fafb;
+        }
+        .execution-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .execution-time {
+            color: #6b7280;
+            font-size: 13px;
+        }
+        .execution-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status-failure {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .execution-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .execution-detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+        
+        .rating-stars {
+            color: #f59e0b;
+        }
+        
+        .version-comparison {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .version-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+        .version-table th {
+            background: #f9fafb;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            font-size: 13px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .version-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .version-table tr:hover {
+            background: #f9fafb;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 40px;
+            color: #6b7280;
+        }
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+        }
+        .page-btn {
+            padding: 8px 16px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .page-btn:hover {
+            background: #f3f4f6;
+        }
+        .page-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <h1>
+                    <span>📊</span>
+                    <span>프롬프트 분석</span>
+                    <span class="prompt-type-badge" th:text="${type}">Type</span>
+                </h1>
+                <p class="subtitle">실행 기록 및 성능 분석</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <a th:href="@{/admin/prompts/edit/{type}(type=${type})}" class="btn btn-primary">
+                    <span>✏️</span>
+                    <span>수정</span>
+                </a>
+                <a th:href="@{/admin/prompts/history/{type}(type=${type})}" class="btn btn-secondary">
+                    <span>📜</span>
+                    <span>히스토리</span>
+                </a>
+                <a href="/admin/prompts" class="btn btn-secondary">
+                    <span>← 목록으로</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <div style="margin-top: 16px;">통계 로딩 중...</div>
+            </div>
+        </div>
+
+        <!-- Trends Chart -->
+        <div class="chart-section">
+            <div class="section-title">📈 실행 트렌드 (최근 30일)</div>
+            <canvas id="trendsChart" height="80"></canvas>
+        </div>
+
+        <!-- Version Comparison -->
+        <div class="version-comparison" id="versionComparison">
+            <div class="section-title">🔄 버전 비교</div>
+            <div class="loading">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+
+        <!-- Execution History -->
+        <div class="execution-list">
+            <div class="section-title">📝 실행 기록</div>
+            <div id="executionHistory">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <div style="margin-top: 16px;">실행 기록 로딩 중...</div>
+                </div>
+            </div>
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        const promptType = /*[[${type}]]*/ 'unknown';
+        let currentPage = 0;
+        let totalPages = 0;
+
+        // Load statistics
+        async function loadStatistics() {
+            try {
+                const response = await fetch(`/api/prompts/${promptType}/statistics`);
+                const stats = await response.json();
+
+                const statsHtml = `
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.totalExecutions.toLocaleString()}</div>
+                        <div class="stat-label">총 실행 횟수</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.successRate.toFixed(1)}%</div>
+                        <div class="stat-label">성공률</div>
+                        <div class="stat-sublabel">${stats.successCount}/${stats.totalExecutions}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.averageRating > 0 ? stats.averageRating.toFixed(1) : 'N/A'}</div>
+                        <div class="stat-label">평균 평점</div>
+                        <div class="stat-sublabel">${stats.averageRating > 0 ? '⭐'.repeat(Math.round(stats.averageRating)) : '평가 없음'}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.averageResponseTimeMs > 0 ? Math.round(stats.averageResponseTimeMs) : 'N/A'}</div>
+                        <div class="stat-label">평균 응답 시간 (ms)</div>
+                    </div>
+                `;
+
+                document.getElementById('statsGrid').innerHTML = statsHtml;
+            } catch (error) {
+                console.error('Failed to load statistics:', error);
+                document.getElementById('statsGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div>통계를 불러올 수 없습니다</div></div>';
+            }
+        }
+
+        // Load trends chart
+        async function loadTrends() {
+            try {
+                const response = await fetch(`/api/prompts/${promptType}/trends?days=30`);
+                const data = await response.json();
+
+                const ctx = document.getElementById('trendsChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.trends.map(t => t.date).reverse(),
+                        datasets: [{
+                            label: '실행 횟수',
+                            data: data.trends.map(t => t.count).reverse(),
+                            borderColor: 'rgb(102, 126, 234)',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to load trends:', error);
+            }
+        }
+
+        // Load version comparison
+        async function loadVersionComparison() {
+            try {
+                const response = await fetch(`/api/prompts/${promptType}/versions/compare`);
+                const data = await response.json();
+
+                if (data.versions.length === 0) {
+                    document.getElementById('versionComparison').innerHTML = `
+                        <div class="section-title">🔄 버전 비교</div>
+                        <div class="empty-state">
+                            <div class="empty-icon">📊</div>
+                            <div>버전 비교 데이터가 없습니다</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const tableHtml = `
+                    <div class="section-title">🔄 버전 비교</div>
+                    <table class="version-table">
+                        <thead>
+                            <tr>
+                                <th>버전</th>
+                                <th>실행 횟수</th>
+                                <th>성공률</th>
+                                <th>평균 평점</th>
+                                <th>평균 응답시간</th>
+                                <th>평균 토큰</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.versions.map(v => `
+                                <tr>
+                                    <td><strong>v${v.version}</strong></td>
+                                    <td>${v.totalExecutions}</td>
+                                    <td>${v.successRate.toFixed(1)}%</td>
+                                    <td>${v.averageRating > 0 ? v.averageRating.toFixed(1) + ' ⭐' : 'N/A'}</td>
+                                    <td>${v.averageResponseTimeMs > 0 ? Math.round(v.averageResponseTimeMs) + ' ms' : 'N/A'}</td>
+                                    <td>${v.averageTokens > 0 ? Math.round(v.averageTokens) : 'N/A'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+
+                document.getElementById('versionComparison').innerHTML = tableHtml;
+            } catch (error) {
+                console.error('Failed to load version comparison:', error);
+            }
+        }
+
+        // Load execution history
+        async function loadExecutionHistory(page = 0) {
+            try {
+                const response = await fetch(`/api/prompts/${promptType}/executions?page=${page}&size=10`);
+                const data = await response.json();
+
+                currentPage = data.currentPage;
+                totalPages = data.totalPages;
+
+                if (data.executions.length === 0) {
+                    document.getElementById('executionHistory').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">📝</div>
+                            <div>아직 실행 기록이 없습니다</div>
+                        </div>
+                    `;
+                    document.getElementById('pagination').innerHTML = '';
+                    return;
+                }
+
+                const historyHtml = data.executions.map(ex => `
+                    <div class="execution-item">
+                        <div class="execution-header">
+                            <div class="execution-time">${new Date(ex.createdAt).toLocaleString('ko-KR')}</div>
+                            <span class="execution-status ${ex.status === 'SUCCESS' ? 'status-success' : 'status-failure'}">
+                                ${ex.status === 'SUCCESS' ? '✓ 성공' : '✗ 실패'}
+                            </span>
+                        </div>
+                        <div class="execution-details">
+                            <div class="execution-detail-item">
+                                <div class="detail-label">버전</div>
+                                <div>v${ex.promptVersion}</div>
+                            </div>
+                            ${ex.responseTimeMs ? `
+                                <div class="execution-detail-item">
+                                    <div class="detail-label">응답 시간</div>
+                                    <div>${ex.responseTimeMs} ms</div>
+                                </div>
+                            ` : ''}
+                            ${ex.totalTokens ? `
+                                <div class="execution-detail-item">
+                                    <div class="detail-label">토큰</div>
+                                    <div>${ex.totalTokens}</div>
+                                </div>
+                            ` : ''}
+                            ${ex.userRating ? `
+                                <div class="execution-detail-item">
+                                    <div class="detail-label">평점</div>
+                                    <div class="rating-stars">${'⭐'.repeat(ex.userRating)}</div>
+                                </div>
+                            ` : ''}
+                            ${ex.sessionId ? `
+                                <div class="execution-detail-item">
+                                    <div class="detail-label">세션</div>
+                                    <div>${ex.sessionId.substring(0, 12)}...</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                        ${ex.userFeedback ? `
+                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                                <div class="detail-label">피드백</div>
+                                <div style="color: #6b7280; font-size: 13px; margin-top: 4px;">${ex.userFeedback}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+
+                document.getElementById('executionHistory').innerHTML = historyHtml;
+
+                // Render pagination
+                renderPagination();
+            } catch (error) {
+                console.error('Failed to load execution history:', error);
+                document.getElementById('executionHistory').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">⚠️</div>
+                        <div>실행 기록을 불러올 수 없습니다</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Render pagination
+        function renderPagination() {
+            if (totalPages <= 1) {
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+
+            let paginationHtml = '';
+
+            // Previous button
+            if (currentPage > 0) {
+                paginationHtml += `<button class="page-btn" onclick="loadExecutionHistory(${currentPage - 1})">이전</button>`;
+            }
+
+            // Page numbers
+            const maxPages = 5;
+            let startPage = Math.max(0, currentPage - 2);
+            let endPage = Math.min(totalPages - 1, startPage + maxPages - 1);
+
+            if (endPage - startPage < maxPages - 1) {
+                startPage = Math.max(0, endPage - maxPages + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadExecutionHistory(${i})">${i + 1}</button>`;
+            }
+
+            // Next button
+            if (currentPage < totalPages - 1) {
+                paginationHtml += `<button class="page-btn" onclick="loadExecutionHistory(${currentPage + 1})">다음</button>`;
+            }
+
+            document.getElementById('pagination').innerHTML = paginationHtml;
+        }
+
+        // Initialize
+        loadStatistics();
+        loadTrends();
+        loadVersionComparison();
+        loadExecutionHistory();
+    </script>
+</body>
+</html>

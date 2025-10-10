@@ -3,6 +3,7 @@ package com.okestro.okchat.prompt.service
 import com.okestro.okchat.prompt.model.Prompt
 import com.okestro.okchat.prompt.repository.PromptRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -10,7 +11,8 @@ import java.time.LocalDateTime
 @Service
 class PromptService(
     private val promptRepository: PromptRepository,
-    private val promptCacheService: PromptCacheService
+    @Autowired(required = false)
+    private val promptCacheService: PromptCacheService?
 ) {
     private val log = KotlinLogging.logger {}
 
@@ -23,8 +25,8 @@ class PromptService(
         val prompt = if (version != null) {
             promptRepository.findByTypeAndVersionAndActive(type, version)
         } else {
-            // Try to get latest from cache first
-            promptCacheService.getLatestPrompt(type)?.let {
+            // Try to get latest from cache first (if Redis is available)
+            promptCacheService?.getLatestPrompt(type)?.let {
                 return it
             }
             promptRepository.findLatestByTypeAndActive(type)
@@ -32,7 +34,7 @@ class PromptService(
 
         return prompt?.let {
             if (version == null) {
-                promptCacheService.cacheLatestPrompt(type, it.content)
+                promptCacheService?.cacheLatestPrompt(type, it.content)
             }
             it.content
         }
@@ -78,7 +80,7 @@ class PromptService(
         }
         val saved = promptRepository.save(prompt)
         log.info { "Created new prompt: type=$type, version=$version" }
-        promptCacheService.cacheLatestPrompt(type, content)
+        promptCacheService?.cacheLatestPrompt(type, content)
         return saved
     }
 
@@ -103,7 +105,7 @@ class PromptService(
         promptRepository.deactivatePrompt(latestPrompt.id!!)
         val saved = promptRepository.save(prompt)
         log.info { "Created new version of prompt: type=$type, version=$newVersion" }
-        promptCacheService.cacheLatestPrompt(type, content)
+        promptCacheService?.cacheLatestPrompt(type, content)
         return saved
     }
 

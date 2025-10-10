@@ -33,6 +33,37 @@ class PromptController(
         val content: String
     )
 
+    data class AnalyzePromptRequest(
+        val content: String,
+        val type: String? = null
+    )
+
+    data class PromptAnalysisResponse(
+        val score: Int,
+        val improvements: List<String>,
+        val strengths: List<String>,
+        val suggestions: String,
+        val similarPrompts: List<SimilarPrompt>? = null
+    )
+
+    data class SimilarPrompt(
+        val type: String,
+        val version: Int,
+        val similarity: Double,
+        val preview: String
+    )
+
+    data class ImprovePromptRequest(
+        val content: String,
+        val focusAreas: List<String>? = null
+    )
+
+    data class ImprovedPromptResponse(
+        val original: String,
+        val improved: String,
+        val changes: List<String>
+    )
+
     data class PromptResponse(
         val id: Long?,
         val type: String,
@@ -107,6 +138,200 @@ class PromptController(
     ) {
         log.info { "Deactivating prompt: type=$type, version=$version" }
         promptService.deactivatePrompt(type, version)
+    }
+
+    /**
+     * Analyze prompt quality and provide recommendations
+     */
+    @PostMapping("/analyze")
+    suspend fun analyzePrompt(@RequestBody request: AnalyzePromptRequest): PromptAnalysisResponse {
+        log.info { "Analyzing prompt quality" }
+        
+        val content = request.content
+        val improvements = mutableListOf<String>()
+        val strengths = mutableListOf<String>()
+        var score = 50 // Base score
+        
+        // Analyze prompt structure and quality
+        if (content.length > 100) {
+            score += 10
+            strengths.add("충분한 길이의 프롬프트")
+        } else {
+            improvements.add("프롬프트를 더 구체적으로 작성하세요")
+        }
+        
+        if (content.contains("{{" ) && content.contains("}}")) {
+            score += 15
+            strengths.add("변수를 적절히 사용하고 있습니다")
+        } else {
+            improvements.add("동적 콘텐츠를 위해 {{변수}} 사용을 고려하세요")
+        }
+        
+        if (content.contains("예:") || content.contains("Example:") || content.contains("예시")) {
+            score += 15
+            strengths.add("예시를 포함하여 명확성을 높였습니다")
+        } else {
+            improvements.add("구체적인 예시를 추가하면 더 좋은 결과를 얻을 수 있습니다")
+        }
+        
+        if (content.lines().size > 5) {
+            score += 10
+            strengths.add("구조화된 프롬프트")
+        } else {
+            improvements.add("프롬프트를 여러 섹션으로 나누어 구조화하세요")
+        }
+        
+        // Check for clear instructions
+        val hasInstructions = content.contains("다음") || content.contains("아래") || 
+                             content.contains("following") || content.contains("please")
+        if (hasInstructions) {
+            score += 10
+            strengths.add("명확한 지시사항이 포함되어 있습니다")
+        } else {
+            improvements.add("명확한 지시사항(예: '다음을 수행하세요')을 추가하세요")
+        }
+        
+        // Cap score at 100
+        score = score.coerceAtMost(100)
+        
+        // Find similar prompts if type is provided
+        val similarPrompts = if (request.type != null) {
+            try {
+                val allPrompts = promptService.getAllVersions(request.type)
+                    .filter { it.content != content }
+                    .take(3)
+                    .map { prompt ->
+                        SimilarPrompt(
+                            type = prompt.type,
+                            version = prompt.version,
+                            similarity = calculateSimilarity(content, prompt.content),
+                            preview = prompt.content.take(100) + "..."
+                        )
+                    }
+                    .filter { it.similarity > 0.3 }
+                    .sortedByDescending { it.similarity }
+                allPrompts
+            } catch (e: Exception) {
+                emptyList()
+            }
+        } else {
+            null
+        }
+        
+        val suggestions = buildString {
+            append("프롬프트 품질 점수: $score/100\n\n")
+            if (score >= 80) {
+                append("훌륭합니다! 이 프롬프트는 잘 작성되었습니다.")
+            } else if (score >= 60) {
+                append("좋은 시작입니다. 아래 개선사항을 참고하여 더 나은 프롬프트를 만들어보세요.")
+            } else {
+                append("프롬프트를 개선할 여지가 많습니다. 아래 제안사항을 참고하세요.")
+            }
+        }
+        
+        return PromptAnalysisResponse(
+            score = score,
+            improvements = improvements,
+            strengths = strengths,
+            suggestions = suggestions,
+            similarPrompts = similarPrompts
+        )
+    }
+
+    /**
+     * Get AI-powered suggestions to improve prompt
+     */
+    @PostMapping("/improve")
+    suspend fun improvePrompt(@RequestBody request: ImprovePromptRequest): ImprovedPromptResponse {
+        log.info { "Getting improvement suggestions for prompt" }
+        
+        // This would typically call an AI service, but for now we'll provide rule-based improvements
+        val original = request.content
+        val changes = mutableListOf<String>()
+        var improved = original
+        
+        // Add structure if missing
+        if (!improved.contains(":") && improved.length > 50) {
+            improved = "당신은 전문적인 AI 어시스턴트입니다.\n\n$improved"
+            changes.add("프롬프트 시작 부분에 역할 정의 추가")
+        }
+        
+        // Add output format if missing
+        if (!improved.contains("JSON") && !improved.contains("형식") && !improved.contains("format")) {
+            improved += "\n\n출력 형식을 명확히 지정해주세요."
+            changes.add("출력 형식 지정 섹션 추가")
+        }
+        
+        // Suggest adding examples
+        if (!improved.contains("예:") && !improved.contains("Example")) {
+            changes.add("구체적인 예시 추가 권장")
+        }
+        
+        return ImprovedPromptResponse(
+            original = original,
+            improved = improved,
+            changes = changes.ifEmpty { listOf("프롬프트가 이미 잘 작성되어 있습니다") }
+        )
+    }
+
+    /**
+     * Get autocomplete suggestions based on current prompt content
+     */
+    @PostMapping("/autocomplete")
+    suspend fun getAutocompleteSuggestions(
+        @RequestBody request: Map<String, String>
+    ): List<String> {
+        val content = request["content"] ?: ""
+        val suggestions = mutableListOf<String>()
+        
+        val lastLine = content.lines().lastOrNull()?.trim() ?: ""
+        
+        // Context-aware suggestions
+        when {
+            lastLine.endsWith("당신은") || lastLine.endsWith("You are") -> {
+                suggestions.addAll(listOf(
+                    "전문적인 AI 어시스턴트입니다.",
+                    "도움이 되는 비서입니다.",
+                    "문서 분석 전문가입니다."
+                ))
+            }
+            lastLine.contains("분석") || lastLine.contains("analyze") -> {
+                suggestions.addAll(listOf(
+                    "다음 항목을 분석하세요:",
+                    "주요 패턴과 트렌드를 파악하세요.",
+                    "데이터에서 인사이트를 추출하세요."
+                ))
+            }
+            lastLine.contains("출력") || lastLine.contains("output") || lastLine.contains("결과") -> {
+                suggestions.addAll(listOf(
+                    "결과를 JSON 형식으로 반환하세요.",
+                    "결과를 구조화된 형식으로 제공하세요.",
+                    "다음 형식으로 응답하세요:"
+                ))
+            }
+            content.length < 50 -> {
+                suggestions.addAll(listOf(
+                    "명확하고 구체적인 지시사항을 작성하세요.",
+                    "예시를 포함하면 더 좋은 결과를 얻을 수 있습니다.",
+                    "원하는 출력 형식을 명시하세요."
+                ))
+            }
+        }
+        
+        return suggestions.take(5)
+    }
+
+    /**
+     * Calculate similarity between two prompts (simple implementation)
+     */
+    private fun calculateSimilarity(text1: String, text2: String): Double {
+        val words1 = text1.lowercase().split("\\s+".toRegex()).toSet()
+        val words2 = text2.lowercase().split("\\s+".toRegex()).toSet()
+        
+        val intersection = words1.intersect(words2).size
+        val union = words1.union(words2).size
+        
+        return if (union > 0) intersection.toDouble() / union else 0.0
     }
 
     data class ErrorResponse(

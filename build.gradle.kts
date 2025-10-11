@@ -87,6 +87,12 @@ dependencies {
     /** redis */
     implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
 
+    /** swagger/openapi */
+    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.7.0")
+
+    /** security: override vulnerable transitive dependencies */
+    implementation("org.apache.commons:commons-lang3:3.18.0")
+
     /** test */
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")

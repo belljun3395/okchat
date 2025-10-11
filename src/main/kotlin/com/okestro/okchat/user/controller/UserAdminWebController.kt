@@ -3,6 +3,10 @@ package com.okestro.okchat.user.controller
 import com.okestro.okchat.user.model.User
 import com.okestro.okchat.user.service.UserService
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -23,6 +27,10 @@ private val log = KotlinLogging.logger {}
  */
 @RestController
 @RequestMapping("/admin/users")
+@Tag(
+    name = "User API",
+    description = "사용자 관리 API. 사용자 생성, 조회, 비활성화 기능을 제공합니다."
+)
 class UserAdminWebController(
     private val userService: UserService
 ) {
@@ -31,6 +39,11 @@ class UserAdminWebController(
      * Get all active users
      */
     @GetMapping
+    @Operation(
+        summary = "활성 사용자 목록 조회",
+        description = "모든 활성 상태인 사용자를 조회합니다."
+    )
+    @ApiResponse(responseCode = "200", description = "조회 성공")
     fun getAllUsers(): ResponseEntity<List<User>> {
         log.info { "Get all users request" }
         val users = userService.getAllActiveUsers()
@@ -52,7 +65,16 @@ class UserAdminWebController(
      * Create or update user
      */
     @PostMapping
-    fun createUser(@RequestBody request: CreateUserRequest): ResponseEntity<User> {
+    @Operation(
+        summary = "사용자 생성 또는 업데이트",
+        description = "새로운 사용자를 생성하거나 기존 사용자 정보를 업데이트합니다."
+    )
+    @ApiResponse(responseCode = "200", description = "생성/업데이트 성공")
+    fun createUser(
+        @Parameter(description = "사용자 생성 요청", required = true)
+        @RequestBody
+        request: CreateUserRequest
+    ): ResponseEntity<User> {
         log.info { "Create user request: email=${request.email}, name=${request.name}" }
         val user = userService.findOrCreateUser(request.email, request.name)
         return ResponseEntity.ok(user)

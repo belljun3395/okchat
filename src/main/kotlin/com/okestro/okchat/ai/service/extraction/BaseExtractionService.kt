@@ -1,11 +1,11 @@
 package com.okestro.okchat.ai.service.extraction
 
+import com.okestro.okchat.ai.support.DefaultResultParser
+import com.okestro.okchat.ai.support.ResultParser
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.ai.openai.OpenAiChatOptions
-
-private val log = KotlinLogging.logger {}
 
 /**
  * Base service for LLM-based keyword extraction.
@@ -13,7 +13,7 @@ private val log = KotlinLogging.logger {}
  *
  * Common responsibilities:
  * - LLM interaction with consistent options
- * - Result parsing (comma-separated)
+ * - Result parsing (comma-separated with fallbacks)
  * - Error handling
  * - Deduplication
  *
@@ -23,15 +23,18 @@ private val log = KotlinLogging.logger {}
  * - Optionally customize empty result via getEmptyResult()
  */
 abstract class BaseExtractionService(
-    protected val chatModel: ChatModel
+    protected val chatModel: ChatModel,
+    protected val resultParser: ResultParser = DefaultResultParser()
 ) {
+    protected val log = KotlinLogging.logger {}
 
     /**
      * Extract keywords from message using LLM.
      * Template method that orchestrates the extraction process.
+     * Uses suspend for future async ChatModel compatibility.
      */
-    fun execute(message: String): List<String> {
-        val prompt = buildPrompt(message)
+    suspend fun execute(message: String): List<String> {
+        val prompt = buildPrompt(message).toString()
         val options = getOptions()
 
         return try {
@@ -51,7 +54,7 @@ abstract class BaseExtractionService(
      * Build the extraction prompt for the specific type.
      * Must be implemented by subclasses.
      */
-    protected abstract fun buildPrompt(message: String): String
+    protected abstract fun buildPrompt(message: String): com.okestro.okchat.ai.model.Prompt
 
     /**
      * Get LLM options for extraction.
@@ -66,52 +69,16 @@ abstract class BaseExtractionService(
 
     /**
      * Parse the LLM result text into a list of keywords.
-     * * Supports multiple formats for robustness:
-     * 1. Comma-separated: "keyword1, keyword2, keyword3"
-     * 2. Newline-separated: "keyword1\nkeyword2\nkeyword3"
-     * 3. Numbered list: "1. keyword1\n2. keyword2"
-     * 4. Bulleted list: "- keyword1\n- keyword2"
-     * * Override to customize parsing logic.
+     * Delegates to ResultParser for testability and flexibility.
+     * Override to customize parsing logic.
      */
     protected open fun parseResult(resultText: String?): List<String> {
-        if (resultText.isNullOrBlank()) {
-            return getEmptyResult()
-        }
-
-        // Parse using multiple strategies
-        val keywords = when {
-            // Strategy 1: Comma-separated (most common from our prompts)
-            resultText.contains(",") -> {
-                resultText.split(",")
-                    .map { it.trim() }
-            }
-
-            // Strategy 2: Newline-separated
-            resultText.contains("\n") -> {
-                resultText.lines()
-                    .map { line ->
-                        // Remove common prefixes: "1. ", "- ", "* ", etc.
-                        line.trim()
-                            .removePrefix("-")
-                            .removePrefix("*")
-                            .removePrefix("•")
-                            .replace(Regex("^\\d+\\.\\s*"), "") // Remove "1. ", "2. ", etc.
-                            .trim()
-                    }
-            }
-
-            // Strategy 3: Single keyword or space-separated (fallback)
-            else -> {
-                listOf(resultText.trim())
-            }
-        }
-
-        // Apply common filtering and deduplication
-        return keywords
-            .filter { it.isNotBlank() }
-            .filter { it.length >= getMinKeywordLength() }
-            .distinctBy { it.lowercase() }
-            .take(getMaxKeywords())
+        return resultParser.parse(
+            resultText = resultText,
+            minLength = getMinKeywordLength(),
+            maxKeywords = getMaxKeywords(),
+            emptyResult = getEmptyResult()
+        )
     }
 
     /**

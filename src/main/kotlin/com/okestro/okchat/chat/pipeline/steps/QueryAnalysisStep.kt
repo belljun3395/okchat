@@ -2,7 +2,7 @@ package com.okestro.okchat.chat.pipeline.steps
 
 import com.okestro.okchat.ai.service.extraction.ContentExtractionService
 import com.okestro.okchat.ai.service.extraction.KeywordExtractionService
-import com.okestro.okchat.ai.service.extraction.PathExtractionService
+import com.okestro.okchat.ai.service.extraction.LocationExtractionService
 import com.okestro.okchat.ai.service.extraction.TitleExtractionService
 import com.okestro.okchat.ai.support.DateExtractor
 import com.okestro.okchat.ai.support.QueryClassifier
@@ -25,7 +25,7 @@ class QueryAnalysisStep(
     private val queryClassifier: QueryClassifier,
     private val keywordExtractionService: KeywordExtractionService,
     private val contentExtractionService: ContentExtractionService,
-    private val pathExtractionService: PathExtractionService,
+    private val locationExtractionService: LocationExtractionService,
     private val titleExtractionService: TitleExtractionService
 ) : FirstChatPipelineStep {
 
@@ -38,18 +38,18 @@ class QueryAnalysisStep(
         log.info { "[${getStepName()}] Type: ${queryAnalysis.type}, Confidence: ${"%.2f".format(queryAnalysis.confidence)}" }
 
         // Extract title using AI
-        val titles = titleExtractionService.extractTitleKeywords(userMessage)
+        val titles = titleExtractionService.execute(userMessage)
 
         // Extract content keywords using AI
-        val contents = contentExtractionService.extractContentKeywords(userMessage)
+        val contents = contentExtractionService.execute(userMessage)
 
         // Extract location using AI
-        val paths = pathExtractionService.extractLocationKeywords(userMessage)
+        val paths = locationExtractionService.execute(userMessage)
 
         // Extract keywords using AI (if not provided)
         val providedKeywords = context.input.providedKeywords
         val keywords = providedKeywords.ifEmpty {
-            keywordExtractionService.extractQueryKeywords(userMessage)
+            keywordExtractionService.execute(userMessage)
         }
         log.debug {
             if (providedKeywords.isNotEmpty()) {

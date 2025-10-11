@@ -1,26 +1,27 @@
 package com.okestro.okchat.ai.service.extraction
 
-import com.okestro.okchat.ai.support.PromptTemplate
+import com.okestro.okchat.ai.model.KeyWordExtractionPrompt
+import com.okestro.okchat.ai.model.Prompt
+import com.okestro.okchat.ai.model.PromptExample
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.stereotype.Service
 
 /**
- * Service for extracting title-related keywords from a user query using an LLM.
- * Extends BaseExtractionService to eliminate code duplication.
+ * Extracts title-related keywords from queries mentioning specific document titles.
+ *
+ * Purpose: Identify explicit document title mentions in user queries
+ * Focus: Proper nouns, report names, quoted text
+ * Output: Document titles, report names (empty if no title mentioned)
+ *
+ * Example: execute("show me the 'Q3 Performance Review' document")
+ *          → ["Q3 Performance Review"]
  */
 @Service
 class TitleExtractionService(
     chatModel: ChatModel
 ) : BaseExtractionService(chatModel) {
 
-    /**
-     * Extracts keywords from the user's message that are likely to be part of a document title.
-     */
-    suspend fun extractTitleKeywords(message: String): List<String> {
-        return execute(message)
-    }
-
-    override fun buildPrompt(message: String): String {
+    override fun buildPrompt(message: String): Prompt {
         val instruction = """
 Extract only the words that seem to be part of a specific document title.
 Order them from most important to least important.
@@ -31,13 +32,29 @@ If no specific title is mentioned, return an empty string.
 - Exclude action words (e.g., "find", "show me", "summarize").
         """.trimIndent()
 
-        val examples = PromptTemplate.formatExamples(
-            "show me the 'Q3 Performance Review' document" to "Q3 Performance Review",
-            "2025년 기술 부채 보고서 찾아줘" to "2025년 기술 부채 보고서, 기술 부채 보고서",
-            "회의록 좀 찾아줄래?" to "회의록",
-            "How does the login logic work?" to ""
+        val examples = listOf(
+            PromptExample(
+                input = "show me the 'Q3 Performance Review' document",
+                output = "Q3 Performance Review"
+            ),
+            PromptExample(
+                input = "2025년 기술 부채 보고서 찾아줘",
+                output = "2025년 기술 부채 보고서, 기술 부채 보고서"
+            ),
+            PromptExample(
+                input = "회의록 좀 찾아줄래?",
+                output = "회의록"
+            ),
+            PromptExample(
+                input = "How does the login logic work?",
+                output = ""
+            )
         )
 
-        return PromptTemplate.buildExtractionPrompt(instruction, examples, message)
+        return KeyWordExtractionPrompt(
+            instruction = instruction,
+            examples = examples,
+            message = message
+        )
     }
 }

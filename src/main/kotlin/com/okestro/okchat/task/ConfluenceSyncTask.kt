@@ -1,7 +1,7 @@
 package com.okestro.okchat.task
 
 import com.okestro.okchat.ai.service.chunking.ChunkingStrategy
-import com.okestro.okchat.ai.service.extraction.KeywordExtractionService
+import com.okestro.okchat.ai.service.extraction.DocumentKeywordExtractionService
 import com.okestro.okchat.confluence.config.ConfluenceProperties
 import com.okestro.okchat.confluence.model.ContentHierarchy
 import com.okestro.okchat.confluence.model.ContentNode
@@ -47,7 +47,7 @@ class ConfluenceSyncTask(
     private val pdfAttachmentService: PdfAttachmentService,
     private val vectorStore: VectorStore,
     private val openSearchClient: OpenSearchClient,
-    private val keywordExtractionService: KeywordExtractionService,
+    private val documentKeywordExtractionService: DocumentKeywordExtractionService,
     private val chunkingStrategy: ChunkingStrategy,
     private val confluenceProperties: ConfluenceProperties,
     @Value("\${spring.ai.vectorstore.opensearch.index-name}") private val indexName: String
@@ -220,7 +220,8 @@ class ConfluenceSyncTask(
                     } else {
                         apiCallSemaphore.withPermit {
                             try {
-                                keywordExtractionService.extractKeywordsFromContentAndTitle(pageContent, pageTitle)
+                                val documentMessage = extractFromDocument(pageContent, pageTitle)
+                                documentKeywordExtractionService.execute(documentMessage)
                             } catch (_: Exception) {
                                 log.warn { "[ConfluenceSync] Keyword extraction failed: page_title='$pageTitle'" }
                                 emptyList()
@@ -337,6 +338,17 @@ class ConfluenceSyncTask(
         documents.addAll(allDocuments)
 
         return documents
+    }
+
+    /**
+     * Extract keywords from document content for search indexing.
+     * Handles both content and title to generate comprehensive keywords.
+     */
+    suspend fun extractFromDocument(content: String, title: String? = null): String {
+        return """
+            Title: ${title ?: "N/A"}
+            Content: ${content.take(2000)}...
+        """.trimIndent()
     }
 
     /**

@@ -4,6 +4,11 @@ import com.okestro.okchat.email.model.PendingEmailReply
 import com.okestro.okchat.email.model.ReviewStatus
 import com.okestro.okchat.email.service.PendingEmailReplyService
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.tags.Tag
 import kotlinx.coroutines.runBlocking
 import org.springframework.data.domain.Page
 import org.springframework.http.ResponseEntity
@@ -23,6 +28,10 @@ private val logger = KotlinLogging.logger {}
  */
 @RestController
 @RequestMapping("/api/email/pending")
+@Tag(
+    name = "Email API",
+    description = "이메일 자동 응답 관리 API. AI가 생성한 이메일 답변을 검토하고 승인/거부할 수 있습니다."
+)
 class PendingEmailReplyController(
     private val pendingEmailReplyService: PendingEmailReplyService
 ) {
@@ -31,9 +40,18 @@ class PendingEmailReplyController(
      * Get all pending email replies with pagination
      */
     @GetMapping
+    @Operation(
+        summary = "대기 중인 이메일 답변 목록 조회",
+        description = "페이징 처리된 대기 중인 이메일 답변 목록을 조회합니다."
+    )
+    @ApiResponse(responseCode = "200", description = "조회 성공")
     fun getPendingReplies(
-        @RequestParam(defaultValue = "0") page: Int,
-        @RequestParam(defaultValue = "20") size: Int
+        @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
+        @RequestParam(defaultValue = "0")
+        page: Int,
+        @Parameter(description = "페이지 크기", example = "20")
+        @RequestParam(defaultValue = "20")
+        size: Int
     ): ResponseEntity<Page<PendingEmailReply>> {
         logger.info { "Getting pending email replies: page=$page, size=$size" }
         val replies = pendingEmailReplyService.getPendingReplies(page, size)
@@ -85,17 +103,31 @@ class PendingEmailReplyController(
      * Approve and send an email reply
      */
     @PostMapping("/{id}/approve")
+    @Operation(
+        summary = "이메일 답변 승인 및 발송",
+        description = "대기 중인 이메일 답변을 승인하고 실제로 발송합니다."
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "승인 및 발송 성공"),
+            ApiResponse(responseCode = "400", description = "발송 실패")
+        ]
+    )
     fun approveAndSend(
-        @PathVariable id: Long,
-        @RequestBody request: ReviewRequest
-    ): ResponseEntity<ApiResponse> = runBlocking {
+        @Parameter(description = "이메일 답변 ID", example = "1", required = true)
+        @PathVariable
+        id: Long,
+        @Parameter(description = "검토 정보", required = true)
+        @RequestBody
+        request: ReviewRequest
+    ): ResponseEntity<EmailApiResponse> = runBlocking {
         logger.info { "Approving email reply: id=$id, reviewedBy=${request.reviewedBy}" }
         val result = pendingEmailReplyService.approveAndSend(id, request.reviewedBy)
 
         result.fold(
             onSuccess = { reply ->
                 ResponseEntity.ok(
-                    ApiResponse(
+                    EmailApiResponse(
                         success = true,
                         message = "Email approved and sent successfully",
                         data = reply
@@ -105,7 +137,7 @@ class PendingEmailReplyController(
             onFailure = { error ->
                 logger.error(error) { "Failed to approve and send email: id=$id" }
                 ResponseEntity.badRequest().body(
-                    ApiResponse(
+                    EmailApiResponse(
                         success = false,
                         message = error.message ?: "Failed to approve and send email",
                         data = null
@@ -119,10 +151,24 @@ class PendingEmailReplyController(
      * Reject an email reply
      */
     @PostMapping("/{id}/reject")
+    @Operation(
+        summary = "이메일 답변 거부",
+        description = "대기 중인 이메일 답변을 거부합니다."
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "거부 성공"),
+            ApiResponse(responseCode = "400", description = "거부 실패")
+        ]
+    )
     fun reject(
-        @PathVariable id: Long,
-        @RequestBody request: ReviewRequest
-    ): ResponseEntity<ApiResponse> = runBlocking {
+        @Parameter(description = "이메일 답변 ID", example = "1", required = true)
+        @PathVariable
+        id: Long,
+        @Parameter(description = "검토 정보 (거부 사유 포함)", required = true)
+        @RequestBody
+        request: ReviewRequest
+    ): ResponseEntity<EmailApiResponse> = runBlocking {
         logger.info { "Rejecting email reply: id=$id, reviewedBy=${request.reviewedBy}" }
         val result = pendingEmailReplyService.reject(
             id = id,
@@ -133,7 +179,7 @@ class PendingEmailReplyController(
         result.fold(
             onSuccess = { reply ->
                 ResponseEntity.ok(
-                    ApiResponse(
+                    EmailApiResponse(
                         success = true,
                         message = "Email rejected successfully",
                         data = reply
@@ -143,7 +189,7 @@ class PendingEmailReplyController(
             onFailure = { error ->
                 logger.error(error) { "Failed to reject email: id=$id" }
                 ResponseEntity.badRequest().body(
-                    ApiResponse(
+                    EmailApiResponse(
                         success = false,
                         message = error.message ?: "Failed to reject email",
                         data = null
@@ -157,12 +203,12 @@ class PendingEmailReplyController(
      * Delete a pending email reply
      */
     @DeleteMapping("/{id}")
-    fun delete(@PathVariable id: Long): ResponseEntity<ApiResponse> {
+    fun delete(@PathVariable id: Long): ResponseEntity<EmailApiResponse> {
         logger.info { "Deleting pending email reply: id=$id" }
         try {
             pendingEmailReplyService.delete(id)
             return ResponseEntity.ok(
-                ApiResponse(
+                EmailApiResponse(
                     success = true,
                     message = "Email reply deleted successfully",
                     data = null
@@ -171,7 +217,7 @@ class PendingEmailReplyController(
         } catch (e: Exception) {
             logger.error(e) { "Failed to delete email reply: id=$id" }
             return ResponseEntity.badRequest().body(
-                ApiResponse(
+                EmailApiResponse(
                     success = false,
                     message = e.message ?: "Failed to delete email reply",
                     data = null
@@ -192,7 +238,7 @@ data class ReviewRequest(
 /**
  * Generic API response
  */
-data class ApiResponse(
+data class EmailApiResponse(
     val success: Boolean,
     val message: String,
     val data: Any?

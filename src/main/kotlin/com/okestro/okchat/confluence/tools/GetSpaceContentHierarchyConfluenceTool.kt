@@ -1,11 +1,11 @@
-package com.okestro.okchat.ai.tools.confluence
+package com.okestro.okchat.confluence.tools
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.okestro.okchat.ai.model.GetSpaceContentHierarchyInput
 import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.confluence.model.ContentNode
 import com.okestro.okchat.confluence.service.ConfluenceService
+import com.okestro.okchat.confluence.tools.dto.GetSpaceContentHierarchyInput
 import kotlinx.coroutines.runBlocking
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition

@@ -1,10 +1,10 @@
-package com.okestro.okchat.ai.tools.confluence
+package com.okestro.okchat.confluence.tools
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.okestro.okchat.ai.model.GetPagesBySpaceIdInput
 import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.confluence.service.ContentCollector
+import com.okestro.okchat.confluence.tools.dto.GetPagesBySpaceIdInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.springframework.ai.tool.ToolCallback

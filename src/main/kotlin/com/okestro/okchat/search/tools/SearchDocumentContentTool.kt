@@ -1,11 +1,11 @@
 package com.okestro.okchat.ai.tools.document
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.okestro.okchat.ai.model.SearchByQueryInput
 import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.search.model.SearchContents
 import com.okestro.okchat.search.strategy.ContentSearchStrategy
+import com.okestro.okchat.search.tools.dto.SearchByQueryInput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import org.springframework.ai.tool.ToolCallback

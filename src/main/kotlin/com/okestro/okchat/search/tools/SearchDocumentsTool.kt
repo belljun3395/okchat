@@ -1,11 +1,11 @@
 package com.okestro.okchat.ai.tools.document
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.okestro.okchat.ai.model.SearchDocumentsInput
 import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.search.model.MetadataFields
 import com.okestro.okchat.search.model.SearchDocument
+import com.okestro.okchat.search.tools.dto.SearchDocumentsInput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.opensearch.client.opensearch._types.FieldValue

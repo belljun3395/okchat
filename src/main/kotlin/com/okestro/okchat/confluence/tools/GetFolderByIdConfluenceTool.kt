@@ -1,10 +1,10 @@
-package com.okestro.okchat.ai.tools.confluence
+package com.okestro.okchat.confluence.tools
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.okestro.okchat.ai.model.GetFolderByIdInput
 import com.okestro.okchat.ai.model.ToolOutput
 import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.confluence.client.ConfluenceClient
+import com.okestro.okchat.confluence.tools.dto.GetFolderByIdInput
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
 import org.springframework.context.annotation.Description

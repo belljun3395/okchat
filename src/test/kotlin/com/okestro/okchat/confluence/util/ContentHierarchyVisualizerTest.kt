@@ -147,9 +147,9 @@ class ContentHierarchyVisualizerTest {
         assertTrue(grandchildLine != null)
 
         // Child should be more indented than root
-        val rootIndent = rootLine!!.takeWhile { it == ' ' }.length
-        val childIndent = childLine!!.takeWhile { it == ' ' }.length
-        val grandchildIndent = grandchildLine!!.takeWhile { it == ' ' }.length
+        val rootIndent = rootLine.takeWhile { it == ' ' }.length
+        val childIndent = childLine.takeWhile { it == ' ' }.length
+        val grandchildIndent = grandchildLine.takeWhile { it == ' ' }.length
 
         assertTrue(childIndent > rootIndent)
         assertTrue(grandchildIndent > childIndent)

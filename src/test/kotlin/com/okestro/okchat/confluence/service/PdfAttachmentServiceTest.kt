@@ -174,9 +174,11 @@ class PdfAttachmentServiceTest {
         }
 
         // Then
-        assertTrue(pdfMetadata.path!!.contains(">"))
-        assertTrue(pdfMetadata.path!!.endsWith(attachmentTitle))
-        assertEquals("$complexPath > $attachmentTitle", pdfMetadata.path)
+        val path = pdfMetadata.path
+        assertNotNull(path)
+        assertTrue(path.contains(">"))
+        assertTrue(path.endsWith(attachmentTitle))
+        assertEquals("$complexPath > $attachmentTitle", path)
     }
 
     @Test
@@ -213,9 +215,6 @@ class PdfAttachmentServiceTest {
             "fileSize" to 1024000L
             "mediaType" to "application/pdf"
         }
-
-        // Both should produce equivalent results
-        val flatMap = newStyleMetadata.toFlatMap()
 
         // Verify they contain the same information
         assertEquals(oldStyleMap["id"], newStyleMetadata.id)

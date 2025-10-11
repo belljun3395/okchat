@@ -52,7 +52,7 @@ Focus on the 'what' of the query, not the action.
         )
 
         return KeyWordExtractionPrompt(
-            instruction = instruction,
+            userInstruction = instruction,
             examples = examples,
             message = message
         )

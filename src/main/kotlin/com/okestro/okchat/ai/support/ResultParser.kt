@@ -69,10 +69,13 @@ class DefaultResultParser : ResultParser {
         }
 
         // Apply common filtering and deduplication
-        return keywords
+        val filtered = keywords
             .filter { it.isNotBlank() }
             .filter { it.length >= minLength }
             .distinctBy { it.lowercase() }
             .take(maxKeywords)
+
+        // Return emptyResult if no valid keywords found
+        return filtered.ifEmpty { emptyResult }
     }
 }

@@ -242,7 +242,7 @@ class EmailContentCleanerTest {
     @Test
     fun `truncateForReply should limit lines`() {
         // Given
-        val lines = (1..20).map { "Line $it" }.joinToString("\n")
+        val lines = (1..20).joinToString("\n") { "Line $it" }
 
         // When
         val truncated = EmailContentCleaner.truncateForReply(lines, maxLines = 5)

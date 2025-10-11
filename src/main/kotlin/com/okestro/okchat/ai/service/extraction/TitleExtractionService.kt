@@ -52,7 +52,7 @@ If no specific title is mentioned, return an empty string.
         )
 
         return KeyWordExtractionPrompt(
-            instruction = instruction,
+            userInstruction = instruction,
             examples = examples,
             message = message
         )

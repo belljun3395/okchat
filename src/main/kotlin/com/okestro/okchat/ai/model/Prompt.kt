@@ -65,8 +65,10 @@ Examples of INCORRECT format (DO NOT USE):
  * Appends FORMAT_INSTRUCTION to ensure consistent output format.
  */
 data class KeyWordExtractionPrompt(
-    override val instruction: String,
+    val userInstruction: String,
     override val examples: List<PromptExample>,
     override val message: String,
     override val outputFormat: String = "Keywords (comma-separated only):"
-) : Prompt("$instruction\n\n$FORMAT_INSTRUCTION", examples, message, outputFormat)
+) : Prompt("$userInstruction\n\n$FORMAT_INSTRUCTION", examples, message, outputFormat) {
+    override fun toString(): String = format()
+}

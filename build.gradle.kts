@@ -89,6 +89,7 @@ dependencies {
 
     /** test */
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
 }
 
 dependencyManagement {

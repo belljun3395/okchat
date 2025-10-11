@@ -43,7 +43,7 @@ TARGET: 15-20 keywords for comprehensive document coverage (max 20)
         """.trimIndent()
 
         return KeyWordExtractionPrompt(
-            instruction = instruction,
+            userInstruction = instruction,
             examples = emptyList(), // No examples needed for document extraction
             message = message
         )

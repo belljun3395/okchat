@@ -67,7 +67,7 @@ TARGET: 7-10 keywords for broader coverage (max 12)
         )
 
         return KeyWordExtractionPrompt(
-            instruction = instruction,
+            userInstruction = instruction,
             examples = examples,
             message = message
         )

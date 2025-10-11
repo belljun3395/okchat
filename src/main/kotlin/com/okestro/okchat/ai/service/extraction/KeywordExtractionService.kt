@@ -1,4 +1,4 @@
-package com.okestro.okchat.ai.support.extraction
+package com.okestro.okchat.ai.service.extraction
 
 import com.okestro.okchat.ai.support.PromptTemplate
 import io.github.oshai.kotlinlogging.KotlinLogging

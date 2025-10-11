@@ -1,4 +1,4 @@
-package com.okestro.okchat.ai.support.extraction
+package com.okestro.okchat.ai.support
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.YearMonth

@@ -1,4 +1,4 @@
-package com.okestro.okchat.ai.support.chunking
+package com.okestro.okchat.ai.service.chunking
 
 import com.okestro.okchat.ai.support.MathUtils
 import org.springframework.ai.document.Document

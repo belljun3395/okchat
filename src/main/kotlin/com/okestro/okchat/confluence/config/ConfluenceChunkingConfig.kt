@@ -1,10 +1,10 @@
 package com.okestro.okchat.confluence.config
 
-import com.okestro.okchat.ai.support.chunking.ChunkingStrategy
-import com.okestro.okchat.ai.support.chunking.ChunkingStrategyType
-import com.okestro.okchat.ai.support.chunking.RecursiveCharacterStrategy
-import com.okestro.okchat.ai.support.chunking.SemanticChunkingStrategy
-import com.okestro.okchat.ai.support.chunking.SentenceWindowStrategy
+import com.okestro.okchat.ai.service.chunking.ChunkingStrategy
+import com.okestro.okchat.ai.service.chunking.ChunkingStrategyType
+import com.okestro.okchat.ai.service.chunking.RecursiveCharacterStrategy
+import com.okestro.okchat.ai.service.chunking.SemanticChunkingStrategy
+import com.okestro.okchat.ai.service.chunking.SentenceWindowStrategy
 import com.okestro.okchat.config.RagProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.embedding.EmbeddingModel

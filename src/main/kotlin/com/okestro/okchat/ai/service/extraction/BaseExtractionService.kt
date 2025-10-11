@@ -1,4 +1,4 @@
-package com.okestro.okchat.ai.support.extraction
+package com.okestro.okchat.ai.service.extraction
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.chat.model.ChatModel

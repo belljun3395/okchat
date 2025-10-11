@@ -45,6 +45,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa") // For domain entities (User, Prompt, Permissions)
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc") // For Spring Cloud Task tables (read-only access)
     runtimeOnly("com.mysql:mysql-connector-j")
+    runtimeOnly("com.h2database:h2") // For E2E testing
 
     /** spring cloud task */
     implementation("org.springframework.cloud:spring-cloud-starter-task")

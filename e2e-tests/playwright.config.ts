@@ -1,0 +1,122 @@
+import { defineConfig, devices } from '@playwright/test';
+
+/**
+ * Playwright configuration for OKChat E2E tests
+ * @see https://playwright.dev/docs/test-configuration
+ */
+export default defineConfig({
+  testDir: './tests',
+  
+  /* Run tests in files in parallel */
+  fullyParallel: true,
+  
+  /* Fail the build on CI if you accidentally left test.only in the source code */
+  forbidOnly: !!process.env.CI,
+  
+  /* Retry on CI only */
+  retries: process.env.CI ? 2 : 0,
+  
+  /* Opt out of parallel tests on CI */
+  workers: process.env.CI ? 1 : undefined,
+  
+  /* Reporter to use */
+  reporter: [
+    ['html'],
+    ['list'],
+    ['json', { outputFile: 'test-results/results.json' }]
+  ],
+  
+  /* Shared settings for all the projects below */
+  use: {
+    /* Base URL to use in actions like `await page.goto('/')` */
+    baseURL: process.env.BASE_URL || 'http://localhost:8080',
+    
+    /* Collect trace when retrying the failed test */
+    trace: 'on-first-retry',
+    
+    /* Screenshot on failure */
+    screenshot: 'only-on-failure',
+    
+    /* Video on failure */
+    video: 'retain-on-failure',
+    
+    /* Maximum time each action such as `click()` can take */
+    actionTimeout: 10000,
+    
+    /* Navigation timeout */
+    navigationTimeout: 30000,
+  },
+
+  /* Configure projects for major browsers */
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: ['**/chat.spec.ts', '**/permissions.spec.ts'], // Core tests only
+    },
+
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+      testMatch: ['**/chat.spec.ts', '**/permissions.spec.ts'],
+    },
+
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+      testMatch: ['**/chat.spec.ts', '**/permissions.spec.ts'],
+    },
+
+    /* Test against mobile viewports */
+    {
+      name: 'mobile-chrome',
+      use: { ...devices['Pixel 5'] },
+      testMatch: ['**/chat.spec.ts', '**/permissions.spec.ts'],
+    },
+    
+    {
+      name: 'mobile-safari',
+      use: { ...devices['iPhone 13'] },
+      testMatch: ['**/chat.spec.ts', '**/permissions.spec.ts'],
+    },
+
+    /* Extended tests - run separately */
+    {
+      name: 'accessibility',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: ['**/accessibility.spec.ts'],
+    },
+
+    {
+      name: 'performance',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: ['**/performance.spec.ts'],
+    },
+
+    {
+      name: 'visual',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: ['**/visual-regression.spec.ts'],
+    },
+
+    /* Test against branded browsers */
+    // {
+    //   name: 'Microsoft Edge',
+    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
+    // },
+    // {
+    //   name: 'Google Chrome',
+    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+    // },
+  ],
+
+  /* Run your local dev server before starting the tests */
+  webServer: {
+    command: 'cd .. && ./gradlew bootRun --args="--spring.profiles.active=e2e"',
+    url: 'http://localhost:8080',
+    reuseExistingServer: !process.env.CI,
+    timeout: 180000, // Increased timeout for first build
+    stdout: 'pipe',
+    stderr: 'pipe',
+  },
+});

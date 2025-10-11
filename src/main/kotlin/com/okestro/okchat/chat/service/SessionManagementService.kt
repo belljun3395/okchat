@@ -8,6 +8,7 @@ import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactive.awaitSingleOrNull
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.data.redis.core.ReactiveRedisTemplate
 import org.springframework.stereotype.Service
 import java.time.Duration
@@ -21,6 +22,7 @@ private val log = KotlinLogging.logger {}
  * Implements sliding window strategy to maintain recent conversation history
  */
 @Service
+@ConditionalOnBean(ReactiveRedisTemplate::class)
 class SessionManagementService(
     @Qualifier("reactiveStringRedisTemplate")
     private val redisTemplate: ReactiveRedisTemplate<String, String>,

@@ -1,7 +1,7 @@
-package com.okestro.okchat.ai.service
+package com.okestro.okchat.prompt.service
 
-import com.okestro.okchat.ai.model.Prompt
-import com.okestro.okchat.ai.repository.PromptRepository
+import com.okestro.okchat.prompt.model.Prompt
+import com.okestro.okchat.prompt.repository.PromptRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

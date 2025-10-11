@@ -1,7 +1,7 @@
-package com.okestro.okchat.ai.controller
+package com.okestro.okchat.prompt.controller
 
-import com.okestro.okchat.ai.model.Prompt
-import com.okestro.okchat.ai.service.PromptService
+import com.okestro.okchat.prompt.model.Prompt
+import com.okestro.okchat.prompt.service.PromptService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping

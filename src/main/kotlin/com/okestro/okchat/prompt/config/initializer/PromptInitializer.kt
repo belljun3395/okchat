@@ -1,7 +1,7 @@
-package com.okestro.okchat.ai.config.initializer
+package com.okestro.okchat.prompt.config.initializer
 
-import com.okestro.okchat.ai.service.PromptService
 import com.okestro.okchat.ai.support.QueryClassifier
+import com.okestro.okchat.prompt.service.PromptService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import org.springframework.boot.ApplicationArguments

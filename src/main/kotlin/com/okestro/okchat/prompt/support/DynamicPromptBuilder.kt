@@ -1,6 +1,7 @@
-package com.okestro.okchat.ai.support
+package com.okestro.okchat.prompt.support
 
-import com.okestro.okchat.ai.service.PromptService
+import com.okestro.okchat.ai.support.QueryClassifier
+import com.okestro.okchat.prompt.service.PromptService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
 

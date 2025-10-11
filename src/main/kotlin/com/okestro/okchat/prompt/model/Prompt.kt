@@ -1,4 +1,4 @@
-package com.okestro.okchat.ai.model
+package com.okestro.okchat.prompt.model
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

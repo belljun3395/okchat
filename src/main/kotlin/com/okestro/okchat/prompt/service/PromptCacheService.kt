@@ -1,6 +1,6 @@
-package com.okestro.okchat.ai.service
+package com.okestro.okchat.prompt.service
 
-import com.okestro.okchat.ai.config.PromptCacheConfig.Companion.PROMPT_LATEST_CACHE_PREFIX
+import com.okestro.okchat.prompt.config.PromptCacheConfig.Companion.PROMPT_LATEST_CACHE_PREFIX
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.data.redis.core.ReactiveRedisTemplate

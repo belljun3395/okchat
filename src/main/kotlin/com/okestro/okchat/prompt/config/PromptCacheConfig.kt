@@ -1,4 +1,4 @@
-package com.okestro.okchat.ai.config
+package com.okestro.okchat.prompt.config
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

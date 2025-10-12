@@ -1,7 +1,10 @@
 package com.okestro.okchat.prompt.config.initializer
 
 import com.okestro.okchat.ai.support.QueryClassifier
-import com.okestro.okchat.prompt.service.PromptService
+import com.okestro.okchat.prompt.application.CheckPromptExistsUseCase
+import com.okestro.okchat.prompt.application.CreatePromptUseCase
+import com.okestro.okchat.prompt.application.dto.CheckPromptExistsUseCaseIn
+import com.okestro.okchat.prompt.application.dto.CreatePromptUseCaseIn
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import org.springframework.boot.ApplicationArguments
@@ -17,7 +20,8 @@ private val log = KotlinLogging.logger {}
  */
 @Component
 class PromptInitializer(
-    private val promptService: PromptService
+    private val checkPromptExistsUseCase: CheckPromptExistsUseCase,
+    private val createPromptUseCase: CreatePromptUseCase
 ) : ApplicationRunner {
 
     companion object {
@@ -43,9 +47,9 @@ class PromptInitializer(
 
         PROMPT_TYPE_MAPPING.forEach { (type, filename) ->
             try {
-                if (!promptService.exists(type)) {
+                if (!checkPromptExistsUseCase.execute(CheckPromptExistsUseCaseIn(type)).exists) {
                     val content = loadPromptFromFile(filename)
-                    promptService.createPrompt(type, content)
+                    createPromptUseCase.execute(CreatePromptUseCaseIn(type, content))
                     initialized++
                     log.info { "Initialized prompt: $type from $filename.txt" }
                 } else {

@@ -1,7 +1,18 @@
 package com.okestro.okchat.prompt.controller
 
+import com.okestro.okchat.prompt.application.CreatePromptUseCase
+import com.okestro.okchat.prompt.application.DeactivatePromptUseCase
+import com.okestro.okchat.prompt.application.GetAllPromptVersionsUseCase
+import com.okestro.okchat.prompt.application.GetLatestPromptVersionUseCase
+import com.okestro.okchat.prompt.application.GetPromptUseCase
+import com.okestro.okchat.prompt.application.UpdatePromptUseCase
+import com.okestro.okchat.prompt.application.dto.CreatePromptUseCaseIn
+import com.okestro.okchat.prompt.application.dto.DeactivatePromptUseCaseIn
+import com.okestro.okchat.prompt.application.dto.GetAllPromptVersionsUseCaseIn
+import com.okestro.okchat.prompt.application.dto.GetLatestPromptVersionUseCaseIn
+import com.okestro.okchat.prompt.application.dto.GetPromptUseCaseIn
+import com.okestro.okchat.prompt.application.dto.UpdatePromptUseCaseIn
 import com.okestro.okchat.prompt.model.Prompt
-import com.okestro.okchat.prompt.service.PromptService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -30,7 +41,12 @@ private val log = KotlinLogging.logger {}
     description = "AI 프롬프트 관리 API. 프롬프트 버전 관리 및 CRUD 기능을 제공합니다."
 )
 class PromptController(
-    private val promptService: PromptService
+    private val getPromptUseCase: GetPromptUseCase,
+    private val getLatestPromptVersionUseCase: GetLatestPromptVersionUseCase,
+    private val getAllPromptVersionsUseCase: GetAllPromptVersionsUseCase,
+    private val createPromptUseCase: CreatePromptUseCase,
+    private val updatePromptUseCase: UpdatePromptUseCase,
+    private val deactivatePromptUseCase: DeactivatePromptUseCase
 ) {
 
     data class CreatePromptRequest(
@@ -86,10 +102,10 @@ class PromptController(
         version: Int?
     ): PromptContentResponse {
         log.info { "Getting prompt: type=$type, version=$version" }
-        val content = promptService.getPrompt(type, version)
+        val content = getPromptUseCase.execute(GetPromptUseCaseIn(type, version)).content
             ?: throw PromptNotFoundException("Prompt not found: type=$type, version=$version")
 
-        val actualVersion = version ?: promptService.getLatestVersion(type)
+        val actualVersion = version ?: getLatestPromptVersionUseCase.execute(GetLatestPromptVersionUseCaseIn(type)).version
 
         return PromptContentResponse(
             type = type,
@@ -110,7 +126,7 @@ class PromptController(
         type: String
     ): List<PromptResponse> {
         log.info { "Getting all versions of prompt: type=$type" }
-        return promptService.getAllVersions(type).map { PromptResponse.from(it) }
+        return getAllPromptVersionsUseCase.execute(GetAllPromptVersionsUseCaseIn(type)).prompts.map { PromptResponse.from(it) }
     }
 
     @PostMapping
@@ -131,7 +147,7 @@ class PromptController(
         request: CreatePromptRequest
     ): PromptResponse {
         log.info { "Creating new prompt: type=${request.type}" }
-        val prompt = promptService.createPrompt(request.type, request.content)
+        val prompt = createPromptUseCase.execute(CreatePromptUseCaseIn(request.type, request.content)).prompt
         return PromptResponse.from(prompt)
     }
 
@@ -155,7 +171,7 @@ class PromptController(
         request: UpdatePromptRequest
     ): PromptResponse {
         log.info { "Updating prompt: type=$type" }
-        val prompt = promptService.updateLatestPrompt(type, request.content)
+        val prompt = updatePromptUseCase.execute(UpdatePromptUseCaseIn(type, request.content)).prompt
         return PromptResponse.from(prompt)
     }
 
@@ -180,7 +196,7 @@ class PromptController(
         version: Int
     ) {
         log.info { "Deactivating prompt: type=$type, version=$version" }
-        promptService.deactivatePrompt(type, version)
+        deactivatePromptUseCase.execute(DeactivatePromptUseCaseIn(type, version))
     }
 
     data class ErrorResponse(

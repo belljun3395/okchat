@@ -1,7 +1,9 @@
 package com.okestro.okchat.prompt.support
 
 import com.okestro.okchat.ai.support.QueryClassifier
-import com.okestro.okchat.prompt.service.PromptService
+import com.okestro.okchat.prompt.application.GetPromptUseCase
+import com.okestro.okchat.prompt.application.dto.GetPromptUseCaseIn
+import com.okestro.okchat.prompt.application.dto.GetPromptUseCaseOut
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.string.shouldContain
 import io.mockk.clearAllMocks
@@ -16,13 +18,13 @@ import org.junit.jupiter.api.Test
 @DisplayName("DynamicPromptBuilder 단위 테스트")
 class DynamicPromptBuilderTest {
 
-    private lateinit var promptService: PromptService
+    private lateinit var getPromptUseCase: GetPromptUseCase
     private lateinit var builder: DynamicPromptBuilder
 
     @BeforeEach
     fun setUp() {
-        promptService = mockk()
-        builder = DynamicPromptBuilder(promptService)
+        getPromptUseCase = mockk()
+        builder = DynamicPromptBuilder(getPromptUseCase)
     }
 
     @AfterEach
@@ -34,9 +36,9 @@ class DynamicPromptBuilderTest {
     @DisplayName("buildPrompt - 프롬프트 빌드 성공")
     fun `should build prompt successfully`() = runTest {
         // given
-        coEvery { promptService.getLatestPrompt(QueryClassifier.QueryType.BASE.name) } returns "Base prompt"
-        coEvery { promptService.getLatestPrompt(QueryClassifier.QueryType.COMMON_GUIDELINES.name) } returns "Common guidelines"
-        coEvery { promptService.getLatestPrompt(QueryClassifier.QueryType.DOCUMENT_SEARCH.name) } returns "Document search specific"
+        coEvery { getPromptUseCase.execute(GetPromptUseCaseIn(QueryClassifier.QueryType.BASE.name)) } returns GetPromptUseCaseOut("Base prompt")
+        coEvery { getPromptUseCase.execute(GetPromptUseCaseIn(QueryClassifier.QueryType.COMMON_GUIDELINES.name)) } returns GetPromptUseCaseOut("Common guidelines")
+        coEvery { getPromptUseCase.execute(GetPromptUseCaseIn(QueryClassifier.QueryType.DOCUMENT_SEARCH.name)) } returns GetPromptUseCaseOut("Document search specific")
 
         // when
         val result = builder.buildPrompt(QueryClassifier.QueryType.DOCUMENT_SEARCH)
@@ -51,7 +53,7 @@ class DynamicPromptBuilderTest {
     @DisplayName("buildPrompt - Base 프롬프트 없으면 예외")
     fun `should throw exception when base prompt not found`() = runTest {
         // given
-        coEvery { promptService.getLatestPrompt(QueryClassifier.QueryType.BASE.name) } returns null
+        coEvery { getPromptUseCase.execute(GetPromptUseCaseIn(QueryClassifier.QueryType.BASE.name)) } returns GetPromptUseCaseOut(null)
 
         // when & then
         shouldThrow<IllegalStateException> {
@@ -63,9 +65,9 @@ class DynamicPromptBuilderTest {
     @DisplayName("buildPrompt - Common Guidelines 없으면 예외")
     fun `should throw exception when common guidelines not found`() = runTest {
         // given
-        coEvery { promptService.getLatestPrompt(QueryClassifier.QueryType.BASE.name) } returns "Base"
-        coEvery { promptService.getLatestPrompt(QueryClassifier.QueryType.DOCUMENT_SEARCH.name) } returns "Specific"
-        coEvery { promptService.getLatestPrompt(QueryClassifier.QueryType.COMMON_GUIDELINES.name) } returns null
+        coEvery { getPromptUseCase.execute(GetPromptUseCaseIn(QueryClassifier.QueryType.BASE.name)) } returns GetPromptUseCaseOut("Base")
+        coEvery { getPromptUseCase.execute(GetPromptUseCaseIn(QueryClassifier.QueryType.DOCUMENT_SEARCH.name)) } returns GetPromptUseCaseOut("Specific")
+        coEvery { getPromptUseCase.execute(GetPromptUseCaseIn(QueryClassifier.QueryType.COMMON_GUIDELINES.name)) } returns GetPromptUseCaseOut(null)
 
         // when & then
         shouldThrow<IllegalStateException> {
@@ -77,8 +79,8 @@ class DynamicPromptBuilderTest {
     @DisplayName("buildPrompt - 특정 타입 프롬프트 없으면 예외")
     fun `should throw exception when specific prompt not found`() = runTest {
         // given
-        coEvery { promptService.getLatestPrompt(QueryClassifier.QueryType.BASE.name) } returns "Base"
-        coEvery { promptService.getLatestPrompt(QueryClassifier.QueryType.DOCUMENT_SEARCH.name) } returns null
+        coEvery { getPromptUseCase.execute(GetPromptUseCaseIn(QueryClassifier.QueryType.BASE.name)) } returns GetPromptUseCaseOut("Base")
+        coEvery { getPromptUseCase.execute(GetPromptUseCaseIn(QueryClassifier.QueryType.DOCUMENT_SEARCH.name)) } returns GetPromptUseCaseOut(null)
 
         // when & then
         shouldThrow<IllegalStateException> {

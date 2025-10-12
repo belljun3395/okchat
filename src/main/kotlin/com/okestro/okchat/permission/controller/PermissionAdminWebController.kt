@@ -10,7 +10,6 @@ import com.okestro.okchat.user.application.GetAllActiveUsersUseCase
 import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
 import com.okestro.okchat.user.application.dto.GetAllActiveUsersUseCaseIn
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.runBlocking
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
@@ -36,7 +35,7 @@ class PermissionAdminWebController(
      * Permission management home page
      */
     @GetMapping
-    fun index(model: Model): String {
+    suspend fun index(model: Model): String {
         log.info { "Loading permission management page" }
 
         val users = getAllActiveUsersUseCase.execute(GetAllActiveUsersUseCaseIn()).users
@@ -54,7 +53,7 @@ class PermissionAdminWebController(
      * Advanced permission management page
      */
     @GetMapping("/manage")
-    fun manage(model: Model): String {
+    suspend fun manage(model: Model): String {
         log.info { "Loading advanced permission management page" }
 
         val users = getAllActiveUsersUseCase.execute(GetAllActiveUsersUseCaseIn()).users
@@ -71,7 +70,7 @@ class PermissionAdminWebController(
      * Shows only path-based permissions (document-specific permissions are automatically covered by paths)
      */
     @GetMapping("/user/{email}")
-    fun userDetail(@PathVariable email: String, model: Model): String {
+    suspend fun userDetail(@PathVariable email: String, model: Model): String {
         log.info { "Loading user detail page: $email" }
 
         val user = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(email)).user
@@ -95,10 +94,10 @@ class PermissionAdminWebController(
      * Path detail page with accessible documents
      */
     @GetMapping("/path/{path:.+}")
-    fun pathDetail(@PathVariable("path") path: String, model: Model): String {
+    suspend fun pathDetail(@PathVariable("path") path: String, model: Model): String {
         log.info { "Loading path detail page: $path" }
 
-        val documents = runBlocking { documentPermissionService.searchAllByPath(path) } // Efficiently get docs with titles
+        val documents = documentPermissionService.searchAllByPath(path) // Efficiently get docs with titles
         val permissions = getPathPermissionsUseCase.execute(GetPathPermissionsUseCaseIn(path)).permissions
 
         // Get user details for each permission
@@ -120,7 +119,7 @@ class PermissionAdminWebController(
      * All paths listing page
      */
     @GetMapping("/paths")
-    fun paths(model: Model): String {
+    suspend fun paths(model: Model): String {
         log.info { "Loading all paths page" }
 
         val paths = documentPermissionService.searchAllPaths()
@@ -142,7 +141,7 @@ class PermissionAdminWebController(
      * All users listing page
      */
     @GetMapping("/users")
-    fun users(model: Model): String {
+    suspend fun users(model: Model): String {
         log.info { "Loading all users page" }
 
         val users = getAllActiveUsersUseCase.execute(GetAllActiveUsersUseCaseIn()).users

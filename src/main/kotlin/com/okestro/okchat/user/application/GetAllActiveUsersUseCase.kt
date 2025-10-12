@@ -4,6 +4,8 @@ import com.okestro.okchat.user.application.dto.GetAllActiveUsersUseCaseIn
 import com.okestro.okchat.user.application.dto.GetAllActiveUsersUseCaseOut
 import com.okestro.okchat.user.repository.UserRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 
 private val log = KotlinLogging.logger {}
@@ -15,9 +17,10 @@ private val log = KotlinLogging.logger {}
 class GetAllActiveUsersUseCase(
     private val userRepository: UserRepository
 ) {
-    fun execute(useCaseIn: GetAllActiveUsersUseCaseIn): GetAllActiveUsersUseCaseOut {
-        val activeUsers = userRepository.findAll().filter { it.active }
-        log.debug { "Get all active users: count=${activeUsers.size}" }
-        return GetAllActiveUsersUseCaseOut(users = activeUsers)
-    }
+    suspend fun execute(useCaseIn: GetAllActiveUsersUseCaseIn): GetAllActiveUsersUseCaseOut =
+        withContext(Dispatchers.IO) {
+            val activeUsers = userRepository.findAll().filter { it.active }
+            log.debug { "Get all active users: count=${activeUsers.size}" }
+            GetAllActiveUsersUseCaseOut(users = activeUsers)
+        }
 }

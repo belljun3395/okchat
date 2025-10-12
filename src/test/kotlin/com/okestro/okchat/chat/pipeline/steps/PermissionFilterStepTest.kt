@@ -7,9 +7,9 @@ import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchScore
 import io.kotest.matchers.shouldBe
 import io.mockk.clearAllMocks
-import io.mockk.every
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -106,14 +106,14 @@ class PermissionFilterStepTest {
             createSearchResult("doc3", "또 다른 허용 문서")
         )
 
-        every { documentPermissionService.filterByUserEmail(results, "user@example.com") } returns filteredResults
+        coEvery { documentPermissionService.filterByUserEmail(results, "user@example.com") } returns filteredResults
 
         // when
         val result = step.execute(context)
 
         // then
         result.search?.results?.size shouldBe 2
-        verify(exactly = 1) { documentPermissionService.filterByUserEmail(results, "user@example.com") }
+        coVerify(exactly = 1) { documentPermissionService.filterByUserEmail(results, "user@example.com") }
     }
 
     @Test
@@ -122,7 +122,7 @@ class PermissionFilterStepTest {
         // given
         val context = createContextWithSearchResults(userEmail = "unknown@example.com")
 
-        every { documentPermissionService.filterByUserEmail(any(), "unknown@example.com") } returns emptyList()
+        coEvery { documentPermissionService.filterByUserEmail(any(), "unknown@example.com") } returns emptyList()
 
         // when
         val result = step.execute(context)

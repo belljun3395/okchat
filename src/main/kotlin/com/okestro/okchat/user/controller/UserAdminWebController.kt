@@ -54,7 +54,7 @@ class UserAdminWebController(
         description = "모든 활성 상태인 사용자를 조회합니다."
     )
     @ApiResponse(responseCode = "200", description = "조회 성공")
-    fun getAllUsers(): ResponseEntity<List<User>> {
+    suspend fun getAllUsers(): ResponseEntity<List<User>> {
         log.info { "Get all users request" }
         val output = getAllActiveUsersUseCase.execute(GetAllActiveUsersUseCaseIn())
         return ResponseEntity.ok(output.users)
@@ -64,11 +64,11 @@ class UserAdminWebController(
      * Get user by email
      */
     @GetMapping("/{email}")
-    fun getUserByEmail(@PathVariable email: String): ResponseEntity<User> {
+    suspend fun getUserByEmail(@PathVariable email: String): ResponseEntity<User> {
         log.info { "Get user by email: $email" }
         val output = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(email))
         return output.user?.let { ResponseEntity.ok(it) }
-            ?: ResponseEntity.status(HttpStatus.NOT_FOUND).build()
+            ?: ResponseEntity.status(HttpStatus.NOT_FOUND).body(null)
     }
 
     /**
@@ -80,7 +80,7 @@ class UserAdminWebController(
         description = "새로운 사용자를 생성하거나 기존 사용자 정보를 업데이트합니다."
     )
     @ApiResponse(responseCode = "200", description = "생성/업데이트 성공")
-    fun createUser(
+    suspend fun createUser(
         @Parameter(description = "사용자 생성 요청", required = true)
         @RequestBody
         request: CreateUserRequest
@@ -96,7 +96,7 @@ class UserAdminWebController(
      * Deactivate user
      */
     @DeleteMapping("/{email}")
-    fun deactivateUser(@PathVariable email: String): ResponseEntity<UserResponse> {
+    suspend fun deactivateUser(@PathVariable email: String): ResponseEntity<UserResponse> {
         log.info { "Deactivate user request: email=$email" }
 
         val findOutput = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(email))

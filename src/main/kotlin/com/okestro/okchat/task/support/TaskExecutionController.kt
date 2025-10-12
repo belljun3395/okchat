@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.core.scheduler.Schedulers
 
 /**
  * REST API for querying Task execution history
@@ -40,12 +41,12 @@ class TaskExecutionController(
         description = "최근 50개의 작업 실행 이력을 조회합니다."
     )
     @ApiResponse(responseCode = "200", description = "조회 성공")
-    fun getAllTaskExecutions(): Flux<TaskExecutionDto> {
-        return Flux.fromIterable(
-            taskExecutionRepository.findRecentExecutions()
-                .map { it.toDto() }
-        )
-    }
+    fun getAllTaskExecutions(): Flux<TaskExecutionDto> =
+        Mono.fromCallable {
+            taskExecutionRepository.findRecentExecutions().map { it.toDto() }
+        }
+            .flatMapMany { Flux.fromIterable(it) }
+            .subscribeOn(Schedulers.boundedElastic())
 
     /**
      * Get specific task execution by ID
@@ -60,13 +61,13 @@ class TaskExecutionController(
         @Parameter(description = "작업 실행 ID", example = "1", required = true)
         @PathVariable
         id: Long
-    ): Mono<TaskExecutionDto> {
-        return Mono.fromCallable {
+    ): Mono<TaskExecutionDto> =
+        Mono.fromCallable {
             taskExecutionRepository.findById(id)
                 .orElseThrow { NoSuchElementException("Task execution not found: $id") }
                 .toDto()
         }
-    }
+            .subscribeOn(Schedulers.boundedElastic())
 
     /**
      * Get task execution statistics
@@ -77,8 +78,8 @@ class TaskExecutionController(
         description = "작업 실행 통계 정보를 조회합니다 (총 개수, 성공/실패 개수, 마지막 실행 시간)."
     )
     @ApiResponse(responseCode = "200", description = "조회 성공")
-    fun getTaskStats(): Mono<TaskStatsDto> {
-        return Mono.fromCallable {
+    fun getTaskStats(): Mono<TaskStatsDto> =
+        Mono.fromCallable {
             val stats = taskExecutionRepository.getStatistics()
             val lastExecution = taskExecutionRepository.findRecentExecutions()
                 .firstOrNull()
@@ -91,15 +92,16 @@ class TaskExecutionController(
                 lastExecution = lastExecution
             )
         }
-    }
+            .subscribeOn(Schedulers.boundedElastic())
 
     /**
      * Get task execution parameters
      */
     @GetMapping("/{id}/params")
-    fun getTaskParams(@PathVariable id: Long): Flux<String> {
-        return Flux.fromIterable(
+    fun getTaskParams(@PathVariable id: Long): Flux<String> =
+        Mono.fromCallable {
             taskExecutionParamsRepository.findParamsByExecutionId(id)
-        )
-    }
+        }
+            .flatMapMany { Flux.fromIterable(it) }
+            .subscribeOn(Schedulers.boundedElastic())
 }

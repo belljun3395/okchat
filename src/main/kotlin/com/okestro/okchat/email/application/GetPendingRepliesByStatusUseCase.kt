@@ -3,14 +3,17 @@ package com.okestro.okchat.email.application
 import com.okestro.okchat.email.application.dto.GetPendingRepliesByStatusUseCaseIn
 import com.okestro.okchat.email.application.dto.GetPendingRepliesByStatusUseCaseOut
 import com.okestro.okchat.email.repository.PendingEmailReplyRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 
 @Service
 class GetPendingRepliesByStatusUseCase(
     private val pendingEmailReplyRepository: PendingEmailReplyRepository
 ) {
-    fun execute(useCaseIn: GetPendingRepliesByStatusUseCaseIn): GetPendingRepliesByStatusUseCaseOut {
-        val replies = pendingEmailReplyRepository.findByStatusOrderByCreatedAtDesc(useCaseIn.status)
-        return GetPendingRepliesByStatusUseCaseOut(replies)
-    }
+    suspend fun execute(useCaseIn: GetPendingRepliesByStatusUseCaseIn): GetPendingRepliesByStatusUseCaseOut =
+        withContext(Dispatchers.IO) {
+            val replies = pendingEmailReplyRepository.findByStatusOrderByCreatedAtDesc(useCaseIn.status)
+            GetPendingRepliesByStatusUseCaseOut(replies)
+        }
 }

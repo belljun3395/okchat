@@ -47,11 +47,11 @@ class PermissionController(
 
     @GetMapping("/user/{email}")
     @Operation(summary = "사용자 권한 조회")
-    fun getUserPermissions(@PathVariable email: String): ResponseEntity<UserPermissionsResponse> {
+    suspend fun getUserPermissions(@PathVariable email: String): ResponseEntity<UserPermissionsResponse> {
         log.info { "Get user permissions request: email=$email" }
 
         val user = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(email)).user
-            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
+            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null)
 
         val pathPermissions = getUserPermissionsUseCase.execute(GetUserPermissionsUseCaseIn(user.id!!)).permissions
 
@@ -66,7 +66,7 @@ class PermissionController(
 
     @DeleteMapping("/user/{email}")
     @Operation(summary = "사용자 전체 권한 취소")
-    fun revokeAllPermissionsForUser(@PathVariable email: String): ResponseEntity<PermissionResponse> {
+    suspend fun revokeAllPermissionsForUser(@PathVariable email: String): ResponseEntity<PermissionResponse> {
         log.info { "Revoke all permissions for user: email=$email" }
 
         val user = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(email)).user
@@ -82,7 +82,7 @@ class PermissionController(
 
     @PostMapping("/path/bulk")
     @Operation(summary = "경로 권한 일괄 부여")
-    fun grantBulkPathPermissions(@RequestBody request: BulkGrantPathPermissionRequest): ResponseEntity<BulkPermissionResponse> {
+    suspend fun grantBulkPathPermissions(@RequestBody request: BulkGrantPathPermissionRequest): ResponseEntity<BulkPermissionResponse> {
         log.info { "Bulk grant path permission request: user_email=${request.userEmail}, paths=${request.documentPaths.size}" }
 
         val user = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(request.userEmail)).user
@@ -113,7 +113,7 @@ class PermissionController(
 
     @DeleteMapping("/path/bulk")
     @Operation(summary = "경로 권한 일괄 취소")
-    fun revokeBulkPathPermissions(@RequestBody request: RevokeBulkPathPermissionRequest): ResponseEntity<PermissionResponse> {
+    suspend fun revokeBulkPathPermissions(@RequestBody request: RevokeBulkPathPermissionRequest): ResponseEntity<PermissionResponse> {
         log.info { "Revoke bulk path permissions request: user_email=${request.userEmail}, count=${request.documentPaths.size}" }
 
         val user = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(request.userEmail)).user
@@ -129,7 +129,7 @@ class PermissionController(
 
     @PostMapping("/path/bulk/deny")
     @Operation(summary = "경로 권한 일괄 거부")
-    fun grantBulkDenyPathPermissions(@RequestBody request: BulkGrantPathPermissionRequest): ResponseEntity<BulkPermissionResponse> {
+    suspend fun grantBulkDenyPathPermissions(@RequestBody request: BulkGrantPathPermissionRequest): ResponseEntity<BulkPermissionResponse> {
         log.info { "Bulk grant DENY path permission request: user_email=${request.userEmail}, paths=${request.documentPaths.size}" }
 
         val user = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(request.userEmail)).user

@@ -4,6 +4,8 @@ import com.okestro.okchat.permission.application.dto.RevokeAllUserPermissionsUse
 import com.okestro.okchat.permission.application.dto.RevokeAllUserPermissionsUseCaseOut
 import com.okestro.okchat.permission.repository.DocumentPathPermissionRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -14,12 +16,13 @@ class RevokeAllUserPermissionsUseCase(
     private val documentPathPermissionRepository: DocumentPathPermissionRepository
 ) {
     @Transactional("transactionManager")
-    fun execute(useCaseIn: RevokeAllUserPermissionsUseCaseIn): RevokeAllUserPermissionsUseCaseOut {
-        val userId = useCaseIn.userId
+    suspend fun execute(useCaseIn: RevokeAllUserPermissionsUseCaseIn): RevokeAllUserPermissionsUseCaseOut =
+        withContext(Dispatchers.IO) {
+            val userId = useCaseIn.userId
 
-        documentPathPermissionRepository.deleteByUserId(userId)
-        log.info { "All path permissions revoked for user: user_id=$userId" }
+            documentPathPermissionRepository.deleteByUserId(userId)
+            log.info { "All path permissions revoked for user: user_id=$userId" }
 
-        return RevokeAllUserPermissionsUseCaseOut(success = true, userId = userId)
-    }
+            RevokeAllUserPermissionsUseCaseOut(success = true, userId = userId)
+        }
 }

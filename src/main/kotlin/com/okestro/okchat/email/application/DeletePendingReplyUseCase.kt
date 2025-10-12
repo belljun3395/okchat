@@ -4,6 +4,8 @@ import com.okestro.okchat.email.application.dto.DeletePendingReplyUseCaseIn
 import com.okestro.okchat.email.application.dto.DeletePendingReplyUseCaseOut
 import com.okestro.okchat.email.repository.PendingEmailReplyRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -14,9 +16,10 @@ class DeletePendingReplyUseCase(
     private val pendingEmailReplyRepository: PendingEmailReplyRepository
 ) {
     @Transactional("transactionManager")
-    fun execute(useCaseIn: DeletePendingReplyUseCaseIn): DeletePendingReplyUseCaseOut {
-        pendingEmailReplyRepository.deleteById(useCaseIn.id)
-        logger.info { "Deleted pending email reply: id=${useCaseIn.id}" }
-        return DeletePendingReplyUseCaseOut(true)
-    }
+    suspend fun execute(useCaseIn: DeletePendingReplyUseCaseIn): DeletePendingReplyUseCaseOut =
+        withContext(Dispatchers.IO) {
+            pendingEmailReplyRepository.deleteById(useCaseIn.id)
+            logger.info { "Deleted pending email reply: id=${useCaseIn.id}" }
+            DeletePendingReplyUseCaseOut(true)
+        }
 }

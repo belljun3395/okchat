@@ -4,6 +4,8 @@ import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
 import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseOut
 import com.okestro.okchat.user.repository.UserRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 
 private val log = KotlinLogging.logger {}
@@ -16,9 +18,10 @@ private val log = KotlinLogging.logger {}
 class FindUserByEmailUseCase(
     private val userRepository: UserRepository
 ) {
-    fun execute(useCaseIn: FindUserByEmailUseCaseIn): FindUserByEmailUseCaseOut {
-        val user = userRepository.findByEmailAndActive(useCaseIn.email, true)
-        log.debug { "Find user by email: ${useCaseIn.email}, found=${user != null}" }
-        return FindUserByEmailUseCaseOut(user = user)
-    }
+    suspend fun execute(useCaseIn: FindUserByEmailUseCaseIn): FindUserByEmailUseCaseOut =
+        withContext(Dispatchers.IO) {
+            val user = userRepository.findByEmailAndActive(useCaseIn.email, true)
+            log.debug { "Find user by email: ${useCaseIn.email}, found=${user != null}" }
+            FindUserByEmailUseCaseOut(user = user)
+        }
 }

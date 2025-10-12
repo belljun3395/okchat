@@ -33,7 +33,7 @@ class DocumentPermissionService(
      * @param userEmail User email to identify and check permissions
      * @return Filtered list containing only accessible documents
      */
-    fun filterByUserEmail(results: List<SearchResult>, userEmail: String): List<SearchResult> {
+    suspend fun filterByUserEmail(results: List<SearchResult>, userEmail: String): List<SearchResult> {
         if (results.isEmpty()) {
             log.debug { "[PermissionFilter] No results to filter" }
             return emptyList()

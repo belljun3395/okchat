@@ -6,6 +6,8 @@ import com.okestro.okchat.prompt.model.Prompt
 import com.okestro.okchat.prompt.repository.PromptRepository
 import com.okestro.okchat.prompt.service.PromptCacheService
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -18,31 +20,32 @@ class CreatePromptUseCase(
     private val promptCacheService: PromptCacheService
 ) {
     @Transactional("transactionManager")
-    suspend fun execute(useCaseIn: CreatePromptUseCaseIn): CreatePromptUseCaseOut {
-        val (type, content) = useCaseIn
+    suspend fun execute(useCaseIn: CreatePromptUseCaseIn): CreatePromptUseCaseOut =
+        withContext(Dispatchers.IO) {
+            val (type, content) = useCaseIn
 
-        val latestPrompt = promptRepository.findLatestByTypeAndActive(type)
-        val version = if (latestPrompt == null) {
-            1
-        } else {
-            latestPrompt.version + 1
+            val latestPrompt = promptRepository.findLatestByTypeAndActive(type)
+            val version = if (latestPrompt == null) {
+                1
+            } else {
+                latestPrompt.version + 1
+            }
+
+            val prompt = Prompt(
+                type = type,
+                version = version,
+                content = content,
+                active = true,
+                createdAt = LocalDateTime.now(),
+                updatedAt = LocalDateTime.now()
+            )
+
+            if (latestPrompt != null) {
+                promptRepository.deactivatePrompt(latestPrompt.id!!)
+            }
+            val saved = promptRepository.save(prompt)
+            log.info { "Created new prompt: type=$type, version=$version" }
+            promptCacheService.cacheLatestPrompt(type, content)
+            CreatePromptUseCaseOut(saved)
         }
-
-        val prompt = Prompt(
-            type = type,
-            version = version,
-            content = content,
-            active = true,
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now()
-        )
-
-        if (latestPrompt != null) {
-            promptRepository.deactivatePrompt(latestPrompt.id!!)
-        }
-        val saved = promptRepository.save(prompt)
-        log.info { "Created new prompt: type=$type, version=$version" }
-        promptCacheService.cacheLatestPrompt(type, content)
-        return CreatePromptUseCaseOut(saved)
-    }
 }

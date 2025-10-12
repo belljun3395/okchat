@@ -21,6 +21,7 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -60,7 +61,7 @@ class DocumentPermissionServiceTest {
 
     @Test
     @DisplayName("filterByUserEmail should return empty list for empty results")
-    fun `should return empty list for empty results`() {
+    fun `should return empty list for empty results`() = runTest {
         // when
         val result = documentPermissionService.filterByUserEmail(emptyList(), "test@example.com")
 
@@ -70,10 +71,10 @@ class DocumentPermissionServiceTest {
 
     @Test
     @DisplayName("filterByUserEmail should return empty list when user not found")
-    fun `should return empty list when user not found`() {
+    fun `should return empty list when user not found`() = runTest {
         // given
         val results = listOf(createSearchResult("팀회의"))
-        every { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("nonexistent@example.com")) } returns
+        coEvery { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("nonexistent@example.com")) } returns
             FindUserByEmailUseCaseOut(user = null)
 
         // when
@@ -81,15 +82,15 @@ class DocumentPermissionServiceTest {
 
         // then
         result.shouldBeEmpty()
-        verify(exactly = 1) { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("nonexistent@example.com")) }
+        coVerify(exactly = 1) { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("nonexistent@example.com")) }
     }
 
     @Test
     @DisplayName("filterByUserEmail should return empty list when user is inactive")
-    fun `should return empty list when user is inactive`() {
+    fun `should return empty list when user is inactive`() = runTest {
         // given
         val results = listOf(createSearchResult("팀회의"))
-        every { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("inactive@example.com")) } returns
+        coEvery { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("inactive@example.com")) } returns
             FindUserByEmailUseCaseOut(user = null)
 
         // when
@@ -101,7 +102,7 @@ class DocumentPermissionServiceTest {
 
     @Test
     @DisplayName("filterByUserEmail should filter results by user permissions")
-    fun `should filter results by user permissions`() {
+    fun `should filter results by user permissions`() = runTest {
         // given
         val user = User(id = 1L, email = "user@example.com", name = "Test User")
         val results = listOf(
@@ -114,9 +115,9 @@ class DocumentPermissionServiceTest {
             createSearchResult("프로젝트")
         )
 
-        every { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("user@example.com")) } returns
+        coEvery { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("user@example.com")) } returns
             FindUserByEmailUseCaseOut(user = user)
-        every { filterSearchResultsUseCase.execute(FilterSearchResultsUseCaseIn(results, 1L)) } returns
+        coEvery { filterSearchResultsUseCase.execute(FilterSearchResultsUseCaseIn(results, 1L)) } returns
             FilterSearchResultsUseCaseOut(filteredResults)
 
         // when
@@ -125,8 +126,8 @@ class DocumentPermissionServiceTest {
         // then
         result shouldHaveSize 2
         result.map { it.path } shouldContainExactly listOf("팀회의", "프로젝트")
-        verify(exactly = 1) { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("user@example.com")) }
-        verify(exactly = 1) { filterSearchResultsUseCase.execute(FilterSearchResultsUseCaseIn(results, 1L)) }
+        coVerify(exactly = 1) { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("user@example.com")) }
+        coVerify(exactly = 1) { filterSearchResultsUseCase.execute(FilterSearchResultsUseCaseIn(results, 1L)) }
     }
 
     @Test

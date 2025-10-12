@@ -20,7 +20,7 @@ private val log = KotlinLogging.logger {}
  */
 @Configuration
 @EnableConfigurationProperties(RagProperties::class)
-class ChunkingConfig {
+class ConfluenceChunkingConfig {
 
     @Bean
     fun chunkingStrategy(

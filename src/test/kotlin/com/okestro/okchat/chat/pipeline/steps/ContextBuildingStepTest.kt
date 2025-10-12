@@ -65,8 +65,8 @@ class ContextBuildingStepTest {
 
             // then
             result.search.shouldNotBeNull()
-            result.search.contextText.shouldNotBeNull()
-            result.search.contextText.shouldNotBeEmpty()
+            result.search!!.contextText.shouldNotBeNull()
+            result.search!!.contextText!!.shouldNotBeEmpty()
         }
 
         @Test
@@ -181,7 +181,7 @@ class ContextBuildingStepTest {
 
             // then
             result.search.shouldNotBeNull()
-            result.search.contextText.shouldBeNull()
+            result.search!!.contextText.shouldBeNull()
         }
 
         @Test

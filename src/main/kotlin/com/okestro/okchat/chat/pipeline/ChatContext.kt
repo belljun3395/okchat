@@ -15,7 +15,8 @@ fun ChatContext.copy(
         conversationHistory = conversationHistory ?: this.conversationHistory,
         analysis = analysis ?: this.analysis,
         search = search ?: this.search,
-        isDeepThink = this.isDeepThink
+        isDeepThink = this.isDeepThink,
+        executedStep = this.executedStep
     )
 }
 

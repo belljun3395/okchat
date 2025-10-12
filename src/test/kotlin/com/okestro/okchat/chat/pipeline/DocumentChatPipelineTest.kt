@@ -317,7 +317,8 @@ class DocumentChatPipelineTest {
                     dateKeywords = emptyList()
                 ),
                 search = ctx.search,
-                isDeepThink = ctx.isDeepThink
+                isDeepThink = ctx.isDeepThink,
+                executedStep = ctx.executedStep
             )
         }
         return step
@@ -327,7 +328,11 @@ class DocumentChatPipelineTest {
         val step = mockk<DocumentChatPipelineStep>()
         every { step.getStepName() } returns name
         every { step.shouldExecute(any()) } returns shouldExecute
-        coEvery { step.execute(any()) } answers { firstArg() }
+        coEvery { step.execute(any()) } answers {
+            val ctx = firstArg<ChatContext>()
+            // Return same context - pipeline will add step name to executedStep
+            ctx
+        }
         return step
     }
 
@@ -353,7 +358,9 @@ class DocumentChatPipelineTest {
                     dateKeywords = emptyList()
                 ),
                 search = ctx.search,
-                prompt = CompleteChatContext.Prompt(text = "Generated prompt")
+                prompt = CompleteChatContext.Prompt(text = "Generated prompt"),
+                isDeepThink = ctx.isDeepThink,
+                executedStep = ctx.executedStep
             )
         }
         return step

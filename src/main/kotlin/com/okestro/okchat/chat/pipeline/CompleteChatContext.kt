@@ -5,13 +5,16 @@ class CompleteChatContext(
     conversationHistory: ConversationHistory?,
     analysis: Analysis,
     search: Search?,
-    val prompt: Prompt
+    val prompt: Prompt,
+    isDeepThink: Boolean = false,
+    executedStep: MutableList<String> = mutableListOf()
 ) : ChatContext(
     input = input,
     conversationHistory = conversationHistory,
     analysis = analysis,
     search = search,
-    isDeepThink = false
+    isDeepThink = isDeepThink,
+    executedStep = executedStep
 ) {
     /**
      * Prompt context (LastChatPipelineStep - always executed at end)

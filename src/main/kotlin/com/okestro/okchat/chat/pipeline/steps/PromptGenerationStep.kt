@@ -50,7 +50,9 @@ class PromptGenerationStep(
             conversationHistory = context.conversationHistory,
             analysis = context.analysis,
             search = context.search,
-            prompt = CompleteChatContext.Prompt(prompt.contents)
+            prompt = CompleteChatContext.Prompt(prompt.contents),
+            isDeepThink = context.isDeepThink,
+            executedStep = context.executedStep
         )
     }
 

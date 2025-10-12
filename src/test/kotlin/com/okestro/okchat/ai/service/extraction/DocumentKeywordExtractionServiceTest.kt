@@ -43,7 +43,7 @@ class DocumentKeywordExtractionServiceTest {
     fun `execute should limit to 20 keywords`() = runBlocking {
         // Given
         val chatModel = mock<ChatModel>()
-        val keywords = (1..25).map { "keyword$it" }.joinToString(", ")
+        val keywords = (1..25).joinToString(", ") { "keyword$it" }
         val expectedResponse = ChatResponse(
             listOf(Generation(AssistantMessage(keywords)))
         )

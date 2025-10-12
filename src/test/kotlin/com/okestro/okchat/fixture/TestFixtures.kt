@@ -69,6 +69,11 @@ object TestFixtures {
         var path: String = "/test/path"
         var spaceKey: String = "TEST"
         var similarity: Double = 0.85
+        var keywords: String = ""
+        var type: String = "confluence-page"
+        var pageId: String = ""
+        var webUrl: String = ""
+        var downloadUrl: String = ""
 
         infix fun withSimilarity(score: Double) = apply { this.similarity = score }
         infix fun inSpace(key: String) = apply { this.spaceKey = key }
@@ -80,7 +85,12 @@ object TestFixtures {
             content = content,
             path = path,
             spaceKey = spaceKey,
-            similarity = SearchScore.SimilarityScore(similarity)
+            keywords = keywords,
+            similarity = SearchScore.SimilarityScore(similarity),
+            type = type,
+            pageId = pageId,
+            webUrl = webUrl,
+            downloadUrl = downloadUrl
         )
     }
 

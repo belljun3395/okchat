@@ -102,10 +102,10 @@ class RecursiveCharacterStrategyTest {
     @DisplayName("should create overlapping chunks")
     fun `should create overlapping chunks`() {
         // given
-        val strategy = createStrategy(chunkSize = 50, chunkOverlap = 20)
+        val strategy = createStrategy(chunkSize = 30, chunkOverlap = 10)
         val text = buildString {
-            repeat(30) {
-                append("Sentence number $it. ")
+            repeat(100) {
+                append("This is a longer sentence number $it with more content to ensure tokenization. ")
             }
         }
         val document = Document("doc1", text, mutableMapOf())

@@ -1,4 +1,4 @@
-package com.okestro.okchat.ai.tools.document
+package com.okestro.okchat.search.tools
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.ToolOutput
@@ -6,12 +6,14 @@ import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.search.model.MetadataFields
 import com.okestro.okchat.search.tools.dto.SearchPagePdfAttachmentsInput
 import org.opensearch.client.opensearch.OpenSearchClient
+import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch.core.SearchResponse
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Description
 import org.springframework.stereotype.Component
+import kotlin.collections.get
 
 @Component("SearchPagePdfAttachmentsTool")
 @Description("Search PDF attachments for a Confluence page from vector store")
@@ -121,13 +123,13 @@ class SearchPagePdfAttachmentsTool(
                             b.must { m ->
                                 m.term { t ->
                                     t.field("metadata.${MetadataFields.Additional.PAGE_ID}")
-                                        .value(org.opensearch.client.opensearch._types.FieldValue.of(pageId))
+                                        .value(FieldValue.of(pageId))
                                 }
                             }
                                 .must { m ->
                                     m.term { t ->
                                         t.field(MetadataFields.TYPE)
-                                            .value(org.opensearch.client.opensearch._types.FieldValue.of("confluence-pdf-attachment"))
+                                            .value(FieldValue.of("confluence-pdf-attachment"))
                                     }
                                 }
                         }

@@ -1,4 +1,4 @@
-package com.okestro.okchat.ai.tools.document
+package com.okestro.okchat.search.tools
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.ToolOutput

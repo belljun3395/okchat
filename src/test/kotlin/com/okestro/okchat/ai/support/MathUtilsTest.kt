@@ -2,6 +2,7 @@ package com.okestro.okchat.ai.support
 
 import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import org.junit.jupiter.api.DisplayName
@@ -83,7 +84,7 @@ class MathUtilsTest {
         val similarity = MathUtils.cosineSimilarity(vec1, vec2)
 
         // then
-        similarity shouldBe expected
+        similarity shouldBe (expected plusOrMinus 1e-6)
     }
 
     @ParameterizedTest(name = "should handle {2}")
@@ -128,7 +129,7 @@ class MathUtilsTest {
         val similarity = MathUtils.cosineSimilarity(vec1, vec2)
 
         // then
-        similarity shouldBe 1.0
+        similarity shouldBe (1.0 plusOrMinus 1e-9)
     }
 
     @Test

@@ -1,7 +1,14 @@
 package com.okestro.okchat.user.controller
 
+import com.okestro.okchat.user.application.DeactivateUserUseCase
+import com.okestro.okchat.user.application.FindOrCreateUserUseCase
+import com.okestro.okchat.user.application.FindUserByEmailUseCase
+import com.okestro.okchat.user.application.GetAllActiveUsersUseCase
+import com.okestro.okchat.user.application.dto.DeactivateUserUseCaseIn
+import com.okestro.okchat.user.application.dto.FindOrCreateUserUseCaseIn
+import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
+import com.okestro.okchat.user.application.dto.GetAllActiveUsersUseCaseIn
 import com.okestro.okchat.user.model.User
-import com.okestro.okchat.user.service.UserService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -32,7 +39,10 @@ private val log = KotlinLogging.logger {}
     description = "사용자 관리 API. 사용자 생성, 조회, 비활성화 기능을 제공합니다."
 )
 class UserAdminWebController(
-    private val userService: UserService
+    private val getAllActiveUsersUseCase: GetAllActiveUsersUseCase,
+    private val findUserByEmailUseCase: FindUserByEmailUseCase,
+    private val findOrCreateUserUseCase: FindOrCreateUserUseCase,
+    private val deactivateUserUseCase: DeactivateUserUseCase
 ) {
 
     /**
@@ -46,8 +56,8 @@ class UserAdminWebController(
     @ApiResponse(responseCode = "200", description = "조회 성공")
     fun getAllUsers(): ResponseEntity<List<User>> {
         log.info { "Get all users request" }
-        val users = userService.getAllActiveUsers()
-        return ResponseEntity.ok(users)
+        val output = getAllActiveUsersUseCase.execute(GetAllActiveUsersUseCaseIn())
+        return ResponseEntity.ok(output.users)
     }
 
     /**
@@ -56,9 +66,9 @@ class UserAdminWebController(
     @GetMapping("/{email}")
     fun getUserByEmail(@PathVariable email: String): ResponseEntity<User> {
         log.info { "Get user by email: $email" }
-        val user = userService.findByEmail(email)
-            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
-        return ResponseEntity.ok(user)
+        val output = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(email))
+        return output.user?.let { ResponseEntity.ok(it) }
+            ?: ResponseEntity.status(HttpStatus.NOT_FOUND).build()
     }
 
     /**
@@ -76,8 +86,10 @@ class UserAdminWebController(
         request: CreateUserRequest
     ): ResponseEntity<User> {
         log.info { "Create user request: email=${request.email}, name=${request.name}" }
-        val user = userService.findOrCreateUser(request.email, request.name)
-        return ResponseEntity.ok(user)
+        val output = findOrCreateUserUseCase.execute(
+            FindOrCreateUserUseCaseIn(email = request.email, name = request.name)
+        )
+        return ResponseEntity.ok(output.user)
     }
 
     /**
@@ -87,11 +99,12 @@ class UserAdminWebController(
     fun deactivateUser(@PathVariable email: String): ResponseEntity<UserResponse> {
         log.info { "Deactivate user request: email=$email" }
 
-        val user = userService.findByEmail(email)
+        val findOutput = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(email))
+        val user = findOutput.user
             ?: return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(UserResponse(success = false, message = "User not found: $email"))
 
-        userService.deactivateUser(user.id!!)
+        deactivateUserUseCase.execute(DeactivateUserUseCaseIn(userId = user.id!!))
 
         return ResponseEntity.ok(
             UserResponse(success = true, message = "User deactivated: $email")

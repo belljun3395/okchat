@@ -2,8 +2,9 @@ package com.okestro.okchat.permission.controller
 
 import com.okestro.okchat.permission.model.DocumentPathPermission
 import com.okestro.okchat.permission.service.PermissionService
+import com.okestro.okchat.user.application.FindUserByEmailUseCase
+import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
 import com.okestro.okchat.user.model.User
-import com.okestro.okchat.user.service.UserService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -37,7 +38,7 @@ private val log = KotlinLogging.logger {}
 )
 class PermissionController(
     private val permissionService: PermissionService,
-    private val userService: UserService
+    private val findUserByEmailUseCase: FindUserByEmailUseCase
 ) {
 
     /**
@@ -62,7 +63,7 @@ class PermissionController(
     ): ResponseEntity<UserPermissionsResponse> {
         log.info { "Get user permissions request: email=$email" }
 
-        val user = userService.findByEmail(email)
+        val user = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(email)).user
             ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
 
         val pathPermissions = permissionService.getUserPathPermissions(user.id!!)
@@ -97,7 +98,7 @@ class PermissionController(
     ): ResponseEntity<PermissionResponse> {
         log.info { "Revoke all permissions for user: email=$email" }
 
-        val user = userService.findByEmail(email)
+        val user = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(email)).user
             ?: return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(PermissionResponse(success = false, message = "User not found: $email"))
 
@@ -130,7 +131,7 @@ class PermissionController(
     ): ResponseEntity<BulkPermissionResponse> {
         log.info { "Bulk grant path permission request: user_email=${request.userEmail}, paths=${request.documentPaths.size}" }
 
-        val user = userService.findByEmail(request.userEmail)
+        val user = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(request.userEmail)).user
             ?: return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(BulkPermissionResponse(success = false, message = "User not found: ${request.userEmail}"))
 
@@ -173,7 +174,7 @@ class PermissionController(
     ): ResponseEntity<PermissionResponse> {
         log.info { "Revoke bulk path permissions request: user_email=${request.userEmail}, count=${request.documentPaths.size}" }
 
-        val user = userService.findByEmail(request.userEmail)
+        val user = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(request.userEmail)).user
             ?: return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(PermissionResponse(success = false, message = "User not found: ${request.userEmail}"))
 
@@ -207,7 +208,7 @@ class PermissionController(
     ): ResponseEntity<BulkPermissionResponse> {
         log.info { "Bulk grant DENY path permission request: user_email=${request.userEmail}, paths=${request.documentPaths.size}" }
 
-        val user = userService.findByEmail(request.userEmail)
+        val user = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(request.userEmail)).user
             ?: return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(BulkPermissionResponse(success = false, message = "User not found: ${request.userEmail}"))
 

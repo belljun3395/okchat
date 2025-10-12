@@ -3,7 +3,8 @@ package com.okestro.okchat.permission.service
 import com.okestro.okchat.search.model.Document
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.service.DocumentSearchService
-import com.okestro.okchat.user.service.UserService
+import com.okestro.okchat.user.application.FindUserByEmailUseCase
+import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 
@@ -15,7 +16,7 @@ private val log = KotlinLogging.logger {}
 @Service
 class DocumentPermissionService(
     private val permissionService: PermissionService,
-    private val userService: UserService,
+    private val findUserByEmailUseCase: FindUserByEmailUseCase,
     private val documentSearchService: DocumentSearchService
 ) {
 
@@ -33,7 +34,7 @@ class DocumentPermissionService(
         }
 
         // 1. Identify user
-        val user = userService.findByEmail(userEmail)
+        val user = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(userEmail)).user
         if (user == null) {
             log.warn { "[PermissionFilter] User not found or inactive: email=$userEmail, filtering all results" }
             return emptyList()

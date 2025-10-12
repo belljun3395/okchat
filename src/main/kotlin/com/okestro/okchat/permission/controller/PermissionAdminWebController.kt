@@ -2,7 +2,10 @@ package com.okestro.okchat.permission.controller
 
 import com.okestro.okchat.permission.service.DocumentPermissionService
 import com.okestro.okchat.permission.service.PermissionService
-import com.okestro.okchat.user.service.UserService
+import com.okestro.okchat.user.application.FindUserByEmailUseCase
+import com.okestro.okchat.user.application.GetAllActiveUsersUseCase
+import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
+import com.okestro.okchat.user.application.dto.GetAllActiveUsersUseCaseIn
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import org.springframework.stereotype.Controller
@@ -19,7 +22,8 @@ private val log = KotlinLogging.logger {}
 @Controller
 @RequestMapping("/admin/permissions")
 class PermissionAdminWebController(
-    private val userService: UserService,
+    private val getAllActiveUsersUseCase: GetAllActiveUsersUseCase,
+    private val findUserByEmailUseCase: FindUserByEmailUseCase,
     private val permissionService: PermissionService,
     private val documentPermissionService: DocumentPermissionService
 ) {
@@ -31,7 +35,7 @@ class PermissionAdminWebController(
     fun index(model: Model): String {
         log.info { "Loading permission management page" }
 
-        val users = userService.getAllActiveUsers()
+        val users = getAllActiveUsersUseCase.execute(GetAllActiveUsersUseCaseIn()).users
         val paths = documentPermissionService.searchAllPaths()
 
         model.addAttribute("users", users)
@@ -49,7 +53,7 @@ class PermissionAdminWebController(
     fun manage(model: Model): String {
         log.info { "Loading advanced permission management page" }
 
-        val users = userService.getAllActiveUsers()
+        val users = getAllActiveUsersUseCase.execute(GetAllActiveUsersUseCaseIn()).users
         val paths = documentPermissionService.searchAllPaths()
 
         model.addAttribute("users", users)
@@ -66,7 +70,7 @@ class PermissionAdminWebController(
     fun userDetail(@PathVariable email: String, model: Model): String {
         log.info { "Loading user detail page: $email" }
 
-        val user = userService.findByEmail(email)
+        val user = findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn(email)).user
         if (user == null) {
             model.addAttribute("error", "User not found: $email")
             return "error"
@@ -94,8 +98,9 @@ class PermissionAdminWebController(
         val permissions = permissionService.getPathPermissions(path)
 
         // Get user details for each permission
+        val allUsers = getAllActiveUsersUseCase.execute(GetAllActiveUsersUseCaseIn()).users
         val usersWithAccess = permissions.mapNotNull { perm ->
-            userService.getAllActiveUsers().find { it.id == perm.userId }
+            allUsers.find { it.id == perm.userId }
         }
 
         model.addAttribute("path", path)
@@ -136,7 +141,7 @@ class PermissionAdminWebController(
     fun users(model: Model): String {
         log.info { "Loading all users page" }
 
-        val users = userService.getAllActiveUsers()
+        val users = getAllActiveUsersUseCase.execute(GetAllActiveUsersUseCaseIn()).users
 
         // Get permission count for each user (path-based only)
         val userPermissions = users.associateWith { user ->

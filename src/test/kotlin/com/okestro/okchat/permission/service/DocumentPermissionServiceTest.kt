@@ -1,0 +1,173 @@
+package com.okestro.okchat.permission.service
+
+import com.okestro.okchat.search.model.Document
+import com.okestro.okchat.search.model.SearchResult
+import com.okestro.okchat.search.model.SearchScore
+import com.okestro.okchat.search.service.DocumentSearchService
+import com.okestro.okchat.user.model.User
+import com.okestro.okchat.user.service.UserService
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.collections.shouldHaveSize
+import io.mockk.clearAllMocks
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Test
+
+@DisplayName("DocumentPermissionService Unit Tests")
+class DocumentPermissionServiceTest {
+
+    private lateinit var permissionService: PermissionService
+    private lateinit var userService: UserService
+    private lateinit var documentSearchService: DocumentSearchService
+    private lateinit var documentPermissionService: DocumentPermissionService
+
+    @BeforeEach
+    fun setUp() {
+        permissionService = mockk()
+        userService = mockk()
+        documentSearchService = mockk()
+        documentPermissionService = DocumentPermissionService(
+            permissionService,
+            userService,
+            documentSearchService
+        )
+    }
+
+    @AfterEach
+    fun tearDown() {
+        clearAllMocks()
+    }
+
+    @Test
+    @DisplayName("filterByUserEmail should return empty list for empty results")
+    fun `should return empty list for empty results`() {
+        // when
+        val result = documentPermissionService.filterByUserEmail(emptyList(), "test@example.com")
+
+        // then
+        result.shouldBeEmpty()
+    }
+
+    @Test
+    @DisplayName("filterByUserEmail should return empty list when user not found")
+    fun `should return empty list when user not found`() {
+        // given
+        val results = listOf(createSearchResult("팀회의"))
+        every { userService.findByEmail("nonexistent@example.com") } returns null
+
+        // when
+        val result = documentPermissionService.filterByUserEmail(results, "nonexistent@example.com")
+
+        // then
+        result.shouldBeEmpty()
+        verify(exactly = 1) { userService.findByEmail("nonexistent@example.com") }
+    }
+
+    @Test
+    @DisplayName("filterByUserEmail should return empty list when user is inactive")
+    fun `should return empty list when user is inactive`() {
+        // given
+        val results = listOf(createSearchResult("팀회의"))
+        every { userService.findByEmail("inactive@example.com") } returns null
+
+        // when
+        val result = documentPermissionService.filterByUserEmail(results, "inactive@example.com")
+
+        // then
+        result.shouldBeEmpty()
+    }
+
+    @Test
+    @DisplayName("filterByUserEmail should filter results by user permissions")
+    fun `should filter results by user permissions`() {
+        // given
+        val user = User(id = 1L, email = "user@example.com", name = "Test User")
+        val results = listOf(
+            createSearchResult("팀회의"),
+            createSearchResult("프로젝트"),
+            createSearchResult("업무일지")
+        )
+        val filteredResults = listOf(
+            createSearchResult("팀회의"),
+            createSearchResult("프로젝트")
+        )
+
+        every { userService.findByEmail("user@example.com") } returns user
+        every { permissionService.filterSearchResults(results, 1L) } returns filteredResults
+
+        // when
+        val result = documentPermissionService.filterByUserEmail(results, "user@example.com")
+
+        // then
+        result shouldHaveSize 2
+        result.map { it.path } shouldContainExactly listOf("팀회의", "프로젝트")
+        verify(exactly = 1) { userService.findByEmail("user@example.com") }
+        verify(exactly = 1) { permissionService.filterSearchResults(results, 1L) }
+    }
+
+    @Test
+    @DisplayName("searchAllPaths should delegate to DocumentSearchService")
+    fun `should delegate searchAllPaths to DocumentSearchService`() {
+        // given
+        val paths = listOf("팀회의 > 2025", "프로젝트 > A", "업무일지")
+        every { documentSearchService.searchAllPaths() } returns paths
+
+        // when
+        val result = documentPermissionService.searchAllPaths()
+
+        // then
+        result shouldHaveSize 3
+        result shouldContainExactly paths
+        verify(exactly = 1) { documentSearchService.searchAllPaths() }
+    }
+
+    @Test
+    @DisplayName("searchAllByPath should delegate to DocumentSearchService")
+    fun `should delegate searchAllByPath to DocumentSearchService`() = runTest {
+        // given
+        val path = "팀회의 > 2025"
+        val documents = listOf(
+            Document(
+                id = "doc1",
+                title = "회의록1",
+                content = "내용1",
+                spaceKey = "TEAM",
+                path = path
+            ),
+            Document(
+                id = "doc2",
+                title = "회의록2",
+                content = "내용2",
+                spaceKey = "TEAM",
+                path = path
+            )
+        )
+        coEvery { documentSearchService.searchAllByPath(path) } returns documents
+
+        // when
+        val result = documentPermissionService.searchAllByPath(path)
+
+        // then
+        result shouldHaveSize 2
+        result shouldContainExactly documents
+    }
+
+    private fun createSearchResult(path: String): SearchResult {
+        return SearchResult(
+            id = "id-${path.hashCode()}",
+            title = "Title for $path",
+            content = "Content for $path",
+            path = path,
+            spaceKey = "TEST",
+            score = SearchScore.fromSimilarity(0.75),
+            webUrl = "http://example.com/$path"
+        )
+    }
+}

@@ -5,6 +5,7 @@ plugins {
     id("org.springframework.boot") version "3.5.6"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jlleitschuh.gradle.ktlint") version "11.6.1"
+    jacoco
 }
 
 group = "com.okestro"
@@ -103,6 +104,12 @@ dependencies {
     testImplementation("io.kotest:kotest-property:5.9.1")
     testImplementation("io.kotest:kotest-framework-datatest:5.9.1")
     testImplementation("io.mockk:mockk:1.13.12")
+
+    /** testcontainers */
+    testImplementation("org.testcontainers:testcontainers:1.20.4")
+    testImplementation("org.testcontainers:junit-jupiter:1.20.4")
+    testImplementation("org.testcontainers:mysql:1.20.4")
+    testImplementation("com.redis:testcontainers-redis:2.2.2")
 }
 
 dependencyManagement {
@@ -120,4 +127,33 @@ kotlin {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+
+    classDirectories.setFrom(
+        files(
+            classDirectories.files.map {
+                fileTree(it) {
+                    exclude(
+                        // Kotlin generated classes
+                        "**/*\$\$serializer.class",
+                        "**/*\$DefaultImpls.class",
+                        "**/*\$Companion.class"
+                    )
+                }
+            }
+        )
+    )
+}
+
+jacoco {
+    toolVersion = "0.8.12"
 }

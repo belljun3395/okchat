@@ -1,7 +1,10 @@
 package com.okestro.okchat.permission.controller
 
+import com.okestro.okchat.permission.application.GetPathPermissionsUseCase
+import com.okestro.okchat.permission.application.GetUserPermissionsUseCase
+import com.okestro.okchat.permission.application.dto.GetPathPermissionsUseCaseIn
+import com.okestro.okchat.permission.application.dto.GetUserPermissionsUseCaseIn
 import com.okestro.okchat.permission.service.DocumentPermissionService
-import com.okestro.okchat.permission.service.PermissionService
 import com.okestro.okchat.user.application.FindUserByEmailUseCase
 import com.okestro.okchat.user.application.GetAllActiveUsersUseCase
 import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
@@ -24,7 +27,8 @@ private val log = KotlinLogging.logger {}
 class PermissionAdminWebController(
     private val getAllActiveUsersUseCase: GetAllActiveUsersUseCase,
     private val findUserByEmailUseCase: FindUserByEmailUseCase,
-    private val permissionService: PermissionService,
+    private val getUserPermissionsUseCase: GetUserPermissionsUseCase,
+    private val getPathPermissionsUseCase: GetPathPermissionsUseCase,
     private val documentPermissionService: DocumentPermissionService
 ) {
 
@@ -76,7 +80,7 @@ class PermissionAdminWebController(
             return "error"
         }
 
-        val pathPermissions = permissionService.getUserPathPermissions(user.id!!)
+        val pathPermissions = getUserPermissionsUseCase.execute(GetUserPermissionsUseCaseIn(user.id!!)).permissions
         val paths = documentPermissionService.searchAllPaths()
 
         model.addAttribute("user", user)
@@ -95,7 +99,7 @@ class PermissionAdminWebController(
         log.info { "Loading path detail page: $path" }
 
         val documents = runBlocking { documentPermissionService.searchAllByPath(path) } // Efficiently get docs with titles
-        val permissions = permissionService.getPathPermissions(path)
+        val permissions = getPathPermissionsUseCase.execute(GetPathPermissionsUseCaseIn(path)).permissions
 
         // Get user details for each permission
         val allUsers = getAllActiveUsersUseCase.execute(GetAllActiveUsersUseCaseIn()).users
@@ -145,7 +149,7 @@ class PermissionAdminWebController(
 
         // Get permission count for each user (path-based only)
         val userPermissions = users.associateWith { user ->
-            permissionService.getUserPathPermissions(user.id!!).size
+            getUserPermissionsUseCase.execute(GetUserPermissionsUseCaseIn(user.id!!)).permissions.size
         }
 
         model.addAttribute("users", users)

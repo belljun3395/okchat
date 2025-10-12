@@ -1,5 +1,7 @@
 package com.okestro.okchat.permission.service
 
+import com.okestro.okchat.permission.application.FilterSearchResultsUseCase
+import com.okestro.okchat.permission.application.dto.FilterSearchResultsUseCaseIn
 import com.okestro.okchat.search.model.Document
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.service.DocumentSearchService
@@ -15,7 +17,7 @@ private val log = KotlinLogging.logger {}
  */
 @Service
 class DocumentPermissionService(
-    private val permissionService: PermissionService,
+    private val filterSearchResultsUseCase: FilterSearchResultsUseCase,
     private val findUserByEmailUseCase: FindUserByEmailUseCase,
     private val documentSearchService: DocumentSearchService
 ) {
@@ -43,7 +45,9 @@ class DocumentPermissionService(
         log.debug { "[PermissionFilter] Filtering ${results.size} results for user: id=${user.id}, email=$userEmail" }
 
         // 2. Filter by permissions
-        val filtered = permissionService.filterSearchResults(results, user.id!!)
+        val filtered = filterSearchResultsUseCase.execute(
+            FilterSearchResultsUseCaseIn(results, user.id!!)
+        ).filteredResults
 
         log.info {
             "[PermissionFilter] Filtered results for $userEmail: " +
@@ -61,3 +65,4 @@ class DocumentPermissionService(
         return documentSearchService.searchAllByPath(documentPath)
     }
 }
+

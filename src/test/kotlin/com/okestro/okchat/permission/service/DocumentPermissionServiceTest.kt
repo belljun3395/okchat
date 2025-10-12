@@ -1,5 +1,8 @@
 package com.okestro.okchat.permission.service
 
+import com.okestro.okchat.permission.application.FilterSearchResultsUseCase
+import com.okestro.okchat.permission.application.dto.FilterSearchResultsUseCaseIn
+import com.okestro.okchat.permission.application.dto.FilterSearchResultsUseCaseOut
 import com.okestro.okchat.search.model.Document
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchScore
@@ -25,18 +28,18 @@ import org.junit.jupiter.api.Test
 @DisplayName("DocumentPermissionService Unit Tests")
 class DocumentPermissionServiceTest {
 
-    private lateinit var permissionService: PermissionService
+    private lateinit var filterSearchResultsUseCase: FilterSearchResultsUseCase
     private lateinit var findUserByEmailUseCase: FindUserByEmailUseCase
     private lateinit var documentSearchService: DocumentSearchService
     private lateinit var documentPermissionService: DocumentPermissionService
 
     @BeforeEach
     fun setUp() {
-        permissionService = mockk()
+        filterSearchResultsUseCase = mockk()
         findUserByEmailUseCase = mockk()
         documentSearchService = mockk()
         documentPermissionService = DocumentPermissionService(
-            permissionService,
+            filterSearchResultsUseCase,
             findUserByEmailUseCase,
             documentSearchService
         )
@@ -62,7 +65,7 @@ class DocumentPermissionServiceTest {
     fun `should return empty list when user not found`() {
         // given
         val results = listOf(createSearchResult("팀회의"))
-        every { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("nonexistent@example.com")) } returns 
+        every { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("nonexistent@example.com")) } returns
             FindUserByEmailUseCaseOut(user = null)
 
         // when
@@ -78,7 +81,7 @@ class DocumentPermissionServiceTest {
     fun `should return empty list when user is inactive`() {
         // given
         val results = listOf(createSearchResult("팀회의"))
-        every { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("inactive@example.com")) } returns 
+        every { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("inactive@example.com")) } returns
             FindUserByEmailUseCaseOut(user = null)
 
         // when
@@ -103,9 +106,10 @@ class DocumentPermissionServiceTest {
             createSearchResult("프로젝트")
         )
 
-        every { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("user@example.com")) } returns 
+        every { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("user@example.com")) } returns
             FindUserByEmailUseCaseOut(user = user)
-        every { permissionService.filterSearchResults(results, 1L) } returns filteredResults
+        every { filterSearchResultsUseCase.execute(FilterSearchResultsUseCaseIn(results, 1L)) } returns
+            FilterSearchResultsUseCaseOut(filteredResults)
 
         // when
         val result = documentPermissionService.filterByUserEmail(results, "user@example.com")
@@ -114,7 +118,7 @@ class DocumentPermissionServiceTest {
         result shouldHaveSize 2
         result.map { it.path } shouldContainExactly listOf("팀회의", "프로젝트")
         verify(exactly = 1) { findUserByEmailUseCase.execute(FindUserByEmailUseCaseIn("user@example.com")) }
-        verify(exactly = 1) { permissionService.filterSearchResults(results, 1L) }
+        verify(exactly = 1) { filterSearchResultsUseCase.execute(FilterSearchResultsUseCaseIn(results, 1L)) }
     }
 
     @Test

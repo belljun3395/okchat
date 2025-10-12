@@ -223,7 +223,7 @@ class SentenceWindowStrategyTest {
     fun `should generate unique chunk IDs`() {
         // given
         val strategy = SentenceWindowStrategy(windowSize = 1)
-        val text = "First. Second. Third. Fourth."
+        val text = "First. Second. Third. Fourth. "
         val document = Document("doc1", text, mutableMapOf())
 
         // when

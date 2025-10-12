@@ -1,10 +1,11 @@
 package com.okestro.okchat.email.event.handler
 
+import com.okestro.okchat.email.application.SavePendingReplyUseCase
+import com.okestro.okchat.email.application.dto.SavePendingReplyUseCaseIn
 import com.okestro.okchat.email.event.EmailEventBus
 import com.okestro.okchat.email.event.EmailReceivedEvent
 import com.okestro.okchat.email.service.EmailChatService
 import com.okestro.okchat.email.service.EmailReplyService
-import com.okestro.okchat.email.service.PendingEmailReplyService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.CoroutineScope
@@ -25,7 +26,7 @@ class EmailReceivedEventHandler(
     private val emailEventBus: EmailEventBus,
     private val emailChatService: EmailChatService,
     private val emailReplyService: EmailReplyService,
-    private val pendingEmailReplyService: PendingEmailReplyService
+    private val savePendingReplyUseCase: SavePendingReplyUseCase
 ) {
     @PostConstruct
     fun subscribeToEvents() {
@@ -89,11 +90,13 @@ class EmailReceivedEventHandler(
             }
 
             // Save for review instead of sending
-            pendingEmailReplyService.savePendingReply(
-                originalMessage = message,
-                replyContent = errorResponse,
-                providerType = event.providerType,
-                toEmail = message.to.firstOrNull() ?: "unknown"
+            savePendingReplyUseCase.execute(
+                SavePendingReplyUseCaseIn(
+                    originalMessage = message,
+                    replyContent = errorResponse,
+                    providerType = event.providerType,
+                    toEmail = message.to.firstOrNull() ?: "unknown"
+                )
             )
             logger.info { "[EmailHandler] Empty content error response saved for review: from=${message.from}" }
             return
@@ -127,11 +130,13 @@ class EmailReceivedEventHandler(
             )
 
             // Save reply for review instead of sending immediately
-            pendingEmailReplyService.savePendingReply(
-                originalMessage = message,
-                replyContent = replyContent,
-                providerType = event.providerType,
-                toEmail = message.to.firstOrNull() ?: "unknown"
+            savePendingReplyUseCase.execute(
+                SavePendingReplyUseCaseIn(
+                    originalMessage = message,
+                    replyContent = replyContent,
+                    providerType = event.providerType,
+                    toEmail = message.to.firstOrNull() ?: "unknown"
+                )
             )
             logger.info { "AI-generated reply saved for review: from=${message.from}, subject=${message.subject}" }
         } else {

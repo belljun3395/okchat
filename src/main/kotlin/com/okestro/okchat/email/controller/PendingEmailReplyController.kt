@@ -1,8 +1,21 @@
 package com.okestro.okchat.email.controller
 
+import com.okestro.okchat.email.application.ApproveAndSendUseCase
+import com.okestro.okchat.email.application.CountByStatusUseCase
+import com.okestro.okchat.email.application.DeletePendingReplyUseCase
+import com.okestro.okchat.email.application.GetPendingRepliesByStatusUseCase
+import com.okestro.okchat.email.application.GetPendingRepliesUseCase
+import com.okestro.okchat.email.application.GetPendingReplyByIdUseCase
+import com.okestro.okchat.email.application.RejectReplyUseCase
+import com.okestro.okchat.email.application.dto.ApproveAndSendUseCaseIn
+import com.okestro.okchat.email.application.dto.CountByStatusUseCaseIn
+import com.okestro.okchat.email.application.dto.DeletePendingReplyUseCaseIn
+import com.okestro.okchat.email.application.dto.GetPendingRepliesByStatusUseCaseIn
+import com.okestro.okchat.email.application.dto.GetPendingRepliesUseCaseIn
+import com.okestro.okchat.email.application.dto.GetPendingReplyByIdUseCaseIn
+import com.okestro.okchat.email.application.dto.RejectReplyUseCaseIn
 import com.okestro.okchat.email.model.PendingEmailReply
 import com.okestro.okchat.email.model.ReviewStatus
-import com.okestro.okchat.email.service.PendingEmailReplyService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -33,7 +46,13 @@ private val logger = KotlinLogging.logger {}
     description = "이메일 자동 응답 관리 API. AI가 생성한 이메일 답변을 검토하고 승인/거부할 수 있습니다."
 )
 class PendingEmailReplyController(
-    private val pendingEmailReplyService: PendingEmailReplyService
+    private val getPendingRepliesUseCase: GetPendingRepliesUseCase,
+    private val getPendingRepliesByStatusUseCase: GetPendingRepliesByStatusUseCase,
+    private val getPendingReplyByIdUseCase: GetPendingReplyByIdUseCase,
+    private val countByStatusUseCase: CountByStatusUseCase,
+    private val approveAndSendUseCase: ApproveAndSendUseCase,
+    private val rejectReplyUseCase: RejectReplyUseCase,
+    private val deletePendingReplyUseCase: DeletePendingReplyUseCase
 ) {
 
     /**
@@ -54,8 +73,8 @@ class PendingEmailReplyController(
         size: Int
     ): ResponseEntity<Page<PendingEmailReply>> {
         logger.info { "Getting pending email replies: page=$page, size=$size" }
-        val replies = pendingEmailReplyService.getPendingReplies(page, size)
-        return ResponseEntity.ok(replies)
+        val output = getPendingRepliesUseCase.execute(GetPendingRepliesUseCaseIn(page, size))
+        return ResponseEntity.ok(output.replies)
     }
 
     /**
@@ -66,8 +85,8 @@ class PendingEmailReplyController(
         @PathVariable status: ReviewStatus
     ): ResponseEntity<List<PendingEmailReply>> {
         logger.info { "Getting pending email replies by status: $status" }
-        val replies = pendingEmailReplyService.getPendingRepliesByStatus(status)
-        return ResponseEntity.ok(replies)
+        val output = getPendingRepliesByStatusUseCase.execute(GetPendingRepliesByStatusUseCaseIn(status))
+        return ResponseEntity.ok(output.replies)
     }
 
     /**
@@ -78,9 +97,9 @@ class PendingEmailReplyController(
         @PathVariable id: Long
     ): ResponseEntity<PendingEmailReply> {
         logger.info { "Getting pending email reply: id=$id" }
-        val reply = pendingEmailReplyService.getPendingReplyById(id)
-            ?: return ResponseEntity.notFound().build()
-        return ResponseEntity.ok(reply)
+        val output = getPendingReplyByIdUseCase.execute(GetPendingReplyByIdUseCaseIn(id))
+        return output.reply?.let { ResponseEntity.ok(it) }
+            ?: ResponseEntity.notFound().build()
     }
 
     /**
@@ -90,11 +109,11 @@ class PendingEmailReplyController(
     fun getCounts(): ResponseEntity<Map<String, Long>> {
         logger.info { "Getting counts by status" }
         val counts = mapOf(
-            "pending" to pendingEmailReplyService.countByStatus(ReviewStatus.PENDING),
-            "approved" to pendingEmailReplyService.countByStatus(ReviewStatus.APPROVED),
-            "rejected" to pendingEmailReplyService.countByStatus(ReviewStatus.REJECTED),
-            "sent" to pendingEmailReplyService.countByStatus(ReviewStatus.SENT),
-            "failed" to pendingEmailReplyService.countByStatus(ReviewStatus.FAILED)
+            "pending" to countByStatusUseCase.execute(CountByStatusUseCaseIn(ReviewStatus.PENDING)).count,
+            "approved" to countByStatusUseCase.execute(CountByStatusUseCaseIn(ReviewStatus.APPROVED)).count,
+            "rejected" to countByStatusUseCase.execute(CountByStatusUseCaseIn(ReviewStatus.REJECTED)).count,
+            "sent" to countByStatusUseCase.execute(CountByStatusUseCaseIn(ReviewStatus.SENT)).count,
+            "failed" to countByStatusUseCase.execute(CountByStatusUseCaseIn(ReviewStatus.FAILED)).count
         )
         return ResponseEntity.ok(counts)
     }
@@ -122,9 +141,9 @@ class PendingEmailReplyController(
         request: ReviewRequest
     ): ResponseEntity<EmailApiResponse> = runBlocking {
         logger.info { "Approving email reply: id=$id, reviewedBy=${request.reviewedBy}" }
-        val result = pendingEmailReplyService.approveAndSend(id, request.reviewedBy)
+        val output = approveAndSendUseCase.execute(ApproveAndSendUseCaseIn(id, request.reviewedBy))
 
-        result.fold(
+        output.result.fold(
             onSuccess = { reply ->
                 ResponseEntity.ok(
                     EmailApiResponse(
@@ -170,13 +189,15 @@ class PendingEmailReplyController(
         request: ReviewRequest
     ): ResponseEntity<EmailApiResponse> = runBlocking {
         logger.info { "Rejecting email reply: id=$id, reviewedBy=${request.reviewedBy}" }
-        val result = pendingEmailReplyService.reject(
-            id = id,
-            reviewedBy = request.reviewedBy,
-            rejectionReason = request.rejectionReason
+        val output = rejectReplyUseCase.execute(
+            RejectReplyUseCaseIn(
+                id = id,
+                reviewedBy = request.reviewedBy,
+                rejectionReason = request.rejectionReason
+            )
         )
 
-        result.fold(
+        output.result.fold(
             onSuccess = { reply ->
                 ResponseEntity.ok(
                     EmailApiResponse(
@@ -206,7 +227,7 @@ class PendingEmailReplyController(
     fun delete(@PathVariable id: Long): ResponseEntity<EmailApiResponse> {
         logger.info { "Deleting pending email reply: id=$id" }
         try {
-            pendingEmailReplyService.delete(id)
+            deletePendingReplyUseCase.execute(DeletePendingReplyUseCaseIn(id))
             return ResponseEntity.ok(
                 EmailApiResponse(
                     success = true,

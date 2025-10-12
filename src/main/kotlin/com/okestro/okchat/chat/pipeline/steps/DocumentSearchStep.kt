@@ -14,8 +14,6 @@ import com.okestro.okchat.search.service.DocumentSearchService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
-import kotlin.text.get
-import kotlin.times
 
 private val log = KotlinLogging.logger {}
 
@@ -65,6 +63,7 @@ class DocumentSearchStep(
 
     override suspend fun execute(context: ChatContext): ChatContext {
         log.info { "[${getStepName()}] Starting optimized multi-search with RRF" }
+        val searchStartTime = System.currentTimeMillis()
 
         val analysis = context.analysis ?: throw IllegalStateException("Analysis not available")
         val searchKeywords = SearchKeywords.fromStrings(analysis.getAllKeywords())
@@ -98,7 +97,8 @@ class DocumentSearchStep(
         )
             .take(MAX_SEARCH_RESULTS)
 
-        log.info { "[${getStepName()}] Found ${combinedResults.size} documents via RRF (after deduplication)" }
+        val searchTimeMs = System.currentTimeMillis() - searchStartTime
+        log.info { "[${getStepName()}] Found ${combinedResults.size} documents via RRF (after deduplication) in ${searchTimeMs}ms" }
 
         logResults(combinedResults)
 

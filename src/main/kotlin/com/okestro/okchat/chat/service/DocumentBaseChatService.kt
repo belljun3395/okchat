@@ -1,19 +1,22 @@
 package com.okestro.okchat.chat.service
 
+import com.okestro.okchat.chat.event.ChatEventBus
+import com.okestro.okchat.chat.event.ChatInteractionCompletedEvent
+import com.okestro.okchat.chat.event.ConversationHistorySaveEvent
 import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.chat.pipeline.CompleteChatContext
 import com.okestro.okchat.chat.pipeline.DocumentChatPipeline
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import org.slf4j.MDC
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.ai.mcp.SyncMcpToolCallbackProvider
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
+import java.util.UUID
 
 private val log = KotlinLogging.logger {}
 
@@ -33,8 +36,10 @@ class DocumentBaseChatService(
     private val chatClient: ChatClient,
     private val documentChatPipeline: DocumentChatPipeline,
     private val sessionManagementService: SessionManagementService,
+    private val chatEventBus: ChatEventBus,
     private val toolCallbacks: List<ToolCallback>,
-    @Autowired(required = false) private val mcpToolCallbackProvider: SyncMcpToolCallbackProvider?
+    @Autowired(required = false) private val mcpToolCallbackProvider: SyncMcpToolCallbackProvider?,
+    @Value("\${spring.ai.openai.chat.options.model:gpt-4o-mini}") private val modelName: String
 ) : ChatService {
 
     private val allToolCallbacks: List<ToolCallback> by lazy {
@@ -53,6 +58,8 @@ class DocumentBaseChatService(
         chatServiceRequest: ChatServiceRequest
     ): Flux<String> {
         log.info { "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
+        val requestId = MDC.get("requestId") ?: UUID.randomUUID().toString()
+        val startTime = System.currentTimeMillis()
         val actualSessionId = generateSessionIdIfNotProvided(chatServiceRequest)
 
         val message = chatServiceRequest.message.trim()
@@ -63,13 +70,19 @@ class DocumentBaseChatService(
             input = ChatContext.UserInput(
                 message = message,
                 providedKeywords = keywords,
-                sessionId = actualSessionId
+                sessionId = actualSessionId,
+                userEmail = chatServiceRequest.userEmail
             ),
             conversationHistory = conversationHistory,
             isDeepThink = isDeepThink
         )
 
-        val processedContext = documentChatPipeline.execute(context)
+        val processedContext = try {
+            documentChatPipeline.execute(context)
+        } catch (e: Exception) {
+            log.error(e) { "[Pipeline Error] Failed to execute pipeline" }
+            throw e
+        }
 
         log.info { "[AI Processing] Starting AI chat with conversation context" }
         log.debug { "Context preview: ${processedContext.search?.contextText?.take(300)}..." }
@@ -81,7 +94,8 @@ class DocumentBaseChatService(
             allToolCallbacks
         }
 
-        return chatClient.prompt(prompt)
+        return chatClient
+            .prompt(prompt)
             .toolCallbacks(toolCallbacks)
             .stream()
             .content() // Returns Flux<String> - streaming response!
@@ -97,14 +111,37 @@ class DocumentBaseChatService(
                 // Log final response to check if newlines are preserved
                 val finalResponse = responseBuffer.toString()
                 val newlineCount = finalResponse.count { it == '\n' }
-                log.info { "[Chat Completed] Total response length: ${finalResponse.length}, newlines: $newlineCount" }
+                val responseTime = System.currentTimeMillis() - startTime
+                log.info { "[Chat Completed] Total response length: ${finalResponse.length}, newlines: $newlineCount, time: ${responseTime}ms" }
                 if (newlineCount < 5) {
                     log.warn { "⚠️ WARNING: Response has few newlines ($newlineCount). Post-processing was applied." }
                 }
 
-                CoroutineScope(Dispatchers.IO).launch {
-                    saveConversationHistory(responseBuffer, actualSessionId, message, conversationHistory)
-                }
+                chatEventBus.publish(
+                    ConversationHistorySaveEvent(
+                        sessionId = actualSessionId,
+                        userMessage = message,
+                        assistantResponse = finalResponse,
+                        existingHistory = conversationHistory
+                    )
+                )
+
+                chatEventBus.publish(
+                    ChatInteractionCompletedEvent(
+                        requestId = requestId,
+                        sessionId = actualSessionId,
+                        userMessage = message,
+                        aiResponse = finalResponse,
+                        responseTimeMs = responseTime,
+                        processedContext = processedContext,
+                        isDeepThink = isDeepThink,
+                        userEmail = chatServiceRequest.userEmail,
+                        modelUsed = modelName
+                    )
+                )
+            }
+            .doOnError { error ->
+                log.error(error) { "[Chat Error] Error during streaming" }
             }
             .doFinally {
                 log.info { "[Chat Completed] Response stream finished" }
@@ -155,28 +192,5 @@ class DocumentBaseChatService(
         return Prompt(
             conversationHistoryPrompt + basePrompt + toolPrompt
         )
-    }
-
-    /**
-     * save conversation history with error handling
-     */
-    private suspend fun saveConversationHistory(
-        responseBuffer: StringBuffer,
-        actualSessionId: String,
-        message: String,
-        conversationHistory: ChatContext.ConversationHistory?
-    ) {
-        try {
-            val assistantResponse = responseBuffer.toString()
-            sessionManagementService.saveConversationHistory(
-                sessionId = actualSessionId,
-                userMessage = message,
-                assistantResponse = assistantResponse,
-                existingHistory = conversationHistory
-            )
-            log.info { "[Session Saved] Conversation history updated for session: $actualSessionId" }
-        } catch (e: Exception) {
-            log.error(e) { "[Session Save Error] Failed to save conversation history" }
-        }
     }
 }

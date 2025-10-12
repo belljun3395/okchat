@@ -35,7 +35,8 @@ open class ChatContext(
     val conversationHistory: ConversationHistory? = null,
     val analysis: Analysis? = null,
     val search: Search? = null,
-    val isDeepThink: Boolean
+    val isDeepThink: Boolean,
+    val executedStep: MutableList<String> = mutableListOf()
 ) {
     /**
      * User input data

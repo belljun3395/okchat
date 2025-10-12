@@ -536,6 +536,50 @@
         .message.user .message-timestamp {
             color: rgba(255, 255, 255, 0.7);
         }
+
+        /* Feedback buttons */
+        .feedback-buttons {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .feedback-btn {
+            padding: 6px 12px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .feedback-btn:hover {
+            background: #f3f4f6;
+            border-color: #667eea;
+        }
+
+        .feedback-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .feedback-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .feedback-message {
+            font-size: 12px;
+            color: #667eea;
+            margin-left: 10px;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -820,7 +864,7 @@
             });
         }
 
-        function addMessage(content, isUser = false) {
+        function addMessage(content, isUser = false, requestId = null) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
 
@@ -844,10 +888,90 @@
             timestamp.textContent = getCurrentTime();
             messageDiv.appendChild(timestamp);
 
+            // Add feedback buttons for bot messages (if requestId is provided)
+            if (!isUser && requestId) {
+                addFeedbackButtons(messageDiv, requestId);
+            }
+
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
             if (isUser) updateMessageCount();
+        }
+
+        function addFeedbackButtons(messageDiv, requestId) {
+            const feedbackContainer = document.createElement('div');
+            feedbackContainer.className = 'feedback-buttons';
+
+            // Helpful button
+            const helpfulBtn = document.createElement('button');
+            helpfulBtn.className = 'feedback-btn';
+            helpfulBtn.innerHTML = '👍 도움됨';
+            helpfulBtn.onclick = () => submitFeedback(requestId, true, helpfulBtn, notHelpfulBtn, feedbackContainer);
+
+            // Not helpful button
+            const notHelpfulBtn = document.createElement('button');
+            notHelpfulBtn.className = 'feedback-btn';
+            notHelpfulBtn.innerHTML = '👎 도움안됨';
+            notHelpfulBtn.onclick = () => submitFeedback(requestId, false, helpfulBtn, notHelpfulBtn, feedbackContainer);
+
+            feedbackContainer.appendChild(helpfulBtn);
+            feedbackContainer.appendChild(notHelpfulBtn);
+
+            messageDiv.appendChild(feedbackContainer);
+        }
+
+        async function submitFeedback(requestId, wasHelpful, helpfulBtn, notHelpfulBtn, feedbackContainer) {
+            try {
+                // Disable buttons to prevent multiple submissions
+                helpfulBtn.disabled = true;
+                notHelpfulBtn.disabled = true;
+
+                const response = await fetch('/api/admin/chat/analytics/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        requestId: requestId,
+                        wasHelpful: wasHelpful,
+                        rating: wasHelpful ? 5 : 2
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Mark the clicked button as active
+                    if (wasHelpful) {
+                        helpfulBtn.classList.add('active');
+                    } else {
+                        notHelpfulBtn.classList.add('active');
+                    }
+
+                    // Show success message
+                    const feedbackMsg = document.createElement('span');
+                    feedbackMsg.className = 'feedback-message';
+                    feedbackMsg.textContent = '피드백 감사합니다!';
+                    feedbackContainer.appendChild(feedbackMsg);
+
+                    // Remove message after 3 seconds
+                    setTimeout(() => {
+                        if (feedbackMsg.parentNode) {
+                            feedbackMsg.remove();
+                        }
+                    }, 3000);
+                } else {
+                    alert('피드백 제출에 실패했습니다.');
+                    helpfulBtn.disabled = false;
+                    notHelpfulBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error submitting feedback:', error);
+                alert('피드백 제출 중 오류가 발생했습니다.');
+                helpfulBtn.disabled = false;
+                notHelpfulBtn.disabled = false;
+            }
         }
 
         function showTypingIndicator() {
@@ -947,7 +1071,24 @@
                     if (done) break;
                     
                     // Decode the binary chunk to text
-                    buffer += decoder.decode(value, { stream: true });
+                    const chunk = decoder.decode(value, { stream: true });
+                    
+                    // Check for special requestId message BEFORE adding to buffer
+                    if (chunk.includes('__REQUEST_ID__:')) {
+                        const lines = chunk.split('\n');
+                        for (const line of lines) {
+                            if (line.startsWith('__REQUEST_ID__:')) {
+                                window.currentStreamRequestId = line.substring(15).trim();
+                                console.log('📝 Captured requestId:', window.currentStreamRequestId);
+                            } else if (line.trim()) {
+                                // Add non-requestId lines to buffer
+                                buffer += line + '\n';
+                            }
+                        }
+                        continue;
+                    }
+                    
+                    buffer += chunk;
                     
                     // Split by newlines to process individual SSE messages
                     const lines = buffer.split('\n');
@@ -957,6 +1098,11 @@
 
                     for (const line of lines) {
                         const trimmedLine = line.trim();
+                        
+                        // Skip empty lines
+                        if (!trimmedLine) {
+                            continue;
+                        }
                         
                         // Process SSE data lines (format: "data: content")
                         if (trimmedLine.startsWith('data:') || line.startsWith('data:')) {
@@ -968,6 +1114,13 @@
                             // Remove leading space if present (SSE standard: "data: content")
                             if (data.startsWith(' ')) {
                                 data = data.slice(1);
+                            }
+                            
+                            // Check if this is the requestId message and capture it
+                            if (data.startsWith('__REQUEST_ID__:')) {
+                                window.currentStreamRequestId = data.substring(15).trim();
+                                console.log('📝 Captured requestId from SSE data:', window.currentStreamRequestId);
+                                continue; // Skip rendering this message
                             }
                             
                             // IMPORTANT: If data is empty after removing space, it means this was a newline chunk
@@ -1059,6 +1212,16 @@
 
                     // Add copy buttons to code blocks
                     addCopyButtonsToCodeBlocks(botMessageContent);
+
+                    // Add feedback buttons to bot message (will be set later from stream)
+                    // requestId will be captured from the stream data
+                    if (window.currentStreamRequestId) {
+                        console.log('✅ Adding feedback buttons with requestId:', window.currentStreamRequestId);
+                        addFeedbackButtons(botMessageDiv, window.currentStreamRequestId);
+                        window.currentStreamRequestId = null; // Clear after use
+                    } else {
+                        console.warn('⚠️ No requestId captured for feedback');
+                    }
 
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                 }

@@ -45,6 +45,7 @@ class DocumentChatPipeline(
             if (step.shouldExecute(context)) {
                 log.debug { "[Pipeline] Executing: ${step.getStepName()}" }
                 context = step.execute(context)
+                context.executedStep.add(step.getStepName())
                 executedSteps++
             } else {
                 log.info { "[Pipeline] Skipping: ${step.getStepName()} (shouldExecute returned false)" }

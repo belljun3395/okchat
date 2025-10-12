@@ -12,12 +12,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.reactive.asFlow
+import org.slf4j.MDC
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/chat")
@@ -94,14 +97,24 @@ class ChatController(
         @RequestBody
         chatRequest: ChatRequest
     ): Flow<String> {
-        return documentBaseChatService.chat(
-            ChatServiceRequest(
-                message = chatRequest.message,
-                isDeepThink = chatRequest.isDeepThink,
-                keywords = chatRequest.keywords ?: emptyList(),
-                sessionId = chatRequest.sessionId
-            )
-        ).asFlow()
+        // Get requestId from MDC
+        val requestId = MDC.get("requestId") ?: UUID.randomUUID().toString()
+
+        return flow {
+            emit("__REQUEST_ID__:$requestId\n")
+
+            documentBaseChatService.chat(
+                ChatServiceRequest(
+                    message = chatRequest.message,
+                    isDeepThink = chatRequest.isDeepThink,
+                    keywords = chatRequest.keywords ?: emptyList(),
+                    sessionId = chatRequest.sessionId,
+                    userEmail = chatRequest.userEmail
+                )
+            ).asFlow().collect { chunk ->
+                emit(chunk)
+            }
+        }
     }
 }
 
@@ -134,5 +147,12 @@ data class ChatRequest(
         defaultValue = "false",
         required = false
     )
-    val isDeepThink: Boolean = false
+    val isDeepThink: Boolean = false,
+
+    @field:Schema(
+        description = "사용자 이메일 (선택사항). 권한 필터링 및 분석에 활용됩니다.",
+        example = "user@example.com",
+        required = false
+    )
+    val userEmail: String? = null
 )

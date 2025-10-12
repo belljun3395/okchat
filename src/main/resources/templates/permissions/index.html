@@ -8,7 +8,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
-        .header { background: white; padding: 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .header { background: white; padding: 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
         h1 { color: #333; margin-bottom: 10px; }
         .subtitle { color: #666; font-size: 14px; }
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
@@ -28,13 +28,19 @@
         .quick-link:hover { transform: translateY(-2px); }
         .quick-link-title { font-size: 18px; font-weight: 600; margin-bottom: 5px; }
         .quick-link-desc { font-size: 13px; opacity: 0.9; }
+        .btn-analytics { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; white-space: nowrap; }
+        .btn-analytics:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3); }
+        .header-content { flex: 1; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Permission Management</h1>
-            <p class="subtitle">Manage document access permissions for users</p>
+            <div class="header-content">
+                <h1>🔐 Permission Management</h1>
+                <p class="subtitle">Manage document access permissions for users</p>
+            </div>
+            <button class="btn-analytics" onclick="location.href='/admin/chat/analytics'">📊 Analytics</button>
         </div>
 
         <div class="stats">

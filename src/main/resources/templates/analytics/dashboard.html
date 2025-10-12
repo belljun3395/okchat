@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OKChat Analytics</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #1a1a1a;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #6b7280;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .metric-card .label {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .metric-card .value {
+            color: #1a1a1a;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .metric-card .subvalue {
+            color: #10b981;
+            font-size: 14px;
+        }
+
+        .metric-card .subvalue.negative {
+            color: #ef4444;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+        }
+
+        .chart-card h2 {
+            color: #1a1a1a;
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+
+        .date-picker {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            align-items: center;
+        }
+
+        .date-picker input {
+            padding: 10px 15px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .date-picker button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .date-picker button:hover {
+            opacity: 0.9;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table th, table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        table th {
+            background: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .back-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+
+        .back-btn:hover {
+            background: rgba(102, 126, 234, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/admin/permissions" class="back-btn">← Back to Admin</a>
+
+        <div class="header">
+            <h1>📊 OKChat Analytics Dashboard</h1>
+            <p>챗봇 성능 및 품질 분석</p>
+        </div>
+
+        <div class="date-picker">
+            <label>기간 선택:</label>
+            <input type="datetime-local" id="startDate" />
+            <span>~</span>
+            <input type="datetime-local" id="endDate" />
+            <button onclick="loadAnalytics()">조회</button>
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div class="metrics-grid" id="metricsGrid">
+            <div class="metric-card">
+                <div class="label">총 대화 수</div>
+                <div class="value" id="totalInteractions">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">평균 응답 시간</div>
+                <div class="value" id="avgResponseTime">-</div>
+                <div class="subvalue">ms</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">사용자 만족도</div>
+                <div class="value" id="avgRating">-</div>
+                <div class="subvalue" id="helpfulPercent">-</div>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h2>쿼리 타입별 통계</h2>
+            <div id="queryTypeStats"></div>
+        </div>
+
+
+    </div>
+
+    <script>
+        // Initialize dates (last 24 hours)
+        const now = new Date();
+        const yesterday = new Date(now - 24 * 60 * 60 * 1000);
+        
+        document.getElementById('startDate').value = formatDateTimeLocal(yesterday);
+        document.getElementById('endDate').value = formatDateTimeLocal(now);
+
+        function formatDateTimeLocal(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        async function loadAnalytics() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (!startDate || !endDate) {
+                showError('시작 날짜와 종료 날짜를 선택해주세요.');
+                return;
+            }
+
+            hideError();
+
+            try {
+                await Promise.all([
+                    loadUsageStats(startDate, endDate),
+                    loadQualityStats(startDate, endDate),
+                    loadPerformanceStats(startDate, endDate),
+                    loadQueryTypeStats(startDate, endDate),
+                    loadErrorPatterns(startDate, endDate)
+                ]);
+            } catch (error) {
+                showError(`데이터 로드 실패: ${error.message}`);
+            }
+        }
+
+        async function loadUsageStats(startDate, endDate) {
+            const response = await fetch(`/api/admin/chat/analytics/usage/daily?startDate=${startDate}&endDate=${endDate}`);
+            const data = await response.json();
+            
+            document.getElementById('totalInteractions').textContent = data.totalInteractions.toLocaleString();
+            document.getElementById('avgResponseTime').textContent = Math.round(data.averageResponseTime);
+        }
+
+        async function loadQualityStats(startDate, endDate) {
+            const response = await fetch(`/api/admin/chat/analytics/quality/trend?startDate=${startDate}&endDate=${endDate}`);
+            const data = await response.json();
+            
+            document.getElementById('avgRating').textContent = data.averageRating.toFixed(2);
+            document.getElementById('helpfulPercent').textContent = `${data.helpfulPercentage.toFixed(1)}% 도움됨`;
+        }
+
+        async function loadPerformanceStats(startDate, endDate) {
+            const response = await fetch(`/api/admin/chat/analytics/performance?startDate=${startDate}&endDate=${endDate}`);
+            const data = await response.json();
+            
+        }
+
+
+        async function loadQueryTypeStats(startDate, endDate) {
+            const response = await fetch(`/api/admin/chat/analytics/query-types?startDate=${startDate}&endDate=${endDate}`);
+            const data = await response.json();
+            
+            let html = '<table><thead><tr><th>쿼리 타입</th><th>횟수</th><th>평균 평점</th><th>평균 응답시간</th></tr></thead><tbody>';
+            data.forEach(item => {
+                html += `<tr><td>${item.queryType}</td><td>${item.count.toLocaleString()}</td><td>${item.averageRating.toFixed(2)}</td><td>${Math.round(item.averageResponseTime)}ms</td></tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('queryTypeStats').innerHTML = html;
+        }
+
+        async function loadErrorPatterns(startDate, endDate) {
+            const response = await fetch(`/api/admin/analytics/failures?startDate=${startDate}&endDate=${endDate}`);
+            const data = await response.json();
+            
+            let html = '<table><thead><tr><th>에러 타입</th><th>발생 횟수</th><th>해결 횟수</th><th>비율</th></tr></thead><tbody>';
+            data.forEach(item => {
+                html += `<tr><td>${item.errorType}</td><td>${item.count}</td><td>${item.resolvedCount}</td><td>${item.percentage.toFixed(1)}%</td></tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('errorPatterns').innerHTML = html;
+        }
+
+        function showError(message) {
+            document.getElementById('error').textContent = message;
+            document.getElementById('error').style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        // Load analytics on page load
+        loadAnalytics();
+    </script>
+</body>
+</html>

@@ -12,7 +12,7 @@ private val logger = KotlinLogging.logger {}
  * Web UI controller for pending email review interface
  */
 @Controller
-@RequestMapping("/email/review")
+@RequestMapping("/admin/email/review")
 class PendingEmailReplyWebController {
 
     /**

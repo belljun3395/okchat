@@ -6,6 +6,7 @@ import com.okestro.okchat.chat.event.ConversationHistorySaveEvent
 import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.chat.pipeline.CompleteChatContext
 import com.okestro.okchat.chat.pipeline.DocumentChatPipeline
+import com.okestro.okchat.chat.service.dto.ChatServiceRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.slf4j.MDC
 import org.springframework.ai.chat.client.ChatClient

@@ -8,7 +8,7 @@ import com.okestro.okchat.user.application.dto.DeactivateUserUseCaseIn
 import com.okestro.okchat.user.application.dto.FindOrCreateUserUseCaseIn
 import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
 import com.okestro.okchat.user.application.dto.GetAllActiveUsersUseCaseIn
-import com.okestro.okchat.user.model.User
+import com.okestro.okchat.user.model.entity.User
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter

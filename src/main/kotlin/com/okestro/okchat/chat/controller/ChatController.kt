@@ -1,8 +1,8 @@
 
 package com.okestro.okchat.chat.controller
 
-import com.okestro.okchat.chat.service.ChatServiceRequest
 import com.okestro.okchat.chat.service.DocumentBaseChatService
+import com.okestro.okchat.chat.service.dto.ChatServiceRequest
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content

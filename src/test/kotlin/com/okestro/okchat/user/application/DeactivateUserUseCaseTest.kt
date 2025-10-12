@@ -1,7 +1,7 @@
 package com.okestro.okchat.user.application
 
 import com.okestro.okchat.user.application.dto.DeactivateUserUseCaseIn
-import com.okestro.okchat.user.model.User
+import com.okestro.okchat.user.model.entity.User
 import com.okestro.okchat.user.repository.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec

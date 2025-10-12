@@ -1,5 +1,6 @@
 package com.okestro.okchat.chat.service
 
+import com.okestro.okchat.chat.service.dto.ChatServiceRequest
 import reactor.core.publisher.Flux
 
 interface ChatService {
@@ -7,11 +8,3 @@ interface ChatService {
         chatServiceRequest: ChatServiceRequest
     ): Flux<String>
 }
-
-data class ChatServiceRequest(
-    val message: String,
-    val isDeepThink: Boolean = false,
-    val keywords: List<String> = emptyList(),
-    val sessionId: String? = null,
-    val userEmail: String? = null
-)

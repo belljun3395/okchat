@@ -1,5 +1,6 @@
 package com.okestro.okchat.search.model
 
+import com.okestro.okchat.search.support.MetadataFields
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

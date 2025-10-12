@@ -1,4 +1,4 @@
-package com.okestro.okchat.ai.model
+package com.okestro.okchat.ai.model.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty

@@ -15,7 +15,7 @@ import com.okestro.okchat.search.model.SearchScore
 import com.okestro.okchat.user.application.FindUserByEmailUseCase
 import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
 import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseOut
-import com.okestro.okchat.user.model.User
+import com.okestro.okchat.user.model.entity.User
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize

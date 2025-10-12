@@ -3,10 +3,10 @@ package com.okestro.okchat.chat.controller
 import com.okestro.okchat.chat.event.ChatEventBus
 import com.okestro.okchat.chat.event.FeedbackSubmittedEvent
 import com.okestro.okchat.chat.service.ChatAnalyticsService
-import com.okestro.okchat.chat.service.DailyUsageStats
-import com.okestro.okchat.chat.service.PerformanceMetrics
-import com.okestro.okchat.chat.service.QualityTrendStats
-import com.okestro.okchat.chat.service.QueryTypeStat
+import com.okestro.okchat.chat.service.dto.DailyUsageStats
+import com.okestro.okchat.chat.service.dto.PerformanceMetrics
+import com.okestro.okchat.chat.service.dto.QualityTrendStats
+import com.okestro.okchat.chat.service.dto.QueryTypeStat
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter

@@ -14,6 +14,8 @@ import com.okestro.okchat.email.application.dto.GetPendingRepliesByStatusUseCase
 import com.okestro.okchat.email.application.dto.GetPendingRepliesUseCaseIn
 import com.okestro.okchat.email.application.dto.GetPendingReplyByIdUseCaseIn
 import com.okestro.okchat.email.application.dto.RejectReplyUseCaseIn
+import com.okestro.okchat.email.controller.dto.EmailApiResponse
+import com.okestro.okchat.email.controller.dto.ReviewRequest
 import com.okestro.okchat.email.model.PendingEmailReply
 import com.okestro.okchat.email.model.ReviewStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -246,20 +248,3 @@ class PendingEmailReplyController(
         }
     }
 }
-
-/**
- * Request body for reviewing emails
- */
-data class ReviewRequest(
-    val reviewedBy: String,
-    val rejectionReason: String? = null
-)
-
-/**
- * Generic API response
- */
-data class EmailApiResponse(
-    val success: Boolean,
-    val message: String,
-    val data: Any?
-)

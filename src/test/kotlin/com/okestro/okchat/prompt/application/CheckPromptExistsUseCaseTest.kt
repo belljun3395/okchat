@@ -1,7 +1,7 @@
 package com.okestro.okchat.prompt.application
 
 import com.okestro.okchat.prompt.application.dto.CheckPromptExistsUseCaseIn
-import com.okestro.okchat.prompt.model.Prompt
+import com.okestro.okchat.prompt.model.entity.Prompt
 import com.okestro.okchat.prompt.repository.PromptRepository
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe

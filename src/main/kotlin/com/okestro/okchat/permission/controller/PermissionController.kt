@@ -10,10 +10,10 @@ import com.okestro.okchat.permission.application.dto.GrantDenyPathPermissionUseC
 import com.okestro.okchat.permission.application.dto.GrantPathPermissionUseCaseIn
 import com.okestro.okchat.permission.application.dto.RevokeAllUserPermissionsUseCaseIn
 import com.okestro.okchat.permission.application.dto.RevokePathPermissionUseCaseIn
-import com.okestro.okchat.permission.model.DocumentPathPermission
+import com.okestro.okchat.permission.model.entity.DocumentPathPermission
 import com.okestro.okchat.user.application.FindUserByEmailUseCase
 import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
-import com.okestro.okchat.user.model.User
+import com.okestro.okchat.user.model.entity.User
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Schema

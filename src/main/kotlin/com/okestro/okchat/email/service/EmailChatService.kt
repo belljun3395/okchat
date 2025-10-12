@@ -1,7 +1,7 @@
 package com.okestro.okchat.email.service
 
-import com.okestro.okchat.chat.service.ChatServiceRequest
 import com.okestro.okchat.chat.service.DocumentBaseChatService
+import com.okestro.okchat.chat.service.dto.ChatServiceRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux

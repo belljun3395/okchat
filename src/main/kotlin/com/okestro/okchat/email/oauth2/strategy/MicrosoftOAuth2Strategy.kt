@@ -4,6 +4,7 @@ import com.microsoft.aad.msal4j.AuthorizationCodeParameters
 import com.microsoft.aad.msal4j.ClientCredentialFactory
 import com.microsoft.aad.msal4j.ConfidentialClientApplication
 import com.okestro.okchat.email.config.EmailProperties
+import com.okestro.okchat.email.oauth2.support.OAuth2AuthorizationUrlBuilder
 import com.okestro.okchat.email.oauth2.support.OAuth2Constants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.future.await

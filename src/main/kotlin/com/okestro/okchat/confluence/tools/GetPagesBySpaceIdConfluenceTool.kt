@@ -1,7 +1,7 @@
 package com.okestro.okchat.confluence.tools
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.okestro.okchat.ai.model.ToolOutput
+import com.okestro.okchat.ai.model.dto.ToolOutput
 import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.confluence.service.ContentCollector
 import com.okestro.okchat.confluence.tools.dto.GetPagesBySpaceIdInput

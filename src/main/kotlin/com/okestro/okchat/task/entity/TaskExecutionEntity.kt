@@ -51,4 +51,3 @@ data class TaskExecutionParamEntity(
     @Column("TASK_PARAM")
     val taskParam: String
 )
-

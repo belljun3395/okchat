@@ -1,7 +1,7 @@
 package com.okestro.okchat.ai.tools.interceptor
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.okestro.okchat.ai.model.ToolOutput
+import com.okestro.okchat.ai.model.dto.ToolOutput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.ai.tool.definition.ToolDefinition

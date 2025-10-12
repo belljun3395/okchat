@@ -3,7 +3,7 @@ package com.okestro.okchat.search.application
 import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseIn
 import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseOut
 import com.okestro.okchat.search.model.Document
-import com.okestro.okchat.search.model.MetadataFields
+import com.okestro.okchat.search.support.MetadataFields
 import com.okestro.okchat.search.util.extractChunk
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers

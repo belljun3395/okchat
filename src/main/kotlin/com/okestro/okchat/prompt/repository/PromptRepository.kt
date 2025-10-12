@@ -1,6 +1,6 @@
 package com.okestro.okchat.prompt.repository
 
-import com.okestro.okchat.prompt.model.Prompt
+import com.okestro.okchat.prompt.model.entity.Prompt
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query

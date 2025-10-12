@@ -1,6 +1,6 @@
 package com.okestro.okchat.permission.application.dto
 
-import com.okestro.okchat.permission.model.DocumentPathPermission
+import com.okestro.okchat.permission.model.entity.DocumentPathPermission
 
 data class GetPathPermissionsUseCaseIn(
     val documentPath: String

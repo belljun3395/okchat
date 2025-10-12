@@ -64,4 +64,3 @@ interface TaskExecutionParamsRepository : CrudRepository<TaskExecutionParamEntit
     )
     fun findParamsByExecutionId(@Param("executionId") executionId: Long): List<String>
 }
-

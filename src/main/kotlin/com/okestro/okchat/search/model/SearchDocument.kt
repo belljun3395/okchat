@@ -3,6 +3,7 @@ package com.okestro.okchat.search.model
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.okestro.okchat.search.support.MetadataFields
 
 /**
  * Type-safe representation of a search document from OpenSearch.

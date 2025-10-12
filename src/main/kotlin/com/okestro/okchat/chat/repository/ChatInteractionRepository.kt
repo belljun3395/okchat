@@ -1,6 +1,6 @@
 package com.okestro.okchat.chat.repository
 
-import com.okestro.okchat.chat.model.ChatInteraction
+import com.okestro.okchat.chat.model.entity.ChatInteraction
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param

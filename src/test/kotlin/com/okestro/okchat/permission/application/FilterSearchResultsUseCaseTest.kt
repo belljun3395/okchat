@@ -1,8 +1,8 @@
 package com.okestro.okchat.permission.application
 
 import com.okestro.okchat.permission.application.dto.FilterSearchResultsUseCaseIn
-import com.okestro.okchat.permission.model.DocumentPathPermission
 import com.okestro.okchat.permission.model.PermissionLevel
+import com.okestro.okchat.permission.model.entity.DocumentPathPermission
 import com.okestro.okchat.permission.repository.DocumentPathPermissionRepository
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchScore

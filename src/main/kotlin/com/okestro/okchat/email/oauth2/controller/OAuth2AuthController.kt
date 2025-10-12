@@ -112,4 +112,3 @@ class OAuth2AuthController(
                 )
             )
 }
-

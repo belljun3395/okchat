@@ -1,7 +1,7 @@
 package com.okestro.okchat.confluence.service
 
-import com.okestro.okchat.search.model.MetadataFields
-import com.okestro.okchat.search.model.metadata
+import com.okestro.okchat.search.support.MetadataFields
+import com.okestro.okchat.search.support.metadata
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

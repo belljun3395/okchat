@@ -5,7 +5,7 @@ import com.okestro.okchat.chat.event.ChatEventBus
 import com.okestro.okchat.chat.event.ChatInteractionCompletedEvent
 import com.okestro.okchat.chat.event.ConversationHistorySaveEvent
 import com.okestro.okchat.chat.event.FeedbackSubmittedEvent
-import com.okestro.okchat.chat.model.ChatInteraction
+import com.okestro.okchat.chat.model.entity.ChatInteraction
 import com.okestro.okchat.chat.repository.ChatInteractionRepository
 import com.okestro.okchat.chat.service.SessionManagementService
 import io.github.oshai.kotlinlogging.KotlinLogging

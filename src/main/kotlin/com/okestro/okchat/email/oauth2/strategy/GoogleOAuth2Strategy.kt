@@ -1,6 +1,7 @@
 package com.okestro.okchat.email.oauth2.strategy
 
 import com.okestro.okchat.email.config.EmailProperties
+import com.okestro.okchat.email.oauth2.support.OAuth2AuthorizationUrlBuilder
 import com.okestro.okchat.email.oauth2.support.OAuth2Constants
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBody

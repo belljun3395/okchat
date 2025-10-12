@@ -1,5 +1,6 @@
-package com.okestro.okchat.permission.model
+package com.okestro.okchat.permission.model.entity
 
+import com.okestro.okchat.permission.model.PermissionLevel
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType

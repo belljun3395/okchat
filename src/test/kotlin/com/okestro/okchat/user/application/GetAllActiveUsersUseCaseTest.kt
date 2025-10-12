@@ -1,7 +1,7 @@
 package com.okestro.okchat.user.application
 
 import com.okestro.okchat.user.application.dto.GetAllActiveUsersUseCaseIn
-import com.okestro.okchat.user.model.User
+import com.okestro.okchat.user.model.entity.User
 import com.okestro.okchat.user.repository.UserRepository
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldContainExactly

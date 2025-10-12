@@ -1,4 +1,7 @@
-package com.okestro.okchat.search.model
+package com.okestro.okchat.search.support
+
+import com.okestro.okchat.search.model.DocumentMetadata
+import org.springframework.ai.document.Document
 
 /**
  * DSL builder for creating DocumentMetadata instances with a fluent API.
@@ -101,7 +104,7 @@ fun metadata(block: DocumentMetadataBuilder.() -> Unit): DocumentMetadata {
 /**
  * Extension function to create metadata from Spring AI Document
  */
-fun org.springframework.ai.document.Document.buildMetadata(block: DocumentMetadataBuilder.() -> Unit): org.springframework.ai.document.Document {
+fun Document.buildMetadata(block: DocumentMetadataBuilder.() -> Unit): Document {
     val documentMetadata = metadata(block)
     val metadataMap = documentMetadata.toMap()
 
@@ -110,5 +113,5 @@ fun org.springframework.ai.document.Document.buildMetadata(block: DocumentMetada
         putAll(metadataMap)
     }
 
-    return org.springframework.ai.document.Document(this.id, this.text ?: "", mergedMetadata)
+    return Document(this.id, this.text ?: "", mergedMetadata)
 }

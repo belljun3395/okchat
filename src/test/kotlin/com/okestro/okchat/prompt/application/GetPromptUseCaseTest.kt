@@ -1,7 +1,7 @@
 package com.okestro.okchat.prompt.application
 
 import com.okestro.okchat.prompt.application.dto.GetPromptUseCaseIn
-import com.okestro.okchat.prompt.model.Prompt
+import com.okestro.okchat.prompt.model.entity.Prompt
 import com.okestro.okchat.prompt.repository.PromptRepository
 import com.okestro.okchat.prompt.service.PromptCacheService
 import io.kotest.core.spec.style.BehaviorSpec

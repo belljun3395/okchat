@@ -1,6 +1,6 @@
 package com.okestro.okchat.search.config
 
-import com.okestro.okchat.search.model.MetadataFields
+import com.okestro.okchat.search.support.MetadataFields
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "search.hybrid")

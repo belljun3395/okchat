@@ -57,4 +57,3 @@ fun TaskExecutionEntity.toDto(): TaskExecutionDto =
         errorMessage = this.errorMessage,
         lastUpdated = this.lastUpdated
     )
-

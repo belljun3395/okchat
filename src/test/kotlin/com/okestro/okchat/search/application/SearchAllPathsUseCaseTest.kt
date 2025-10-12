@@ -1,7 +1,7 @@
 package com.okestro.okchat.search.application
 
 import com.okestro.okchat.search.application.dto.SearchAllPathsUseCaseIn
-import com.okestro.okchat.search.model.MetadataFields
+import com.okestro.okchat.search.support.MetadataFields
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly

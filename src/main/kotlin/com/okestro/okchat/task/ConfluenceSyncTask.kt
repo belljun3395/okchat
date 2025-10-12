@@ -8,8 +8,8 @@ import com.okestro.okchat.confluence.model.ContentNode
 import com.okestro.okchat.confluence.service.ConfluenceService
 import com.okestro.okchat.confluence.service.PdfAttachmentService
 import com.okestro.okchat.confluence.util.ContentHierarchyVisualizer
-import com.okestro.okchat.search.model.MetadataFields
-import com.okestro.okchat.search.model.metadata
+import com.okestro.okchat.search.support.MetadataFields
+import com.okestro.okchat.search.support.metadata
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async

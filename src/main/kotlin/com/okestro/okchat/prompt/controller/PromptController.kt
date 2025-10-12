@@ -12,7 +12,7 @@ import com.okestro.okchat.prompt.application.dto.GetAllPromptVersionsUseCaseIn
 import com.okestro.okchat.prompt.application.dto.GetLatestPromptVersionUseCaseIn
 import com.okestro.okchat.prompt.application.dto.GetPromptUseCaseIn
 import com.okestro.okchat.prompt.application.dto.UpdatePromptUseCaseIn
-import com.okestro.okchat.prompt.model.Prompt
+import com.okestro.okchat.prompt.model.entity.Prompt
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter

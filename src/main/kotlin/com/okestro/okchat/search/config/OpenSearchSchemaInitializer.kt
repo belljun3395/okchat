@@ -1,6 +1,6 @@
 package com.okestro.okchat.search.config
 
-import com.okestro.okchat.search.model.MetadataFields
+import com.okestro.okchat.search.support.MetadataFields
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.opensearch.client.opensearch._types.mapping.Property

@@ -134,64 +134,53 @@ tasks.withType<Test> {
 
 private object JacocoCoverage {
     val generatedClasses = listOf(
-        "**/*\$\$serializer.class",
+        "**/*$\$serializer.class",
         "**/*\$DefaultImpls.class",
         "**/*\$Companion.class",
         "**/*Kt.class",
-        "**/*Kt\$*.class",
+        "**/*Kt$*.class",
         "**/*\$WhenMappings.class",
-        "**/*\$WhenMappings\$*.class",
-        "**/*\$log\$*.class",
-        "**/*\$*Function*.class",
-        "**/*\$lambda\$*.class"
+        "**/*\$WhenMappings$*.class",
+        "**/*\$log$*.class",
+        "**/*$*Function*.class",
+        "**/*\$lambda$*.class"
     )
 
-    val infrastructure = listOf(
+    val untrackItems = listOf(
         "**/*Application*.class",
         "**/config/**",
         "**/configuration/**",
+        "**/controller/**",
         "**/support/**",
         "**/dto/**",
         "**/model/**",
         "**/entity/**",
-        "**/*Request*.class",
-        "**/*Response*.class",
-        "**/*Dto.class",
-        "**/*Record.class",
-        "**/controller/**",
-        "**/*Controller.class",
-        "**/*Controller\$*.class",
         "**/task/**",
-        "**/*Task*.class",
         "**/event/**",
         "**/exception/**"
     )
 
     val externalAdapters = listOf(
-        "**/*Repository.class",
-        "**/*Repository\$*.class",
-        "**/confluence/client/**",
-        "**/search/client/**",
+        "**/confluence/**",
+        "**/client/**",
+        "**/repository/**",
         "**/tools/**",
-        "**/*Tool*.class",
-        "**/*Feign*.class",
-        "**/oauth2/**",
-        "**/confluence/**"
+        "**/oauth2/**"
     )
 
-    val excludes: List<String> = generatedClasses + infrastructure + externalAdapters
+    val excludes: List<String> = generatedClasses + untrackItems + externalAdapters
 
     private val syntheticSuffixes = listOf(
         "Kt",
-        "\$\$serializer",
+        "$\$serializer",
         "\$DefaultImpls",
         "\$Companion"
     )
 
     private val syntheticFragments = listOf(
         "\$WhenMappings",
-        "\$log\$",
-        "\$lambda\$",
+        "\$log$",
+        "\$lambda$",
         "\$Function"
     )
 

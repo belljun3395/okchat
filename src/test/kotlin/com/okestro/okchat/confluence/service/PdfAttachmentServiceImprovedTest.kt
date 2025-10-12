@@ -1,8 +1,8 @@
 package com.okestro.okchat.confluence.service
 
 import com.okestro.okchat.fixture.TestFixtures
-import com.okestro.okchat.search.model.MetadataFields
-import com.okestro.okchat.search.model.metadata
+import com.okestro.okchat.search.support.MetadataFields
+import com.okestro.okchat.search.support.metadata
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.collections.shouldHaveSize

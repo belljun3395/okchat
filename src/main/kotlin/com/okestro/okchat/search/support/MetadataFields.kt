@@ -1,4 +1,4 @@
-package com.okestro.okchat.search.model
+package com.okestro.okchat.search.support
 
 /**
  * Constants for metadata field names used in OpenSearch/Typesense.

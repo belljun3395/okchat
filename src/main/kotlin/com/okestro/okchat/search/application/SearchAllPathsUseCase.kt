@@ -2,7 +2,7 @@ package com.okestro.okchat.search.application
 
 import com.okestro.okchat.search.application.dto.SearchAllPathsUseCaseIn
 import com.okestro.okchat.search.application.dto.SearchAllPathsUseCaseOut
-import com.okestro.okchat.search.model.MetadataFields
+import com.okestro.okchat.search.support.MetadataFields
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.springframework.beans.factory.annotation.Value

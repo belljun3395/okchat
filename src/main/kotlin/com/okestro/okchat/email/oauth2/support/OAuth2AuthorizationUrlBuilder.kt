@@ -1,4 +1,4 @@
-package com.okestro.okchat.email.oauth2.strategy
+package com.okestro.okchat.email.oauth2.support
 
 import com.okestro.okchat.email.config.EmailProperties
 import java.net.URLEncoder

@@ -2,7 +2,7 @@ package com.okestro.okchat.prompt.application
 
 import com.okestro.okchat.prompt.application.dto.CreatePromptUseCaseIn
 import com.okestro.okchat.prompt.application.dto.CreatePromptUseCaseOut
-import com.okestro.okchat.prompt.model.Prompt
+import com.okestro.okchat.prompt.model.entity.Prompt
 import com.okestro.okchat.prompt.repository.PromptRepository
 import com.okestro.okchat.prompt.service.PromptCacheService
 import io.github.oshai.kotlinlogging.KotlinLogging

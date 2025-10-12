@@ -2,7 +2,7 @@ package com.okestro.okchat.user.application
 
 import com.okestro.okchat.user.application.dto.FindOrCreateUserUseCaseIn
 import com.okestro.okchat.user.application.dto.FindOrCreateUserUseCaseOut
-import com.okestro.okchat.user.model.User
+import com.okestro.okchat.user.model.entity.User
 import com.okestro.okchat.user.repository.UserRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers

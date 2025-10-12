@@ -3,8 +3,8 @@ package com.okestro.okchat.confluence.service
 import com.okestro.okchat.confluence.client.Attachment
 import com.okestro.okchat.confluence.client.ConfluenceClient
 import com.okestro.okchat.confluence.config.ConfluenceProperties
-import com.okestro.okchat.search.model.MetadataFields
-import com.okestro.okchat.search.model.metadata
+import com.okestro.okchat.search.support.MetadataFields
+import com.okestro.okchat.search.support.metadata
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.reactive.awaitSingle

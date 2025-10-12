@@ -1,7 +1,7 @@
 package com.okestro.okchat.email.service
 
-import com.okestro.okchat.chat.service.ChatServiceRequest
 import com.okestro.okchat.chat.service.DocumentBaseChatService
+import com.okestro.okchat.chat.service.dto.ChatServiceRequest
 import io.kotest.matchers.shouldBe
 import io.mockk.clearAllMocks
 import io.mockk.coEvery

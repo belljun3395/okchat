@@ -2,8 +2,8 @@ package com.okestro.okchat.permission.application
 
 import com.okestro.okchat.permission.application.dto.GrantPathPermissionUseCaseIn
 import com.okestro.okchat.permission.application.dto.GrantPathPermissionUseCaseOut
-import com.okestro.okchat.permission.model.DocumentPathPermission
 import com.okestro.okchat.permission.model.PermissionLevel
+import com.okestro.okchat.permission.model.entity.DocumentPathPermission
 import com.okestro.okchat.permission.repository.DocumentPathPermissionRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers

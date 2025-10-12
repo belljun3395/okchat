@@ -166,6 +166,11 @@ task:
         enabled: ${TASK_CONFLUENCE_SYNC_ENABLED:false}
     email-polling:
         enabled: ${TASK_EMAIL_POLLING_ENABLED:false}
+    metrics-update:
+        enabled: ${TASK_METRICS_UPDATE_ENABLED:true}  # Enabled by default
+        hourly-interval: ${TASK_METRICS_UPDATE_HOURLY_INTERVAL:60000}  # 1 minute
+        daily-interval: ${TASK_METRICS_UPDATE_DAILY_INTERVAL:300000}   # 5 minutes
+        initial-delay: ${TASK_METRICS_UPDATE_INITIAL_DELAY:10000}      # 10 seconds
 
 # Hybrid search configuration
 search:

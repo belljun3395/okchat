@@ -4,13 +4,14 @@ import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.chat.pipeline.DocumentChatPipelineStep
 import com.okestro.okchat.chat.pipeline.copy
 import com.okestro.okchat.config.RagProperties
+import com.okestro.okchat.search.application.MultiSearchUseCase
+import com.okestro.okchat.search.application.dto.MultiSearchUseCaseIn
 import com.okestro.okchat.search.model.SearchContents
 import com.okestro.okchat.search.model.SearchKeywords
 import com.okestro.okchat.search.model.SearchPaths
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchScore
 import com.okestro.okchat.search.model.SearchTitles
-import com.okestro.okchat.search.service.DocumentSearchService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
@@ -26,7 +27,7 @@ private val log = KotlinLogging.logger {}
 @Component
 @Order(1)
 class DocumentSearchStep(
-    private val documentSearchService: DocumentSearchService,
+    private val multiSearchUseCase: MultiSearchUseCase,
     private val ragProperties: RagProperties
 ) : DocumentChatPipelineStep {
 
@@ -71,13 +72,15 @@ class DocumentSearchStep(
         val searchContents = SearchContents.fromStrings(analysis.extractedContents)
         val searchPaths = SearchPaths.fromStrings(analysis.extractedPaths)
 
-        val searchResult = documentSearchService.multiSearch(
-            titles = searchTitles,
-            contents = searchContents,
-            paths = searchPaths,
-            keywords = searchKeywords,
-            topK = MAX_SEARCH_RESULTS
-        )
+        val searchResult = multiSearchUseCase.execute(
+            MultiSearchUseCaseIn(
+                titles = searchTitles,
+                contents = searchContents,
+                paths = searchPaths,
+                keywords = searchKeywords,
+                topK = MAX_SEARCH_RESULTS
+            )
+        ).result
 
         // Sort results by score
         val sortedKeywordResults = searchResult.keywordResults.results.sortedByDescending { it.score }

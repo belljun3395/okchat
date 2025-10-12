@@ -2,9 +2,12 @@ package com.okestro.okchat.permission.service
 
 import com.okestro.okchat.permission.application.FilterSearchResultsUseCase
 import com.okestro.okchat.permission.application.dto.FilterSearchResultsUseCaseIn
+import com.okestro.okchat.search.application.SearchAllByPathUseCase
+import com.okestro.okchat.search.application.SearchAllPathsUseCase
+import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseIn
+import com.okestro.okchat.search.application.dto.SearchAllPathsUseCaseIn
 import com.okestro.okchat.search.model.Document
 import com.okestro.okchat.search.model.SearchResult
-import com.okestro.okchat.search.service.DocumentSearchService
 import com.okestro.okchat.user.application.FindUserByEmailUseCase
 import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -19,7 +22,8 @@ private val log = KotlinLogging.logger {}
 class DocumentPermissionService(
     private val filterSearchResultsUseCase: FilterSearchResultsUseCase,
     private val findUserByEmailUseCase: FindUserByEmailUseCase,
-    private val documentSearchService: DocumentSearchService
+    private val searchAllPathsUseCase: SearchAllPathsUseCase,
+    private val searchAllByPathUseCase: SearchAllByPathUseCase
 ) {
 
     /**
@@ -58,11 +62,11 @@ class DocumentPermissionService(
     }
 
     fun searchAllPaths(): List<String> {
-        return documentSearchService.searchAllPaths()
+        return searchAllPathsUseCase.execute(SearchAllPathsUseCaseIn()).paths
     }
 
     suspend fun searchAllByPath(documentPath: String): List<Document> {
-        return documentSearchService.searchAllByPath(documentPath)
+        return searchAllByPathUseCase.execute(SearchAllByPathUseCaseIn(documentPath)).documents
     }
 }
 

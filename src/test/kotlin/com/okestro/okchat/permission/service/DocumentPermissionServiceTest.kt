@@ -3,10 +3,15 @@ package com.okestro.okchat.permission.service
 import com.okestro.okchat.permission.application.FilterSearchResultsUseCase
 import com.okestro.okchat.permission.application.dto.FilterSearchResultsUseCaseIn
 import com.okestro.okchat.permission.application.dto.FilterSearchResultsUseCaseOut
+import com.okestro.okchat.search.application.SearchAllByPathUseCase
+import com.okestro.okchat.search.application.SearchAllPathsUseCase
+import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseIn
+import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseOut
+import com.okestro.okchat.search.application.dto.SearchAllPathsUseCaseIn
+import com.okestro.okchat.search.application.dto.SearchAllPathsUseCaseOut
 import com.okestro.okchat.search.model.Document
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchScore
-import com.okestro.okchat.search.service.DocumentSearchService
 import com.okestro.okchat.user.application.FindUserByEmailUseCase
 import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
 import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseOut
@@ -30,18 +35,21 @@ class DocumentPermissionServiceTest {
 
     private lateinit var filterSearchResultsUseCase: FilterSearchResultsUseCase
     private lateinit var findUserByEmailUseCase: FindUserByEmailUseCase
-    private lateinit var documentSearchService: DocumentSearchService
+    private lateinit var searchAllPathsUseCase: SearchAllPathsUseCase
+    private lateinit var searchAllByPathUseCase: SearchAllByPathUseCase
     private lateinit var documentPermissionService: DocumentPermissionService
 
     @BeforeEach
     fun setUp() {
         filterSearchResultsUseCase = mockk()
         findUserByEmailUseCase = mockk()
-        documentSearchService = mockk()
+        searchAllPathsUseCase = mockk()
+        searchAllByPathUseCase = mockk()
         documentPermissionService = DocumentPermissionService(
             filterSearchResultsUseCase,
             findUserByEmailUseCase,
-            documentSearchService
+            searchAllPathsUseCase,
+            searchAllByPathUseCase
         )
     }
 
@@ -122,11 +130,11 @@ class DocumentPermissionServiceTest {
     }
 
     @Test
-    @DisplayName("searchAllPaths should delegate to DocumentSearchService")
-    fun `should delegate searchAllPaths to DocumentSearchService`() {
+    @DisplayName("searchAllPaths should delegate to SearchAllPathsUseCase")
+    fun `should delegate searchAllPaths to SearchAllPathsUseCase`() {
         // given
         val paths = listOf("팀회의 > 2025", "프로젝트 > A", "업무일지")
-        every { documentSearchService.searchAllPaths() } returns paths
+        every { searchAllPathsUseCase.execute(any<SearchAllPathsUseCaseIn>()) } returns SearchAllPathsUseCaseOut(paths)
 
         // when
         val result = documentPermissionService.searchAllPaths()
@@ -134,31 +142,27 @@ class DocumentPermissionServiceTest {
         // then
         result shouldHaveSize 3
         result shouldContainExactly paths
-        verify(exactly = 1) { documentSearchService.searchAllPaths() }
+        verify(exactly = 1) { searchAllPathsUseCase.execute(SearchAllPathsUseCaseIn()) }
     }
 
     @Test
-    @DisplayName("searchAllByPath should delegate to DocumentSearchService")
-    fun `should delegate searchAllByPath to DocumentSearchService`() = runTest {
+    @DisplayName("searchAllByPath should delegate to SearchAllByPathUseCase")
+    fun `should delegate searchAllByPath to SearchAllByPathUseCase`() = runTest {
         // given
         val path = "팀회의 > 2025"
         val documents = listOf(
             Document(
                 id = "doc1",
                 title = "회의록1",
-                content = "내용1",
-                spaceKey = "TEAM",
                 path = path
             ),
             Document(
                 id = "doc2",
                 title = "회의록2",
-                content = "내용2",
-                spaceKey = "TEAM",
                 path = path
             )
         )
-        coEvery { documentSearchService.searchAllByPath(path) } returns documents
+        coEvery { searchAllByPathUseCase.execute(SearchAllByPathUseCaseIn(path)) } returns SearchAllByPathUseCaseOut(documents)
 
         // when
         val result = documentPermissionService.searchAllByPath(path)
@@ -175,8 +179,7 @@ class DocumentPermissionServiceTest {
             content = "Content for $path",
             path = path,
             spaceKey = "TEST",
-            score = SearchScore.fromSimilarity(0.75),
-            webUrl = "http://example.com/$path"
+            score = SearchScore.fromSimilarity(0.75)
         )
     }
 }

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.dto.ToolOutput
 import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.confluence.client.ConfluenceClient
-import com.okestro.okchat.confluence.client.Page
+import com.okestro.okchat.confluence.client.dto.Page
 import com.okestro.okchat.confluence.tools.dto.GetAllChildPagesInput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.tool.ToolCallback

@@ -1,7 +1,7 @@
 package com.okestro.okchat.confluence.service
 
 import com.okestro.okchat.confluence.client.ConfluenceClient
-import com.okestro.okchat.confluence.client.Page
+import com.okestro.okchat.confluence.client.dto.Page
 import com.okestro.okchat.confluence.model.ContentHierarchy
 import com.okestro.okchat.confluence.model.ContentNode
 import com.okestro.okchat.confluence.model.ContentType
@@ -16,7 +16,7 @@ private val log = KotlinLogging.logger {}
  * Responsible for building hierarchical structure from flat list of pages
  */
 @Component
-class HierarchyBuilder(
+class HierarchyBuilderService(
     private val confluenceClient: ConfluenceClient
 ) {
     /**

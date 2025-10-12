@@ -1,5 +1,10 @@
 package com.okestro.okchat.confluence.client
 
+import com.okestro.okchat.confluence.client.dto.AttachmentListResponse
+import com.okestro.okchat.confluence.client.dto.FolderResponse
+import com.okestro.okchat.confluence.client.dto.Page
+import com.okestro.okchat.confluence.client.dto.PageListResponse
+import com.okestro.okchat.confluence.client.dto.SpaceListResponse
 import feign.Param
 import feign.RequestLine
 

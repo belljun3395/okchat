@@ -2,8 +2,8 @@ package com.okestro.okchat.email.application
 
 import com.okestro.okchat.email.application.dto.GetPendingRepliesByStatusUseCaseIn
 import com.okestro.okchat.email.config.EmailProperties
-import com.okestro.okchat.email.model.PendingEmailReply
-import com.okestro.okchat.email.model.ReviewStatus
+import com.okestro.okchat.email.model.entity.PendingEmailReply
+import com.okestro.okchat.email.model.entity.ReviewStatus
 import com.okestro.okchat.email.repository.PendingEmailReplyRepository
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.booleans.shouldBeTrue

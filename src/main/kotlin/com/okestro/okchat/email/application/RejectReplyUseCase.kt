@@ -2,8 +2,8 @@ package com.okestro.okchat.email.application
 
 import com.okestro.okchat.email.application.dto.RejectReplyUseCaseIn
 import com.okestro.okchat.email.application.dto.RejectReplyUseCaseOut
-import com.okestro.okchat.email.model.PendingEmailReply
-import com.okestro.okchat.email.model.ReviewStatus
+import com.okestro.okchat.email.model.entity.PendingEmailReply
+import com.okestro.okchat.email.model.entity.ReviewStatus
 import com.okestro.okchat.email.repository.PendingEmailReplyRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers

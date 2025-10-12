@@ -2,6 +2,7 @@ package com.okestro.okchat.email.provider
 
 import com.okestro.okchat.email.config.EmailProperties
 import com.okestro.okchat.email.oauth2.OAuth2TokenService
+import com.okestro.okchat.email.support.MailPropertiesBuilder
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 
 class OutlookEmailProvider(

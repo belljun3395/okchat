@@ -1,4 +1,4 @@
-package com.okestro.okchat.confluence.client
+package com.okestro.okchat.confluence.client.dto
 
 data class SpaceListResponse(
     val results: List<Space>,

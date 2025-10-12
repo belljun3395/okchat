@@ -3,7 +3,7 @@ package com.okestro.okchat.confluence.tools
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.dto.ToolOutput
 import com.okestro.okchat.ai.tools.ToolExecutor
-import com.okestro.okchat.confluence.service.ContentCollector
+import com.okestro.okchat.confluence.service.ContentCollectorService
 import com.okestro.okchat.confluence.tools.dto.GetPagesBySpaceIdInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component
 @Component("getPagesBySpaceIdConfluenceTool")
 @Description("Get all pages in a Confluence space by space ID")
 class GetPagesBySpaceIdConfluenceTool(
-    private val contentCollector: ContentCollector,
+    private val contentCollectorService: ContentCollectorService,
     private val objectMapper: ObjectMapper
 ) : ToolCallback {
     override fun getToolDefinition(): ToolDefinition {
@@ -60,7 +60,7 @@ class GetPagesBySpaceIdConfluenceTool(
             val spaceId = input.spaceId
             val limit = input.getValidatedLimit()
 
-            val allPages = runBlocking(Dispatchers.IO) { contentCollector.collectAllContent(spaceId) }
+            val allPages = runBlocking(Dispatchers.IO) { contentCollectorService.collectAllContent(spaceId) }
             val limitedPages = allPages.take(limit)
 
             val answer = if (limitedPages.isEmpty()) {

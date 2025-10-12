@@ -16,8 +16,8 @@ private val log = KotlinLogging.logger {}
 @Service
 class ConfluenceService(
     private val confluenceClient: ConfluenceClient,
-    private val contentCollector: ContentCollector,
-    private val hierarchyBuilder: HierarchyBuilder
+    private val contentCollectorService: ContentCollectorService,
+    private val hierarchyBuilderService: HierarchyBuilderService
 ) {
     /**
      * Get space ID by space key
@@ -48,12 +48,12 @@ class ConfluenceService(
 
         // Step 1: Collect all content (pages and folders)
         val allContent = withContext(Dispatchers.IO) {
-            contentCollector.collectAllContent(spaceId)
+            contentCollectorService.collectAllContent(spaceId)
         }
 
         // Step 2: Build hierarchical structure
         val hierarchy = withContext(Dispatchers.IO) {
-            hierarchyBuilder.buildHierarchy(allContent, spaceId)
+            hierarchyBuilderService.buildHierarchy(allContent, spaceId)
         }
 
         // Step 3: Log statistics

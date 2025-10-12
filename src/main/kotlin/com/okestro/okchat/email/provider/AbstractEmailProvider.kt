@@ -1,6 +1,8 @@
 package com.okestro.okchat.email.provider
 
 import com.okestro.okchat.email.config.EmailProperties
+import com.okestro.okchat.email.support.MailPropertiesBuilder
+import com.okestro.okchat.email.support.buildMailProperties
 import com.okestro.okchat.email.util.EmailContentCleaner
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.mail.Flags

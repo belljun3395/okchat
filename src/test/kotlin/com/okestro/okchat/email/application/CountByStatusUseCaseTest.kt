@@ -1,7 +1,7 @@
 package com.okestro.okchat.email.application
 
 import com.okestro.okchat.email.application.dto.CountByStatusUseCaseIn
-import com.okestro.okchat.email.model.ReviewStatus
+import com.okestro.okchat.email.model.entity.ReviewStatus
 import com.okestro.okchat.email.repository.PendingEmailReplyRepository
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe

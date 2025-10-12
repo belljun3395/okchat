@@ -1,7 +1,7 @@
 package com.okestro.okchat.email.application.dto
 
 import com.okestro.okchat.email.config.EmailProperties
-import com.okestro.okchat.email.model.PendingEmailReply
+import com.okestro.okchat.email.model.entity.PendingEmailReply
 import com.okestro.okchat.email.provider.EmailMessage
 
 data class SavePendingReplyUseCaseIn(

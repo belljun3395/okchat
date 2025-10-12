@@ -1,4 +1,4 @@
-package com.okestro.okchat.email.provider
+package com.okestro.okchat.email.support
 
 import com.okestro.okchat.email.config.EmailDefaults
 import java.util.Properties

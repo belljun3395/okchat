@@ -1,6 +1,6 @@
 package com.okestro.okchat.email.application.dto
 
-import com.okestro.okchat.email.model.PendingEmailReply
+import com.okestro.okchat.email.model.entity.PendingEmailReply
 
 data class RejectReplyUseCaseIn(
     val id: Long,

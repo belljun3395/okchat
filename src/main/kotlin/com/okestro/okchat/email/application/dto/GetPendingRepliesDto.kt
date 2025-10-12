@@ -1,6 +1,6 @@
 package com.okestro.okchat.email.application.dto
 
-import com.okestro.okchat.email.model.PendingEmailReply
+import com.okestro.okchat.email.model.entity.PendingEmailReply
 import org.springframework.data.domain.Page
 
 data class GetPendingRepliesUseCaseIn(

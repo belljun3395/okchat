@@ -1,4 +1,4 @@
-package com.okestro.okchat.email.provider
+package com.okestro.okchat.email.support
 
 /**
  * Constants for JavaMail properties

@@ -1,7 +1,7 @@
 package com.okestro.okchat.email.repository
 
-import com.okestro.okchat.email.model.PendingEmailReply
-import com.okestro.okchat.email.model.ReviewStatus
+import com.okestro.okchat.email.model.entity.PendingEmailReply
+import com.okestro.okchat.email.model.entity.ReviewStatus
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository

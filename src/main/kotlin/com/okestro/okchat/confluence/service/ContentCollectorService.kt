@@ -1,7 +1,7 @@
 package com.okestro.okchat.confluence.service
 
 import com.okestro.okchat.confluence.client.ConfluenceClient
-import com.okestro.okchat.confluence.client.Page
+import com.okestro.okchat.confluence.client.dto.Page
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -13,7 +13,7 @@ private val log = KotlinLogging.logger {}
  * Responsible for collecting all content (pages and folders) from Confluence space
  */
 @Component
-class ContentCollector(
+class ContentCollectorService(
     private val confluenceClient: ConfluenceClient
 ) {
     /**

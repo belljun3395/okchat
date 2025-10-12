@@ -2,6 +2,7 @@ package com.okestro.okchat.email.application
 
 import com.okestro.okchat.email.application.dto.SavePendingReplyUseCaseIn
 import com.okestro.okchat.email.config.EmailProperties
+import com.okestro.okchat.email.model.entity.PendingEmailReply
 import com.okestro.okchat.email.provider.EmailMessage
 import com.okestro.okchat.email.repository.PendingEmailReplyRepository
 import io.kotest.core.spec.style.BehaviorSpec
@@ -44,7 +45,7 @@ class SavePendingReplyUseCaseTest : BehaviorSpec({
 
     given("A generated reply should be persisted for review") {
         val message = createEmailMessage()
-        val pendingSlot = slot<com.okestro.okchat.email.model.PendingEmailReply>()
+        val pendingSlot = slot<PendingEmailReply>()
 
         every { pendingEmailReplyRepository.save(capture(pendingSlot)) } answers {
             pendingSlot.captured.copy(id = 42L)

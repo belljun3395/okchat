@@ -16,8 +16,8 @@ import com.okestro.okchat.email.application.dto.GetPendingReplyByIdUseCaseIn
 import com.okestro.okchat.email.application.dto.RejectReplyUseCaseIn
 import com.okestro.okchat.email.controller.dto.EmailApiResponse
 import com.okestro.okchat.email.controller.dto.ReviewRequest
-import com.okestro.okchat.email.model.PendingEmailReply
-import com.okestro.okchat.email.model.ReviewStatus
+import com.okestro.okchat.email.model.entity.PendingEmailReply
+import com.okestro.okchat.email.model.entity.ReviewStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter

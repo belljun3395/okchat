@@ -1,7 +1,7 @@
 package com.okestro.okchat.confluence.service
 
-import com.okestro.okchat.confluence.client.Attachment
 import com.okestro.okchat.confluence.client.ConfluenceClient
+import com.okestro.okchat.confluence.client.dto.Attachment
 import com.okestro.okchat.confluence.config.ConfluenceProperties
 import com.okestro.okchat.search.support.MetadataFields
 import com.okestro.okchat.search.support.metadata

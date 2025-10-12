@@ -1,4 +1,4 @@
-package com.okestro.okchat.email.model
+package com.okestro.okchat.email.model.entity
 
 import com.okestro.okchat.email.config.EmailProperties
 import jakarta.persistence.Column

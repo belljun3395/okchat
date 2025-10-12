@@ -65,8 +65,8 @@ class ContextBuildingStepTest {
 
             // then
             result.search.shouldNotBeNull()
-            result.search!!.contextText.shouldNotBeNull()
-            result.search!!.contextText!!.shouldNotBeEmpty()
+            result.search.contextText.shouldNotBeNull()
+            result.search.contextText.shouldNotBeEmpty()
         }
 
         @Test
@@ -105,9 +105,18 @@ class ContextBuildingStepTest {
                 analysis = createAnalysis(),
                 search = ChatContext.Search(
                     results = listOf(
-                        searchResult { similarity = 0.9 }, // High
-                        searchResult { similarity = 0.6 }, // Medium
-                        searchResult { similarity = 0.4 } // Other
+                        searchResult {
+                            content = "This is high relevance content. ".repeat(10)
+                            similarity = 0.9
+                        }, // High
+                        searchResult {
+                            content = "This is medium relevance content. ".repeat(10)
+                            similarity = 0.6
+                        }, // Medium
+                        searchResult {
+                            content = "This is other relevance content. ".repeat(10)
+                            similarity = 0.4
+                        } // Other
                     )
                 ),
                 isDeepThink = false
@@ -172,7 +181,7 @@ class ContextBuildingStepTest {
 
             // then
             result.search.shouldNotBeNull()
-            result.search!!.contextText.shouldBeNull()
+            result.search.contextText.shouldBeNull()
         }
 
         @Test

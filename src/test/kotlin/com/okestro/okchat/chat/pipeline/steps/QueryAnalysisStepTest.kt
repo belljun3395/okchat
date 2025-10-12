@@ -17,36 +17,25 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 
-@DisplayName("QueryAnalysisStep 단위 테스트")
+@DisplayName("QueryAnalysisStep Tests")
 class QueryAnalysisStepTest {
 
-    private lateinit var queryClassifier: QueryClassifier
-    private lateinit var titleExtractionService: TitleExtractionService
-    private lateinit var contentExtractionService: ContentExtractionService
-    private lateinit var locationExtractionService: LocationExtractionService
-    private lateinit var keywordExtractionService: KeywordExtractionService
-    private lateinit var step: QueryAnalysisStep
+    private val queryClassifier: QueryClassifier = mockk()
+    private val titleExtractionService: TitleExtractionService = mockk()
+    private val contentExtractionService: ContentExtractionService = mockk()
+    private val locationExtractionService: LocationExtractionService = mockk()
+    private val keywordExtractionService: KeywordExtractionService = mockk()
 
-    @BeforeEach
-    fun setUp() {
-        queryClassifier = mockk()
-        titleExtractionService = mockk()
-        contentExtractionService = mockk()
-        locationExtractionService = mockk()
-        keywordExtractionService = mockk()
-
-        step = QueryAnalysisStep(
-            queryClassifier,
-            keywordExtractionService,
-            contentExtractionService,
-            locationExtractionService,
-            titleExtractionService
-        )
-    }
+    private val step = QueryAnalysisStep(
+        queryClassifier,
+        keywordExtractionService,
+        contentExtractionService,
+        locationExtractionService,
+        titleExtractionService
+    )
 
     @AfterEach
     fun tearDown() {
@@ -54,7 +43,7 @@ class QueryAnalysisStepTest {
     }
 
     @Test
-    @DisplayName("getStepName - 스텝 이름 반환")
+    @DisplayName("should return step name")
     fun `should return step name`() {
         // when
         val name = step.getStepName()
@@ -64,7 +53,7 @@ class QueryAnalysisStepTest {
     }
 
     @Test
-    @DisplayName("execute - 쿼리 분석 수행")
+    @DisplayName("should analyze query and extract information")
     fun `should analyze query and extract information`() = runTest {
         // given
         val context = ChatContext(
@@ -102,7 +91,7 @@ class QueryAnalysisStepTest {
     }
 
     @Test
-    @DisplayName("execute - 날짜 키워드 추출")
+    @DisplayName("should extract date keywords")
     fun `should extract date keywords`() = runTest {
         // given
         val context = ChatContext(
@@ -136,7 +125,7 @@ class QueryAnalysisStepTest {
     }
 
     @Test
-    @DisplayName("shouldExecute - 항상 true 반환")
+    @DisplayName("should always execute")
     fun `should always execute`() {
         // given
         val context = ChatContext(

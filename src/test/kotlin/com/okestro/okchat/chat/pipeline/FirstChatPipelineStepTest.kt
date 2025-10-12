@@ -7,12 +7,12 @@ import io.mockk.mockk
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 
-@DisplayName("FirstChatPipelineStep Interface Tests")
+@DisplayName("FirstChatPipelineStep Tests")
 class FirstChatPipelineStepTest {
 
     @Test
-    @DisplayName("FirstChatPipelineStep interface should be implemented correctly")
-    fun `FirstChatPipelineStep interface should be implemented correctly`() {
+    @DisplayName("should be implemented correctly")
+    fun `should be implemented correctly`() {
         // given
         val step = mockk<QueryAnalysisStep>()
         every { step.getStepName() } returns "Query Analysis"

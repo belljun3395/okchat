@@ -19,24 +19,16 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.opensearch.client.opensearch.OpenSearchClient
 
-@DisplayName("DocumentSearchService Unit Tests")
+@DisplayName("DocumentSearchService Tests")
 class DocumentSearchServiceTest {
 
-    private lateinit var searchStrategy: MultiSearchStrategy
-    private lateinit var openSearchClient: OpenSearchClient
-    private lateinit var service: DocumentSearchService
-
-    @BeforeEach
-    fun setUp() {
-        searchStrategy = mockk()
-        openSearchClient = mockk()
-        service = DocumentSearchService(searchStrategy, openSearchClient, "test-index")
-    }
+    private val searchStrategy: MultiSearchStrategy = mockk()
+    private val openSearchClient: OpenSearchClient = mockk()
+    private val service = DocumentSearchService(searchStrategy, openSearchClient, "test-index")
 
     @AfterEach
     fun tearDown() {
@@ -44,8 +36,8 @@ class DocumentSearchServiceTest {
     }
 
     @Test
-    @DisplayName("multiSearch should delegate to search strategy")
-    fun `multiSearch should delegate to search strategy`() = runTest {
+    @DisplayName("should delegate to search strategy")
+    fun `should delegate to search strategy`() = runTest {
         // given
         val titles = SearchTitles.fromStrings(listOf("Kotlin Guide"))
         val contents = SearchContents.fromStrings(listOf("programming"))
@@ -79,8 +71,8 @@ class DocumentSearchServiceTest {
     }
 
     @Test
-    @DisplayName("multiSearch should handle null criteria")
-    fun `multiSearch should handle null criteria`() = runTest {
+    @DisplayName("should handle null criteria")
+    fun `should handle null criteria`() = runTest {
         // given
         val keywords = SearchKeywords.fromStrings(listOf("test"))
 
@@ -110,8 +102,8 @@ class DocumentSearchServiceTest {
     }
 
     @Test
-    @DisplayName("multiSearch should use custom topK value")
-    fun `multiSearch should use custom topK value`() = runTest {
+    @DisplayName("should use custom topK value")
+    fun `should use custom topK value`() = runTest {
         // given
         val keywords = SearchKeywords.fromStrings(listOf("test"))
 

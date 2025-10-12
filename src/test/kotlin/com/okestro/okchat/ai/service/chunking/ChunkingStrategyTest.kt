@@ -5,18 +5,18 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.ai.document.Document
 
-@DisplayName("ChunkingStrategy Interface Tests")
+@DisplayName("ChunkingStrategy Tests")
 class ChunkingStrategyTest {
 
     @Test
-    @DisplayName("ChunkingStrategy should define required interface methods")
-    fun `ChunkingStrategy should define required interface methods`() {
+    @DisplayName("should define required interface methods")
+    fun `should define required interface methods`() {
         // given
         val testStrategy = object : ChunkingStrategy {
             override fun chunk(document: Document): List<Document> {
                 return listOf(document)
             }
-            
+
             override fun getName(): String {
                 return "Test Strategy"
             }
@@ -33,8 +33,8 @@ class ChunkingStrategyTest {
     }
 
     @Test
-    @DisplayName("ChunkingStrategyType enum should have expected values")
-    fun `ChunkingStrategyType enum should have expected values`() {
+    @DisplayName("should have expected values in ChunkingStrategyType enum")
+    fun `should have expected values in ChunkingStrategyType enum`() {
         // when
         val types = ChunkingStrategyType.entries
 

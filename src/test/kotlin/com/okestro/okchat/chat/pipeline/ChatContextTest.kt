@@ -7,12 +7,12 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Instant
 
-@DisplayName("ChatContext Unit Tests")
+@DisplayName("ChatContext Tests")
 class ChatContextTest {
 
     @Test
-    @DisplayName("ChatContext should be created with required fields")
-    fun `ChatContext should be created with required fields`() {
+    @DisplayName("should be created with required fields")
+    fun `should be created with required fields`() {
         // given & when
         val context = ChatContext(
             input = ChatContext.UserInput(message = "test message"),
@@ -25,8 +25,8 @@ class ChatContextTest {
     }
 
     @Test
-    @DisplayName("ChatContext.UserInput should handle optional fields")
-    fun `ChatContext UserInput should handle optional fields`() {
+    @DisplayName("should handle optional fields in UserInput")
+    fun `should handle optional fields in UserInput`() {
         // given & when
         val userInput = ChatContext.UserInput(
             message = "test",
@@ -43,8 +43,8 @@ class ChatContextTest {
     }
 
     @Test
-    @DisplayName("ChatContext.Analysis.getAllKeywords should combine keywords")
-    fun `ChatContext Analysis getAllKeywords should combine keywords`() {
+    @DisplayName("should combine keywords in Analysis.getAllKeywords")
+    fun `should combine keywords in Analysis getAllKeywords`() {
         // given
         val analysis = ChatContext.Analysis(
             queryAnalysis = QueryClassifier.QueryAnalysis(
@@ -68,8 +68,8 @@ class ChatContextTest {
     }
 
     @Test
-    @DisplayName("ChatContext.Message should store message data")
-    fun `ChatContext Message should store message data`() {
+    @DisplayName("should store message data in Message")
+    fun `should store message data in Message`() {
         // given
         val timestamp = Instant.now()
 
@@ -87,8 +87,8 @@ class ChatContextTest {
     }
 
     @Test
-    @DisplayName("copy extension should create new context with updated fields")
-    fun `copy extension should create new context with updated fields`() {
+    @DisplayName("should create new context with updated fields using copy extension")
+    fun `should create new context with updated fields using copy extension`() {
         // given
         val originalContext = ChatContext(
             input = ChatContext.UserInput(message = "original"),

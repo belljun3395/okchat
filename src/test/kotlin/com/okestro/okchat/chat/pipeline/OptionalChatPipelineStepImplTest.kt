@@ -1,18 +1,17 @@
 package com.okestro.okchat.chat.pipeline
 
-import com.okestro.okchat.ai.support.QueryClassifier
 import com.okestro.okchat.fixture.TestFixtures
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 
-@DisplayName("DocumentChatPipelineStep Default Behavior Tests")
+@DisplayName("DocumentChatPipelineStep Tests")
 class OptionalChatPipelineStepImplTest {
 
     @Test
-    @DisplayName("DocumentChatPipelineStep shouldExecute default is true")
-    fun `DocumentChatPipelineStep shouldExecute default is true`() {
+    @DisplayName("should execute by default")
+    fun `should execute by default`() {
         // given
         val step = TestStep()
         val context = ChatContext(
@@ -28,8 +27,8 @@ class OptionalChatPipelineStepImplTest {
     }
 
     @Test
-    @DisplayName("DocumentChatPipelineStep can override shouldExecute")
-    fun `DocumentChatPipelineStep can override shouldExecute`() = runTest {
+    @DisplayName("should allow overriding shouldExecute")
+    fun `should allow overriding shouldExecute`() = runTest {
         // given
         val conditionalStep = ConditionalTestStep()
         val contextWithResults = ChatContext(
@@ -56,11 +55,11 @@ class OptionalChatPipelineStepImplTest {
     // Test step with custom shouldExecute
     private class ConditionalTestStep : DocumentChatPipelineStep {
         override fun getStepName() = "Conditional Step"
-        
+
         override fun shouldExecute(context: ChatContext): Boolean {
             return context.search?.results?.isNotEmpty() == true
         }
-        
+
         override suspend fun execute(context: ChatContext) = context
     }
 }

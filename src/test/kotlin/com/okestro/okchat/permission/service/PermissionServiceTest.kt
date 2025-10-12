@@ -1,10 +1,10 @@
 package com.okestro.okchat.permission.service
 
+import com.okestro.okchat.fixture.TestFixtures.searchResult
 import com.okestro.okchat.permission.model.DocumentPathPermission
 import com.okestro.okchat.permission.model.PermissionLevel
 import com.okestro.okchat.permission.repository.DocumentPathPermissionRepository
 import com.okestro.okchat.search.model.SearchResult
-import com.okestro.okchat.search.model.SearchScore
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -31,7 +31,7 @@ import org.testcontainers.utility.DockerImageName
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@DisplayName("PermissionService Integration Tests")
+@DisplayName("PermissionService Tests")
 class PermissionServiceTest {
 
     companion object {
@@ -399,14 +399,12 @@ class PermissionServiceTest {
         }
     }
 
-    private fun createSearchResult(path: String): SearchResult {
-        return SearchResult(
-            id = "id-${path.hashCode()}",
-            title = "Title for $path",
-            content = "Content for $path",
-            path = path,
-            spaceKey = "TEST",
-            score = SearchScore.fromSimilarity(0.75)
-        )
+    private fun createSearchResult(path: String): SearchResult = searchResult {
+        id = "id-${path.hashCode()}"
+        title = "Title for $path"
+        content = "Content for $path"
+        this.path = path
+        spaceKey = "TEST"
+        similarity = 0.75
     }
 }

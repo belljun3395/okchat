@@ -7,7 +7,6 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.ai.chat.messages.AssistantMessage
@@ -15,17 +14,11 @@ import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.model.ChatResponse
 import org.springframework.ai.chat.model.Generation
 
-@DisplayName("QueryClassifier Unit Tests")
+@DisplayName("QueryClassifier Tests")
 class QueryClassifierTest {
 
-    private lateinit var chatModel: ChatModel
-    private lateinit var classifier: QueryClassifier
-
-    @BeforeEach
-    fun setUp() {
-        chatModel = mockk()
-        classifier = QueryClassifier(chatModel)
-    }
+    private val chatModel: ChatModel = mockk()
+    private val classifier = QueryClassifier(chatModel)
 
     @AfterEach
     fun tearDown() {
@@ -33,8 +26,8 @@ class QueryClassifierTest {
     }
 
     @Test
-    @DisplayName("classify should classify query using AI")
-    fun `classify should classify query using AI`() = runTest {
+    @DisplayName("should classify query using AI")
+    fun `should classify query using AI`() = runTest {
         // given
         val query = "프로젝트 문서를 찾아줘"
         val aiResponse = """
@@ -57,8 +50,8 @@ class QueryClassifierTest {
     }
 
     @Test
-    @DisplayName("classify should fallback to rule-based when AI fails")
-    fun `classify should fallback to rule-based when AI fails`() = runTest {
+    @DisplayName("should fallback to rule-based when AI fails")
+    fun `should fallback to rule-based when AI fails`() = runTest {
         // given
         val query = "안녕하세요"
         every { chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()) } throws RuntimeException("API error")
@@ -72,8 +65,8 @@ class QueryClassifierTest {
     }
 
     @Test
-    @DisplayName("classify should handle invalid AI response format")
-    fun `classify should handle invalid AI response format`() = runTest {
+    @DisplayName("should handle invalid AI response format")
+    fun `should handle invalid AI response format`() = runTest {
         // given
         val query = "test"
         val invalidResponse = "Invalid response format"
@@ -92,8 +85,8 @@ class QueryClassifierTest {
     }
 
     @Test
-    @DisplayName("classify should parse confidence as 0.5 when invalid")
-    fun `classify should parse confidence as default when invalid`() = runTest {
+    @DisplayName("should parse confidence as default when invalid")
+    fun `should parse confidence as default when invalid`() = runTest {
         // given
         val query = "test"
         val aiResponse = """

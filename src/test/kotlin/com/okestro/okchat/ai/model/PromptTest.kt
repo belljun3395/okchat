@@ -1,30 +1,48 @@
 package com.okestro.okchat.ai.model
 
+import io.kotest.matchers.string.shouldContain
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import kotlin.test.assertTrue
 
+@DisplayName("Prompt Tests")
 class PromptTest {
 
-    @Test
-    fun `KeyWordExtractionPrompt should include FORMAT_INSTRUCTION`() {
-        // Given
+    companion object {
+        @JvmStatic
+        fun promptContentTestCases() = listOf(
+            Arguments.of("CRITICAL OUTPUT FORMAT", "format instruction"),
+            Arguments.of("comma-separated", "output format"),
+            Arguments.of("User query:", "user query section"),
+            Arguments.of("Keywords (comma-separated only):", "output section")
+        )
+    }
+
+    @ParameterizedTest(name = "should include {1}")
+    @MethodSource("promptContentTestCases")
+    @DisplayName("should include required sections in formatted prompt")
+    fun `should include required sections`(expectedContent: String, description: String) {
+        // given
         val prompt = KeyWordExtractionPrompt(
             userInstruction = "Extract keywords",
             examples = emptyList(),
             message = "Test message"
         )
 
-        // When
+        // when
         val formatted = prompt.format()
 
-        // Then
-        assertTrue(formatted.contains("CRITICAL OUTPUT FORMAT"))
-        assertTrue(formatted.contains("comma-separated"))
+        // then
+        formatted shouldContain expectedContent
     }
 
     @Test
-    fun `KeyWordExtractionPrompt should include instruction`() {
-        // Given
+    @DisplayName("should include user instruction")
+    fun `should include user instruction`() {
+        // given
         val instruction = "Extract technical keywords from the message"
         val prompt = KeyWordExtractionPrompt(
             userInstruction = instruction,
@@ -32,16 +50,17 @@ class PromptTest {
             message = "Test message"
         )
 
-        // When
+        // when
         val formatted = prompt.format()
 
-        // Then
-        assertTrue(formatted.contains(instruction))
+        // then
+        formatted shouldContain instruction
     }
 
     @Test
-    fun `KeyWordExtractionPrompt should include examples`() {
-        // Given
+    @DisplayName("should include examples")
+    fun `should include examples`() {
+        // given
         val examples = listOf(
             PromptExample("input1", "output1"),
             PromptExample("input2", "output2")
@@ -52,19 +71,20 @@ class PromptTest {
             message = "Test message"
         )
 
-        // When
+        // when
         val formatted = prompt.format()
 
-        // Then
-        assertTrue(formatted.contains("input1"))
-        assertTrue(formatted.contains("output1"))
-        assertTrue(formatted.contains("input2"))
-        assertTrue(formatted.contains("output2"))
+        // then
+        formatted shouldContain "input1"
+        formatted shouldContain "output1"
+        formatted shouldContain "input2"
+        formatted shouldContain "output2"
     }
 
     @Test
-    fun `KeyWordExtractionPrompt should include message`() {
-        // Given
+    @DisplayName("should include message")
+    fun `should include message`() {
+        // given
         val message = "Find documents about Spring Boot"
         val prompt = KeyWordExtractionPrompt(
             userInstruction = "Extract keywords",
@@ -72,33 +92,18 @@ class PromptTest {
             message = message
         )
 
-        // When
+        // when
         val formatted = prompt.format()
 
-        // Then
-        assertTrue(formatted.contains(message))
-        assertTrue(formatted.contains("User query:"))
+        // then
+        formatted shouldContain message
+        formatted shouldContain "User query:"
     }
 
     @Test
-    fun `KeyWordExtractionPrompt should include output format`() {
-        // Given
-        val prompt = KeyWordExtractionPrompt(
-            userInstruction = "Extract keywords",
-            examples = emptyList(),
-            message = "Test message"
-        )
-
-        // When
-        val formatted = prompt.format()
-
-        // Then
-        assertTrue(formatted.contains("Keywords (comma-separated only):"))
-    }
-
-    @Test
-    fun `KeyWordExtractionPrompt should format examples correctly`() {
-        // Given
+    @DisplayName("should format examples correctly")
+    fun `should format examples correctly`() {
+        // given
         val examples = listOf(
             PromptExample("Spring Boot tutorials", "spring, boot, tutorial")
         )
@@ -108,34 +113,36 @@ class PromptTest {
             message = "Test message"
         )
 
-        // When
+        // when
         val formatted = prompt.format()
 
-        // Then
-        assertTrue(formatted.contains("Input: \"Spring Boot tutorials\""))
-        assertTrue(formatted.contains("Output: \"spring, boot, tutorial\""))
+        // then
+        formatted shouldContain "Input: \"Spring Boot tutorials\""
+        formatted shouldContain "Output: \"spring, boot, tutorial\""
     }
 
     @Test
-    fun `KeyWordExtractionPrompt toString should return formatted prompt`() {
-        // Given
+    @DisplayName("should return formatted prompt from toString")
+    fun `should return formatted prompt from toString`() {
+        // given
         val prompt = KeyWordExtractionPrompt(
             userInstruction = "Extract keywords",
             examples = emptyList(),
             message = "Test message"
         )
 
-        // When
+        // when
         val toString = prompt.toString()
         val formatted = prompt.format()
 
-        // Then
+        // then
         assertTrue(toString == formatted)
     }
 
     @Test
-    fun `KeyWordExtractionPrompt should handle Korean examples`() {
-        // Given
+    @DisplayName("should handle Korean examples")
+    fun `should handle Korean examples`() {
+        // given
         val examples = listOf(
             PromptExample("백엔드 개발 레포 정보", "백엔드, backend, 개발, development")
         )
@@ -145,17 +152,18 @@ class PromptTest {
             message = "Test message"
         )
 
-        // When
+        // when
         val formatted = prompt.format()
 
-        // Then
-        assertTrue(formatted.contains("백엔드 개발 레포 정보"))
-        assertTrue(formatted.contains("백엔드, backend, 개발, development"))
+        // then
+        formatted shouldContain "백엔드 개발 레포 정보"
+        formatted shouldContain "백엔드, backend, 개발, development"
     }
 
     @Test
-    fun `KeyWordExtractionPrompt should handle multiple examples`() {
-        // Given
+    @DisplayName("should handle multiple examples")
+    fun `should handle multiple examples`() {
+        // given
         val examples = listOf(
             PromptExample("input1", "output1"),
             PromptExample("input2", "output2"),
@@ -167,59 +175,63 @@ class PromptTest {
             message = "Test message"
         )
 
-        // When
+        // when
         val formatted = prompt.format()
 
-        // Then
+        // then
         examples.forEach { example ->
-            assertTrue(formatted.contains(example.input))
-            assertTrue(formatted.contains(example.output))
+            formatted shouldContain example.input
+            formatted shouldContain example.output
         }
     }
 
     @Test
-    fun `FORMAT_INSTRUCTION should contain critical instructions`() {
-        // Then
-        assertTrue(FORMAT_INSTRUCTION.contains("CRITICAL OUTPUT FORMAT"))
-        assertTrue(FORMAT_INSTRUCTION.contains("comma-separated"))
-        assertTrue(FORMAT_INSTRUCTION.contains("DO NOT"))
+    @DisplayName("should contain critical instructions in FORMAT_INSTRUCTION")
+    fun `should contain critical instructions in FORMAT_INSTRUCTION`() {
+        // then
+        FORMAT_INSTRUCTION shouldContain "CRITICAL OUTPUT FORMAT"
+        FORMAT_INSTRUCTION shouldContain "comma-separated"
+        FORMAT_INSTRUCTION shouldContain "DO NOT"
     }
 
     @Test
-    fun `FORMAT_INSTRUCTION should provide correct format examples`() {
-        // Then
-        assertTrue(FORMAT_INSTRUCTION.contains("Examples of CORRECT format"))
-        assertTrue(FORMAT_INSTRUCTION.contains("keyword1, keyword2, keyword3"))
+    @DisplayName("should provide correct format examples in FORMAT_INSTRUCTION")
+    fun `should provide correct format examples in FORMAT_INSTRUCTION`() {
+        // then
+        FORMAT_INSTRUCTION shouldContain "Examples of CORRECT format"
+        FORMAT_INSTRUCTION shouldContain "keyword1, keyword2, keyword3"
     }
 
     @Test
-    fun `FORMAT_INSTRUCTION should provide incorrect format examples`() {
-        // Then
-        assertTrue(FORMAT_INSTRUCTION.contains("Examples of INCORRECT format"))
-        assertTrue(FORMAT_INSTRUCTION.contains("DO NOT USE"))
+    @DisplayName("should provide incorrect format examples in FORMAT_INSTRUCTION")
+    fun `should provide incorrect format examples in FORMAT_INSTRUCTION`() {
+        // then
+        FORMAT_INSTRUCTION shouldContain "Examples of INCORRECT format"
+        FORMAT_INSTRUCTION shouldContain "DO NOT USE"
     }
 
     @Test
-    fun `KeyWordExtractionPrompt should create well-structured prompt`() {
-        // Given
+    @DisplayName("should create well-structured prompt")
+    fun `should create well-structured prompt`() {
+        // given
         val instruction = "Extract technical keywords"
         val examples = listOf(
             PromptExample("Spring Boot REST API", "spring, boot, rest, api")
         )
         val message = "How to build microservices?"
 
-        // When
+        // when
         val prompt = KeyWordExtractionPrompt(instruction, examples, message)
         val formatted = prompt.format()
 
-        // Then
+        // then
         val lines = formatted.lines()
         assertTrue(lines.isNotEmpty())
         // Should have all major sections
-        assertTrue(formatted.contains(instruction))
-        assertTrue(formatted.contains("Examples:"))
-        assertTrue(formatted.contains("CRITICAL OUTPUT FORMAT:"))
-        assertTrue(formatted.contains("User query:"))
-        assertTrue(formatted.contains("Keywords (comma-separated only):"))
+        formatted shouldContain instruction
+        formatted shouldContain "Examples:"
+        formatted shouldContain "CRITICAL OUTPUT FORMAT:"
+        formatted shouldContain "User query:"
+        formatted shouldContain "Keywords (comma-separated only):"
     }
 }

@@ -6,23 +6,15 @@ import io.kotest.matchers.string.shouldContain
 import io.mockk.clearAllMocks
 import io.mockk.mockk
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 
-@DisplayName("EmailReplyService Unit Tests")
+@DisplayName("EmailReplyService Tests")
 class EmailReplyServiceTest {
 
-    private lateinit var emailProperties: EmailProperties
-    private lateinit var oauth2TokenService: OAuth2TokenService
-    private lateinit var service: EmailReplyService
-
-    @BeforeEach
-    fun setUp() {
-        emailProperties = mockk()
-        oauth2TokenService = mockk()
-        service = EmailReplyService(emailProperties, oauth2TokenService)
-    }
+    private val emailProperties: EmailProperties = mockk()
+    private val oauth2TokenService: OAuth2TokenService = mockk()
+    private val service = EmailReplyService(emailProperties, oauth2TokenService)
 
     @AfterEach
     fun tearDown() {
@@ -30,7 +22,7 @@ class EmailReplyServiceTest {
     }
 
     @Test
-    @DisplayName("buildReplyContent should build reply content with original message")
+    @DisplayName("should build reply content with original message")
     fun `should build reply content with original message`() {
         // given
         val answer = "이것은 답변입니다"
@@ -47,7 +39,7 @@ class EmailReplyServiceTest {
     }
 
     @Test
-    @DisplayName("buildReplyContent should truncate long original content")
+    @DisplayName("should truncate long original content")
     fun `should truncate long original content`() {
         // given
         val answer = "답변"

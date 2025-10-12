@@ -3,67 +3,85 @@ package com.okestro.okchat.search.model
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 
-@DisplayName("SearchCriteria Implementation Tests")
+@DisplayName("SearchCriteria Tests")
 class SearchCriteriaTest {
 
+    companion object {
+        @JvmStatic
+        fun criteriaImplementationTestCases() = listOf(
+            Arguments.of(
+                SearchKeywords.fromStrings(listOf("kotlin", "spring", "boot")),
+                SearchType.KEYWORD,
+                3,
+                "SearchKeywords"
+            ),
+            Arguments.of(
+                SearchTitles.fromStrings(listOf("User Guide", "API Reference")),
+                SearchType.TITLE,
+                2,
+                "SearchTitles"
+            ),
+            Arguments.of(
+                SearchContents.fromStrings(listOf("tutorial", "documentation")),
+                SearchType.CONTENT,
+                2,
+                "SearchContents"
+            ),
+            Arguments.of(
+                SearchPaths.fromStrings(listOf("Development", "Backend")),
+                SearchType.PATH,
+                2,
+                "SearchPaths"
+            )
+        )
+
+        @JvmStatic
+        fun emptyCriteriaTestCases() = listOf(
+            Arguments.of(SearchKeywords.fromStrings(emptyList()), "SearchKeywords"),
+            Arguments.of(SearchTitles.fromStrings(emptyList()), "SearchTitles"),
+            Arguments.of(SearchContents.fromStrings(emptyList()), "SearchContents"),
+            Arguments.of(SearchPaths.fromStrings(emptyList()), "SearchPaths")
+        )
+    }
+
+    @ParameterizedTest(name = "{3} should implement SearchCriteria correctly")
+    @MethodSource("criteriaImplementationTestCases")
+    @DisplayName("should implement SearchCriteria correctly")
+    fun `should implement SearchCriteria correctly`(
+        criteria: SearchCriteria,
+        expectedType: SearchType,
+        expectedSize: Int,
+        description: String
+    ) {
+        // when & then
+        criteria.getSearchType() shouldBe expectedType
+        criteria.isEmpty() shouldBe false
+        criteria.size() shouldBe expectedSize
+    }
+
+    @ParameterizedTest(name = "{1} should report isEmpty as true")
+    @MethodSource("emptyCriteriaTestCases")
+    @DisplayName("should report isEmpty as true for empty criteria")
+    fun `should report isEmpty as true for empty criteria`(criteria: SearchCriteria, description: String) {
+        // when & then
+        criteria.isEmpty() shouldBe true
+        criteria.size() shouldBe 0
+    }
+
     @Test
-    @DisplayName("SearchKeywords should implement SearchCriteria correctly")
-    fun `SearchKeywords should implement SearchCriteria correctly`() {
+    @DisplayName("SearchKeywords should generate correct query format")
+    fun `should generate correct query format for keywords`() {
         // given
         val keywords = SearchKeywords.fromStrings(listOf("kotlin", "spring", "boot"))
 
-        // when & then
-        keywords.getSearchType() shouldBe SearchType.KEYWORD
-        keywords.isEmpty() shouldBe false
-        keywords.size() shouldBe 3
-        keywords.toQuery() shouldBe "kotlin OR spring OR boot"
-    }
+        // when
+        val query = keywords.toQuery()
 
-    @Test
-    @DisplayName("SearchTitles should implement SearchCriteria correctly")
-    fun `SearchTitles should implement SearchCriteria correctly`() {
-        // given
-        val titles = SearchTitles.fromStrings(listOf("User Guide", "API Reference"))
-
-        // when & then
-        titles.getSearchType() shouldBe SearchType.TITLE
-        titles.isEmpty() shouldBe false
-        titles.size() shouldBe 2
-    }
-
-    @Test
-    @DisplayName("SearchContents should implement SearchCriteria correctly")
-    fun `SearchContents should implement SearchCriteria correctly`() {
-        // given
-        val contents = SearchContents.fromStrings(listOf("tutorial", "documentation"))
-
-        // when & then
-        contents.getSearchType() shouldBe SearchType.CONTENT
-        contents.isEmpty() shouldBe false
-        contents.size() shouldBe 2
-    }
-
-    @Test
-    @DisplayName("SearchPaths should implement SearchCriteria correctly")
-    fun `SearchPaths should implement SearchCriteria correctly`() {
-        // given
-        val paths = SearchPaths.fromStrings(listOf("Development", "Backend"))
-
-        // when & then
-        paths.getSearchType() shouldBe SearchType.PATH
-        paths.isEmpty() shouldBe false
-        paths.size() shouldBe 2
-    }
-
-    @Test
-    @DisplayName("empty criteria should report isEmpty as true")
-    fun `empty criteria should report isEmpty as true`() {
-        // given
-        val emptyKeywords = SearchKeywords.fromStrings(emptyList())
-
-        // when & then
-        emptyKeywords.isEmpty() shouldBe true
-        emptyKeywords.size() shouldBe 0
+        // then
+        query shouldBe "kotlin OR spring OR boot"
     }
 }

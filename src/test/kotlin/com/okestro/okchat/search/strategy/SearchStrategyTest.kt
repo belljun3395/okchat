@@ -7,18 +7,18 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 
-@DisplayName("SearchStrategy Interface Tests")
+@DisplayName("SearchStrategy Tests")
 class SearchStrategyTest {
 
     @Test
-    @DisplayName("SearchStrategy should define required interface methods")
-    fun `SearchStrategy should define required interface methods`() = runTest {
+    @DisplayName("should define required interface methods")
+    fun `should define required interface methods`() = runTest {
         // given
         val testStrategy = object : SearchStrategy {
             override suspend fun search(criteria: com.okestro.okchat.search.model.SearchCriteria, topK: Int): List<SearchResult> {
                 return emptyList()
             }
-            
+
             override fun getName(): String {
                 return "Test Strategy"
             }

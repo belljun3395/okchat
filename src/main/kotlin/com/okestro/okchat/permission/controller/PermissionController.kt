@@ -1,13 +1,13 @@
 package com.okestro.okchat.permission.controller
 
+import com.okestro.okchat.permission.application.GetUserPermissionsUseCase
 import com.okestro.okchat.permission.application.GrantDenyPathPermissionUseCase
 import com.okestro.okchat.permission.application.GrantPathPermissionUseCase
-import com.okestro.okchat.permission.application.GetUserPermissionsUseCase
 import com.okestro.okchat.permission.application.RevokeAllUserPermissionsUseCase
 import com.okestro.okchat.permission.application.RevokePathPermissionUseCase
+import com.okestro.okchat.permission.application.dto.GetUserPermissionsUseCaseIn
 import com.okestro.okchat.permission.application.dto.GrantDenyPathPermissionUseCaseIn
 import com.okestro.okchat.permission.application.dto.GrantPathPermissionUseCaseIn
-import com.okestro.okchat.permission.application.dto.GetUserPermissionsUseCaseIn
 import com.okestro.okchat.permission.application.dto.RevokeAllUserPermissionsUseCaseIn
 import com.okestro.okchat.permission.application.dto.RevokePathPermissionUseCaseIn
 import com.okestro.okchat.permission.model.DocumentPathPermission
@@ -16,10 +16,7 @@ import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
 import com.okestro.okchat.user.model.User
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Schema
-import io.swagger.v3.oas.annotations.responses.ApiResponse
-import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity

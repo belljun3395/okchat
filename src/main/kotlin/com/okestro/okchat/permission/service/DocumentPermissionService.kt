@@ -69,4 +69,3 @@ class DocumentPermissionService(
         return searchAllByPathUseCase.execute(SearchAllByPathUseCaseIn(documentPath)).documents
     }
 }
-

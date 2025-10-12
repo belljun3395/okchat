@@ -10,10 +10,9 @@ import com.okestro.okchat.search.model.SearchKeywords
 import com.okestro.okchat.search.model.SearchPaths
 import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchScore
-import com.okestro.okchat.search.model.SearchType
 import com.okestro.okchat.search.model.SearchTitles
+import com.okestro.okchat.search.model.SearchType
 import com.okestro.okchat.search.model.TitleSearchResults
-import com.okestro.okchat.search.model.TypedSearchResults
 import com.okestro.okchat.search.strategy.MultiSearchStrategy
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe

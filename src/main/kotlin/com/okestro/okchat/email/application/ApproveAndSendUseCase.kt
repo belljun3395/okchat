@@ -10,8 +10,6 @@ import com.okestro.okchat.email.service.EmailReplyService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.mail.Session
 import jakarta.mail.internet.MimeMessage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -25,7 +23,7 @@ class ApproveAndSendUseCase(
     private val emailReplyService: EmailReplyService
 ) {
     @Transactional("transactionManager")
-    suspend fun execute(useCaseIn: ApproveAndSendUseCaseIn): ApproveAndSendUseCaseOut  {
+    suspend fun execute(useCaseIn: ApproveAndSendUseCaseIn): ApproveAndSendUseCaseOut {
         return ApproveAndSendUseCaseOut(
             approveAndSendInternal(useCaseIn.id, useCaseIn.reviewedBy)
         )

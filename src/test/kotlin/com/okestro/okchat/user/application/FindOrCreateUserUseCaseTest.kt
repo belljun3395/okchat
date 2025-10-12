@@ -10,7 +10,6 @@ import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import java.util.Optional
 
 class FindOrCreateUserUseCaseTest : BehaviorSpec({
 

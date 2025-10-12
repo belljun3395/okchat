@@ -42,4 +42,3 @@ class SavePendingReplyUseCase(
             SavePendingReplyUseCaseOut(saved)
         }
 }
-

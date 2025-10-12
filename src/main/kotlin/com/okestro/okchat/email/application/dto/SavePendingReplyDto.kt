@@ -14,4 +14,3 @@ data class SavePendingReplyUseCaseIn(
 data class SavePendingReplyUseCaseOut(
     val pendingReply: PendingEmailReply
 )
-

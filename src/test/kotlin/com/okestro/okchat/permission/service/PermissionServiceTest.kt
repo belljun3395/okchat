@@ -5,6 +5,8 @@ import com.okestro.okchat.permission.model.DocumentPathPermission
 import com.okestro.okchat.permission.model.PermissionLevel
 import com.okestro.okchat.permission.repository.DocumentPathPermissionRepository
 import com.okestro.okchat.search.model.SearchResult
+import com.okestro.okchat.testcontainers.IntegrationTestBase
+import com.okestro.okchat.testcontainers.SharedTestContainers
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -22,32 +24,18 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
-import org.testcontainers.containers.MySQLContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.utility.DockerImageName
 
 @DataJpaTest
-@Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 @DisplayName("PermissionService Tests")
-class PermissionServiceTest {
+class PermissionServiceTest : IntegrationTestBase() {
 
     companion object {
-        @Container
-        @JvmStatic
-        val mysql = MySQLContainer(DockerImageName.parse("mysql:8.0"))
-            .withDatabaseName("testdb")
-            .withUsername("test")
-            .withPassword("test")
-
         @JvmStatic
         @DynamicPropertySource
         fun properties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url", mysql::getJdbcUrl)
-            registry.add("spring.datasource.username", mysql::getUsername)
-            registry.add("spring.datasource.password", mysql::getPassword)
+            SharedTestContainers.configureMysql(registry)
         }
     }
 

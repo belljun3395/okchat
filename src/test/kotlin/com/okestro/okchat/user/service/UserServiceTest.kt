@@ -1,5 +1,7 @@
 package com.okestro.okchat.user.service
 
+import com.okestro.okchat.testcontainers.IntegrationTestBase
+import com.okestro.okchat.testcontainers.SharedTestContainers
 import com.okestro.okchat.user.model.User
 import com.okestro.okchat.user.repository.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -19,32 +21,18 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
-import org.testcontainers.containers.MySQLContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.utility.DockerImageName
 
 @DataJpaTest
-@Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 @DisplayName("UserService Integration Tests")
-class UserServiceTest {
+class UserServiceTest : IntegrationTestBase() {
 
     companion object {
-        @Container
-        @JvmStatic
-        val mysql = MySQLContainer(DockerImageName.parse("mysql:8.0"))
-            .withDatabaseName("testdb")
-            .withUsername("test")
-            .withPassword("test")
-
         @JvmStatic
         @DynamicPropertySource
         fun properties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url", mysql::getJdbcUrl)
-            registry.add("spring.datasource.username", mysql::getUsername)
-            registry.add("spring.datasource.password", mysql::getPassword)
+            SharedTestContainers.configureMysql(registry)
         }
     }
 

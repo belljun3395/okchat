@@ -3,6 +3,10 @@ package com.okestro.okchat.email.provider
 import com.okestro.okchat.email.config.EmailDefaults
 import java.util.Properties
 
+@DslMarker
+annotation class MailPropertiesDsl
+
+@MailPropertiesDsl
 class MailPropertiesBuilder(private val protocol: String = EmailDefaults.PROTOCOL) {
     private val properties = Properties()
 

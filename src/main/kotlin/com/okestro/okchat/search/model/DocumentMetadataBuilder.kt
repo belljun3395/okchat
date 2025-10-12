@@ -18,6 +18,10 @@ package com.okestro.okchat.search.model
  * }
  * ```
  */
+@DslMarker
+annotation class DocumentMetadataDsl
+
+@DocumentMetadataDsl
 class DocumentMetadataBuilder {
     var title: String? = null
     var path: String? = null

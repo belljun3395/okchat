@@ -1,4 +1,4 @@
-package com.okestro.okchat.task.support
+package com.okestro.okchat.task.entity
 
 import org.springframework.data.annotation.Id
 import org.springframework.data.relational.core.mapping.Column
@@ -8,7 +8,7 @@ import java.time.LocalDateTime
 /**
  * Entity mapping for TASK_EXECUTION table
  * * NOTE: Spring Cloud Task manages this table using JDBC internally.
- * We use Spring Data JDBC (not JPA) for read-only access to avoid conflicts.
+ *   We use Spring Data JDBC (not JPA) for read-only access to avoid conflicts.
  */
 @Table("TASK_EXECUTION")
 data class TaskExecutionEntity(
@@ -51,3 +51,4 @@ data class TaskExecutionParamEntity(
     @Column("TASK_PARAM")
     val taskParam: String
 )
+

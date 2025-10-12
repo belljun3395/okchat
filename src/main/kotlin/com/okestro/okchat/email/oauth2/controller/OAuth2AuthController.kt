@@ -1,4 +1,4 @@
-package com.okestro.okchat.email.oauth2.support
+package com.okestro.okchat.email.oauth2.controller
 
 import com.okestro.okchat.email.oauth2.OAuth2TokenService
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -112,3 +112,4 @@ class OAuth2AuthController(
                 )
             )
 }
+

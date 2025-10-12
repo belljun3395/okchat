@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     kotlin("jvm") version "1.9.25"
     kotlin("plugin.spring") version "1.9.25"
@@ -43,8 +45,8 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 
     /** database - hybrid approach */
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa") // For domain entities (User, Prompt, Permissions)
-    implementation("org.springframework.boot:spring-boot-starter-data-jdbc") // For Spring Cloud Task tables (read-only access)
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     runtimeOnly("com.mysql:mysql-connector-j")
 
     /** spring cloud task */
@@ -130,6 +132,86 @@ tasks.withType<Test> {
     finalizedBy(tasks.jacocoTestReport)
 }
 
+private object JacocoCoverage {
+    val generatedClasses = listOf(
+        "**/*\$\$serializer.class",
+        "**/*\$DefaultImpls.class",
+        "**/*\$Companion.class",
+        "**/*Kt.class",
+        "**/*Kt\$*.class",
+        "**/*\$WhenMappings.class",
+        "**/*\$WhenMappings\$*.class",
+        "**/*\$log\$*.class",
+        "**/*\$*Function*.class",
+        "**/*\$lambda\$*.class"
+    )
+
+    val infrastructure = listOf(
+        "**/*Application*.class",
+        "**/config/**",
+        "**/configuration/**",
+        "**/support/**",
+        "**/dto/**",
+        "**/model/**",
+        "**/entity/**",
+        "**/*Request*.class",
+        "**/*Response*.class",
+        "**/*Dto.class",
+        "**/*Record.class",
+        "**/controller/**",
+        "**/*Controller.class",
+        "**/*Controller\$*.class",
+        "**/task/**",
+        "**/*Task*.class",
+        "**/event/**",
+        "**/exception/**"
+    )
+
+    val externalAdapters = listOf(
+        "**/*Repository.class",
+        "**/*Repository\$*.class",
+        "**/confluence/client/**",
+        "**/search/client/**",
+        "**/tools/**",
+        "**/*Tool*.class",
+        "**/*Feign*.class",
+        "**/oauth2/**",
+        "**/confluence/**"
+    )
+
+    val excludes: List<String> = generatedClasses + infrastructure + externalAdapters
+
+    private val syntheticSuffixes = listOf(
+        "Kt",
+        "\$\$serializer",
+        "\$DefaultImpls",
+        "\$Companion"
+    )
+
+    private val syntheticFragments = listOf(
+        "\$WhenMappings",
+        "\$log\$",
+        "\$lambda\$",
+        "\$Function"
+    )
+
+    fun isSynthetic(file: File): Boolean {
+        val name = file.nameWithoutExtension
+        return syntheticSuffixes.any { name.endsWith(it) } ||
+            syntheticFragments.any { name.contains(it) } ||
+            hasNumericSyntheticSuffix(name)
+    }
+
+    private fun hasNumericSyntheticSuffix(name: String): Boolean {
+        val lastDollar = name.lastIndexOf('$')
+        if (lastDollar == -1 || lastDollar == name.lastIndex) {
+            return false
+        }
+        val suffix = name.substring(lastDollar + 1)
+        return suffix.firstOrNull()?.isDigit() == true
+    }
+}
+
 tasks.jacocoTestReport {
     dependsOn(tasks.test)
     reports {
@@ -142,13 +224,9 @@ tasks.jacocoTestReport {
         files(
             classDirectories.files.map {
                 fileTree(it) {
-                    exclude(
-                        // Kotlin generated classes
-                        "**/*\$\$serializer.class",
-                        "**/*\$DefaultImpls.class",
-                        "**/*\$Companion.class"
-                    )
-                }
+                    include("com/okestro/**")
+                    exclude(JacocoCoverage.excludes)
+                }.filter { file -> !JacocoCoverage.isSynthetic(file) }
             }
         )
     )

@@ -1,6 +1,7 @@
-package com.okestro.okchat.task.support
+package com.okestro.okchat.task.dto
 
 import com.fasterxml.jackson.annotation.JsonFormat
+import com.okestro.okchat.task.entity.TaskExecutionEntity
 import java.time.Duration
 import java.time.LocalDateTime
 
@@ -45,8 +46,8 @@ data class TaskStatsDto(
 /**
  * Extension function to convert entity to DTO
  */
-fun TaskExecutionEntity.toDto(): TaskExecutionDto {
-    return TaskExecutionDto(
+fun TaskExecutionEntity.toDto(): TaskExecutionDto =
+    TaskExecutionDto(
         taskExecutionId = this.taskExecutionId ?: 0L,
         startTime = this.startTime,
         endTime = this.endTime,
@@ -56,4 +57,4 @@ fun TaskExecutionEntity.toDto(): TaskExecutionDto {
         errorMessage = this.errorMessage,
         lastUpdated = this.lastUpdated
     )
-}
+

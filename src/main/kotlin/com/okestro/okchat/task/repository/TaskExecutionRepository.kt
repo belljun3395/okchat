@@ -1,5 +1,7 @@
-package com.okestro.okchat.task.support
+package com.okestro.okchat.task.repository
 
+import com.okestro.okchat.task.entity.TaskExecutionEntity
+import com.okestro.okchat.task.entity.TaskExecutionParamEntity
 import org.springframework.data.jdbc.repository.query.Query
 import org.springframework.data.repository.CrudRepository
 import org.springframework.data.repository.query.Param
@@ -8,9 +10,9 @@ import org.springframework.stereotype.Repository
 /**
  * Spring Data JDBC Repository for Task Execution (Read-only access)
  * * NOTE: Spring Cloud Task manages the TASK_EXECUTION table internally using JDBC.
- * We use Spring Data JDBC (not JPA) to avoid conflicts:
- * - JPA's caching and entity lifecycle management would conflict with Spring Cloud Task's direct JDBC writes
- * - JDBC provides simple, cache-free access for querying task execution history
+ *   We use Spring Data JDBC (not JPA) to avoid conflicts:
+ *   - JPA's caching and entity lifecycle management would conflict with Spring Cloud Task's direct JDBC writes
+ *   - JDBC provides simple, cache-free access for querying task execution history
  * * This repository is primarily for monitoring and reporting purposes.
  */
 @Repository
@@ -62,3 +64,4 @@ interface TaskExecutionParamsRepository : CrudRepository<TaskExecutionParamEntit
     )
     fun findParamsByExecutionId(@Param("executionId") executionId: Long): List<String>
 }
+

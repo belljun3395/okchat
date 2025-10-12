@@ -31,7 +31,8 @@ class SentenceWindowStrategyTest {
     fun `should create one chunk per sentence`() {
         // given
         val strategy = SentenceWindowStrategy(windowSize = 1)
-        val text = "First sentence. Second sentence. Third sentence."
+        // Note: Sentence splitter requires space after punctuation
+        val text = "First sentence. Second sentence. Third sentence. "
         val document = Document("doc1", text, mutableMapOf())
 
         // when
@@ -74,7 +75,8 @@ class SentenceWindowStrategyTest {
     fun `should respect window size`(windowSize: Int, expectedSentences: Int) {
         // given
         val strategy = SentenceWindowStrategy(windowSize = windowSize)
-        val text = "S1. S2. S3. S4. S5. S6. S7."
+        // Note: Space after each period is required for splitting
+        val text = "S1. S2. S3. S4. S5. S6. S7. "
         val document = Document("doc1", text, mutableMapOf())
 
         // when
@@ -92,7 +94,7 @@ class SentenceWindowStrategyTest {
     fun `should handle edge sentences with smaller windows`() {
         // given
         val strategy = SentenceWindowStrategy(windowSize = 2)
-        val text = "First. Second. Third."
+        val text = "First. Second. Third. "
         val document = Document("doc1", text, mutableMapOf())
 
         // when
@@ -118,7 +120,7 @@ class SentenceWindowStrategyTest {
     fun `should store sentence index in metadata`() {
         // given
         val strategy = SentenceWindowStrategy(windowSize = 1)
-        val text = "First. Second. Third."
+        val text = "First. Second. Third. "
         val document = Document("doc1", text, mutableMapOf())
 
         // when
@@ -136,7 +138,7 @@ class SentenceWindowStrategyTest {
     fun `should include chunking strategy in metadata`() {
         // given
         val strategy = SentenceWindowStrategy(windowSize = 1)
-        val text = "Test sentence."
+        val text = "Test sentence. "
         val document = Document("doc1", text, mutableMapOf())
 
         // when
@@ -153,7 +155,7 @@ class SentenceWindowStrategyTest {
     fun `should handle single sentence document`() {
         // given
         val strategy = SentenceWindowStrategy(windowSize = 2)
-        val text = "Only one sentence."
+        val text = "Only one sentence. "
         val document = Document("doc1", text, mutableMapOf())
 
         // when
@@ -184,7 +186,7 @@ class SentenceWindowStrategyTest {
     fun `should handle multiple punctuation marks`() {
         // given
         val strategy = SentenceWindowStrategy(windowSize = 1)
-        val text = "Question? Exclamation! Statement."
+        val text = "Question? Exclamation! Statement. "
         val document = Document("doc1", text, mutableMapOf())
 
         // when

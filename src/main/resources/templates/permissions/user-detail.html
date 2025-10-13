@@ -139,6 +139,8 @@
         </div>
     </div>
 
+    <script src="/js/treeUtils.js"></script>
+
     <script th:inline="javascript">
         /*<![CDATA[*/
         const paths = /*[[${paths}]]*/ [];
@@ -217,29 +219,7 @@
             return grantedDocuments.has(docId);
         }
 
-        // Build tree structure from flat path list (same as paths.html)
-        function buildTree(paths) {
-            const tree = {};
-            
-            paths.forEach(path => {
-                const parts = path.split(' > ').map(p => p.trim());
-                let current = tree;
-                
-                parts.forEach((part, index) => {
-                    if (!current[part]) {
-                        current[part] = {
-                            name: part,
-                            fullPath: parts.slice(0, index + 1).join(' > '),
-                            children: {},
-                            isLeaf: index === parts.length - 1
-                        };
-                    }
-                    current = current[part].children;
-                });
-            });
-            
-            return tree;
-        }
+
         
         // Check if path is explicitly denied
         function isDenied(path) {
@@ -255,37 +235,7 @@
             return false;
         }
         
-        // Render tree recursively (same as paths.html with permission badges)
-        function renderTree(node) {
-            const entries = Object.entries(node).sort((a, b) => a[0].localeCompare(b[0]));
-            
-            return entries.map(([key, value]) => {
-                const hasChildren = Object.keys(value.children).length > 0;
-                const directPermission = hasDirectPermission(value.fullPath);
-                const inheritedPermission = !directPermission && hasPermission(value.fullPath);
-                const denied = isDenied(value.fullPath);
-                const hasAnyPermission = directPermission || inheritedPermission || denied;
-                
-                return `
-                    <div class="tree-node" data-path="${value.fullPath}">
-                        <div class="tree-node-content">
-                            <span class="expand-icon">${hasChildren ? '▶' : ''}</span>
-                            ${hasAnyPermission ? `<input type="checkbox" class="node-checkbox" data-path="${value.fullPath}" data-is-direct="${directPermission || denied}">` : '<span style="width: 18px; display: inline-block;"></span>'}
-                            <span class="node-icon">${hasChildren ? '📁' : '📄'}</span>
-                            <span class="node-label">${value.name}</span>
-                            ${directPermission ? '<span class="permission-badge">✓ Direct</span>' : ''}
-                            ${inheritedPermission && !denied ? '<span class="permission-badge" style="background: #6b7280;">✓ Inherited</span>' : ''}
-                            ${denied ? '<span class="permission-badge" style="background: #ef4444;">❌ Denied</span>' : ''}
-                        </div>
-                        ${hasChildren ? `
-                            <div class="tree-children">
-                                ${renderTree(value.children)}
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            }).join('');
-        }
+
 
         // Toggle functionality (same as paths.html)
         document.addEventListener('click', (e) => {
@@ -484,7 +434,7 @@
         console.log('Tree structure:', tree);
         console.log('Rendering tree...');
         const treeElement = document.getElementById('pathTree');
-        const treeHtml = renderTree(tree);
+        const treeHtml = renderTree(tree, { showUserDetailCheckboxes: true, selectedFolders: selectedPaths, showPermissionBadges: true, hasDirectPermission: hasDirectPermission, hasPermission: hasPermission, isDenied: isDenied });
         console.log('Tree HTML length:', treeHtml.length);
         treeElement.innerHTML = treeHtml;
         console.log('Tree rendered to DOM');

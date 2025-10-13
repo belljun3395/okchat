@@ -4,34 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Permission Management</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .header { background: white; padding: 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
-        h1 { color: #333; margin-bottom: 10px; }
-        .subtitle { color: #666; font-size: 14px; }
-        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
-        .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .stat-number { font-size: 32px; font-weight: bold; color: #2563eb; }
-        .stat-label { color: #666; font-size: 14px; margin-top: 5px; }
-        .section { background: white; padding: 25px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .section-title { font-size: 18px; font-weight: 600; color: #333; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; }
-        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
-        .btn { padding: 12px 24px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.2s; }
-        .btn-primary { background: #2563eb; color: white; }
-        .btn-primary:hover { background: #1d4ed8; }
-        .btn-secondary { background: #6b7280; color: white; }
-        .btn-secondary:hover { background: #4b5563; }
-        .quick-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
-        .quick-link { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-decoration: none; display: block; transition: transform 0.2s; }
-        .quick-link:hover { transform: translateY(-2px); }
-        .quick-link-title { font-size: 18px; font-weight: 600; margin-bottom: 5px; }
-        .quick-link-desc { font-size: 13px; opacity: 0.9; }
-        .btn-analytics { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; white-space: nowrap; }
-        .btn-analytics:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3); }
-        .header-content { flex: 1; }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/permissions.css}">
 </head>
 <body>
     <div class="container">
@@ -61,18 +34,18 @@
                     <div class="quick-link-title">🤖 Chat Interface</div>
                     <div class="quick-link-desc">AI-powered document search and Q&A</div>
                 </a>
-                <a href="/admin/permissions/manage" class="quick-link" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                    <div class="quick-link-title">⚡ Permission Manager</div>
-                    <div class="quick-link-desc">Advanced permission control with tree view</div>
-                </a>
-                <a href="/admin/permissions/users" class="quick-link" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                    <div class="quick-link-title">👥 Manage Users</div>
-                    <div class="quick-link-desc">View all users and their permissions</div>
-                </a>
-                <a href="/admin/permissions/paths" class="quick-link" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
-                    <div class="quick-link-title">📁 Browse Paths</div>
-                    <div class="quick-link-desc">Explore document hierarchy</div>
-                </a>
+                    <a href="/admin/permissions/manage" class="quick-link">
+                        <h3 class="quick-link-title">⚙️ Manage Permissions</h3>
+                        <p class="quick-link-desc">Define and adjust access levels for paths and users.</p>
+                    </a>
+                    <a href="/admin/permissions/paths" class="quick-link">
+                        <h3 class="quick-link-title">📄 View All Paths</h3>
+                        <p class="quick-link-desc">Browse all protected paths and their configurations.</p>
+                    </a>
+                    <a href="/admin/permissions/users" class="quick-link">
+                        <h3 class="quick-link-title">👥 View All Users</h3>
+                        <p class="quick-link-desc">See all users and their assigned permissions.</p>
+                    </a>
             </div>
         </div>
 
@@ -87,21 +60,53 @@
                         <th style="padding: 12px; font-weight: 600; color: #374151;">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr th:each="user : ${users}" style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 12px;" th:text="${user.email}">user@example.com</td>
-                        <td style="padding: 12px;" th:text="${user.name}">User Name</td>
-                        <td style="padding: 12px;">
-                            <span style="background: #10b981; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;" th:if="${user.active}">Active</span>
-                            <span style="background: #ef4444; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;" th:unless="${user.active}">Inactive</span>
-                        </td>
-                        <td style="padding: 12px;">
-                            <a th:href="@{/admin/permissions/user/{email}(email=${user.email})}" class="btn btn-primary" style="padding: 6px 16px; font-size: 13px;">View Details</a>
-                        </td>
+                <tbody id="recentUsersTableBody">
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 20px;">Loading recent users...</td>
                     </tr>
                 </tbody>
             </table>
         </div>
     </div>
+
+    <script>
+        async function loadRecentUsers() {
+            const tableBody = document.getElementById('recentUsersTableBody');
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">Loading recent users...</td></tr>';
+
+            try {
+                const response = await fetch('/api/admin/users/recent');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const users = await response.json();
+
+                if (users.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #6b7280;">No recent users found.</td></tr>';
+                    return;
+                }
+
+                tableBody.innerHTML = users.map(user => `
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td class="px-4 py-3">${user.email}</td>
+                        <td class="px-4 py-3">${user.name}</td>
+                        <td class="px-4 py-3">
+                            <span class="status-badge ${user.active ? 'status-active' : 'status-inactive'}">${user.active ? 'Active' : 'Inactive'}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <a href="/admin/permissions/user/${user.email}" class="btn btn-view-details">View Details</a>
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch (error) {
+                console.error('Failed to load recent users:', error);
+                tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #ef4444;">Failed to load recent users.</td></tr>';
+            }
+        }
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', loadRecentUsers);
+    </script>
 </body>
 </html>

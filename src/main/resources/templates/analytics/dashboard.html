@@ -201,6 +201,16 @@
                 <div class="value" id="avgRating">-</div>
                 <div class="subvalue" id="helpfulPercent">-</div>
             </div>
+            <div class="metric-card">
+                <div class="label">평균 응답 시간 (API)</div>
+                <div class="value" id="apiAvgResponseTime">-</div>
+                <div class="subvalue">ms</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">에러율</div>
+                <div class="value" id="errorRate">-</div>
+                <div class="subvalue">%</div>
+            </div>
         </div>
 
         <div class="chart-card">
@@ -211,6 +221,8 @@
 
     </div>
 
+    <script src="/js/utils.js"></script>
+
     <script>
         // Initialize dates (last 24 hours)
         const now = new Date();
@@ -219,14 +231,9 @@
         document.getElementById('startDate').value = formatDateTimeLocal(yesterday);
         document.getElementById('endDate').value = formatDateTimeLocal(now);
 
-        function formatDateTimeLocal(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            return `${year}-${month}-${day}T${hours}:${minutes}`;
-        }
+
+
+
 
         async function loadAnalytics() {
             const startDate = document.getElementById('startDate').value;
@@ -244,8 +251,7 @@
                     loadUsageStats(startDate, endDate),
                     loadQualityStats(startDate, endDate),
                     loadPerformanceStats(startDate, endDate),
-                    loadQueryTypeStats(startDate, endDate),
-                    loadErrorPatterns(startDate, endDate)
+                    loadQueryTypeStats(startDate, endDate)
                 ]);
             } catch (error) {
                 showError(`데이터 로드 실패: ${error.message}`);
@@ -272,6 +278,8 @@
             const response = await fetch(`/api/admin/chat/analytics/performance?startDate=${startDate}&endDate=${endDate}`);
             const data = await response.json();
             
+            document.getElementById('apiAvgResponseTime').textContent = Math.round(data.averageResponseTimeMs);
+            document.getElementById('errorRate').textContent = data.errorRate.toFixed(1);
         }
 
 
@@ -287,20 +295,10 @@
             document.getElementById('queryTypeStats').innerHTML = html;
         }
 
-        async function loadErrorPatterns(startDate, endDate) {
-            const response = await fetch(`/api/admin/analytics/failures?startDate=${startDate}&endDate=${endDate}`);
-            const data = await response.json();
-            
-            let html = '<table><thead><tr><th>에러 타입</th><th>발생 횟수</th><th>해결 횟수</th><th>비율</th></tr></thead><tbody>';
-            data.forEach(item => {
-                html += `<tr><td>${item.errorType}</td><td>${item.count}</td><td>${item.resolvedCount}</td><td>${item.percentage.toFixed(1)}%</td></tr>`;
-            });
-            html += '</tbody></table>';
-            document.getElementById('errorPatterns').innerHTML = html;
-        }
+
 
         function showError(message) {
-            document.getElementById('error').textContent = message;
+            document.getElementById('error').innerHTML = `<strong>오류 발생:</strong> ${message} <br> 잠시 후 다시 시도해주세요.`;
             document.getElementById('error').style.display = 'block';
         }
 

@@ -3,29 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Path Details</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .header { background: white; padding: 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        h1 { color: #333; margin-bottom: 10px; }
-        .path-info { color: #666; font-size: 14px; margin-top: 10px; }
-        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 15px; }
-        .btn-secondary { background: #6b7280; color: white; }
-        .btn-secondary:hover { background: #4b5563; }
-        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
-        .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .stat-number { font-size: 32px; font-weight: bold; color: #2563eb; }
-        .stat-label { color: #666; font-size: 14px; margin-top: 5px; }
-        .section { background: white; padding: 25px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .section-title { font-size: 18px; font-weight: 600; color: #333; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; }
-        .list { list-style: none; }
-        .list-item { padding: 12px; border-bottom: 1px solid #e5e7eb; }
-        .list-item:last-child { border-bottom: none; }
-        code { background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-family: monospace; font-size: 13px; }
-        .empty-state { text-align: center; padding: 40px; color: #9ca3af; }
-    </style>
+    <link rel="stylesheet" href="/css/permissions.css">
 </head>
 <body>
     <div class="container">
@@ -51,9 +29,15 @@
         <div class="section">
             <h2 class="section-title">📄 Documents (<span th:text="${totalDocuments}">0</span>)</h2>
             <ul class="list" th:if="${!#lists.isEmpty(documents)}">
-                <li class="list-item" th:each="doc : ${documents}" style="display: flex; justify-content: space-between; align-items: center;">
-                    <span th:text="${doc.title}">Document Title</span>
-                    <code th:text="${doc.id}" style="background: #e5e7eb;">123456789</code>
+                <li class="list-item" th:each="doc : ${documents}">
+                    <div class="list-item-details">
+                        <div class="list-item-title" th:text="${doc.title}">Document Title</div>
+                        <div class="list-item-meta">
+                            ID: <code th:text="${doc.id}">123456789</code>
+                            <span th:if="${doc.createdAt}"> | Created: <span th:text="${#dates.format(doc.createdAt, 'yyyy-MM-dd HH:mm')}"></span></span>
+                            <span th:if="${doc.updatedAt}"> | Last Updated: <span th:text="${#dates.format(doc.updatedAt, 'yyyy-MM-dd HH:mm')}"></span></span>
+                        </div>
+                    </div>
                 </li>
             </ul>
             <div class="empty-state" th:if="${#lists.isEmpty(documents)}">
@@ -63,21 +47,79 @@
 
         <div class="section">
             <h2 class="section-title">👥 Users with Access (<span th:text="${totalUsers}">0</span>)</h2>
-            <ul class="list" th:if="${!#lists.isEmpty(usersWithAccess)}">
-                <li class="list-item" th:each="user : ${usersWithAccess}">
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const allUsers = /*[[${usersWithAccess}]]*/ [];
+        let currentPage = 1;
+        const pageSize = 5; // Display 5 users per page
+
+        function renderUsers() {
+            const userList = document.getElementById('usersWithAccessList');
+            userList.innerHTML = ''; // Clear current list
+
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+            const usersToDisplay = allUsers.slice(startIndex, endIndex);
+
+            if (usersToDisplay.length === 0) {
+                userList.innerHTML = '<div class="empty-state">No users have been granted access to this path</div>';
+                return;
+            }
+
+            usersToDisplay.forEach(user => {
+                const listItem = document.createElement('li');
+                listItem.className = 'list-item';
+                listItem.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <div style="font-weight: 500;" th:text="${user.name}">User Name</div>
-                            <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;" th:text="${user.email}">email@example.com</div>
+                            <div style="font-weight: 500;">${user.name}</div>
+                            <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${user.email}</div>
                         </div>
-                        <a th:href="@{/admin/permissions/user/{email}(email=${user.email})}" class="btn btn-secondary" style="padding: 6px 16px; font-size: 13px; margin: 0;">View Details</a>
+                        <div style="display: flex; align-items: center;">
+                            <span class="user-permission-badge">Access Granted</span>
+                            <a href="/admin/permissions/user/${user.email}" class="btn btn-secondary" style="padding: 6px 16px; font-size: 13px; margin: 0 0 0 10px;">View Details</a>
+                        </div>
                     </div>
-                </li>
-            </ul>
-            <div class="empty-state" th:if="${#lists.isEmpty(usersWithAccess)}">
-                No users have been granted access to this path
-            </div>
-        </div>
-    </div>
+                `;
+                userList.appendChild(listItem);
+            });
+        }
+
+        function updatePaginationControls() {
+            const totalPages = Math.ceil(allUsers.length / pageSize);
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages === 0 ? 1 : totalPages}`;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
+        }
+
+        function changePage(direction) {
+            currentPage += direction;
+            renderUsers();
+            updatePaginationControls();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Replace the Thymeleaf generated list with a placeholder for JS rendering
+            const usersSection = document.querySelector('.section:last-of-type');
+            const usersListThymeleaf = usersSection.querySelector('ul');
+            if (usersListThymeleaf) {
+                usersListThymeleaf.id = 'usersWithAccessList'; // Give it an ID for JS to target
+                usersListThymeleaf.innerHTML = ''; // Clear Thymeleaf content
+            } else {
+                // If no ul exists (e.g., empty list initially), create one
+                const newUl = document.createElement('ul');
+                newUl.className = 'list';
+                newUl.id = 'usersWithAccessList';
+                usersSection.insertBefore(newUl, document.getElementById('userPagination'));
+            }
+
+            renderUsers();
+            updatePaginationControls();
+
+            document.getElementById('prevPage').addEventListener('click', () => changePage(-1));
+            document.getElementById('nextPage').addEventListener('click', () => changePage(1));
+        });
+        /*]]>*/
+    </script>
 </body>
 </html>

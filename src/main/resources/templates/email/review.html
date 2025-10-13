@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -140,11 +140,7 @@
             font-size: 12px;
             font-weight: 500;
         }
-        .status-pending { background: #fef3c7; color: #92400e; }
-        .status-approved { background: #d1fae5; color: #065f46; }
-        .status-rejected { background: #fee2e2; color: #991b1b; }
-        .status-sent { background: #dbeafe; color: #1e40af; }
-        .status-failed { background: #fecaca; color: #7f1d1d; }
+
         .email-preview {
             font-size: 13px;
             color: #6b7280;
@@ -157,9 +153,7 @@
             overflow: hidden;
             position: relative;
         }
-        .email-preview.expanded {
-            max-height: none;
-        }
+
         .email-actions {
             display: flex;
             gap: 8px;
@@ -297,9 +291,23 @@
             outline: none;
             border-color: #667eea;
         }
+
     </style>
 </head>
 <body>
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 1001; display: flex; justify-content: center; align-items: center;">
+        <div style="border: 8px solid #f3f3f3; border-top: 8px solid #667eea; border-radius: 50%; width: 60px; height: 60px; animation: spin 2s linear infinite;"></div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+
+    <div id="notificationContainer" style="position: fixed; top: 20px; right: 20px; z-index: 1002;"></div>
     <div class="container">
         <div class="header">
             <div>
@@ -342,43 +350,60 @@
             <div class="email-list" id="emailList">
                 <div class="loading">Loading...</div>
             </div>
-        </div>
-    </div>
-
-    <!-- View Detail Modal -->
-    <div class="modal" id="detailModal">
-        <div class="modal-content">
-            <div class="modal-header">이메일 상세</div>
-            <div class="modal-body" id="modalBody"></div>
-            <div class="modal-actions">
-                <button class="btn btn-view" onclick="closeModal()">닫기</button>
+            <div class="pagination" style="display: flex; justify-content: center; align-items: center; padding: 20px; gap: 10px;">
+                <button id="prevPageBtn" class="btn" onclick="changePage(-1)" disabled>이전</button>
+                <span id="pageInfo"></span>
+                <button id="nextPageBtn" class="btn" onclick="changePage(1)" disabled>다음</button>
             </div>
         </div>
     </div>
 
-    <!-- Reject Reason Modal -->
-    <div class="modal" id="rejectModal">
+    <!-- Generic Modal Structure -->
+    <div class="modal" id="genericModal">
         <div class="modal-content">
-            <div class="modal-header">거부 사유 입력</div>
-            <div class="modal-body">
-                <div class="modal-field">
-                    <label class="modal-label">거부 사유 (선택사항)</label>
-                    <textarea class="input-field" id="rejectionReason" rows="4" placeholder="거부 사유를 입력하세요..."></textarea>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-view" onclick="closeRejectModal()">취소</button>
-                <button class="btn btn-reject" onclick="confirmReject()">거부 확인</button>
-            </div>
+            <div class="modal-header" id="modalTitle"></div>
+            <div class="modal-body" id="modalContent"></div>
+            <div class="modal-actions" id="modalActions"></div>
         </div>
     </div>
 
     <script>
         let currentStatus = 'PENDING';
         let currentRejectId = null;
+        let currentPage = 0; // 0-indexed
+        const pageSize = 10; // Number of emails per page
+        let totalPages = 0;
+
+        // Loading spinner functions
+        function showLoading() {
+            document.getElementById('loadingSpinner').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+
+        // Notification functions
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.classList.add('notification', type);
+            notification.textContent = message;
+            container.appendChild(notification);
+
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+                notification.addEventListener('transitionend', () => notification.remove());
+            }, 3000);
+        }
 
         // Load counts
         async function loadCounts() {
+            showLoading();
             try {
                 const response = await fetch('/api/email/pending/count');
                 const counts = await response.json();
@@ -388,18 +413,24 @@
                 document.getElementById('rejectedCount').textContent = counts.rejected || 0;
             } catch (error) {
                 console.error('Failed to load counts:', error);
+            } finally {
+                hideLoading();
             }
         }
 
         // Load emails by status
-        async function loadEmails(status) {
+        async function loadEmails(status, page = 0) {
             currentStatus = status;
+            currentPage = page;
             const emailList = document.getElementById('emailList');
             emailList.innerHTML = '<div class="loading">Loading...</div>';
-
+            showLoading();
             try {
-                const response = await fetch(`/api/email/pending/status/${status}`);
-                const emails = await response.json();
+                const response = await fetch(`/api/email/pending/status/${status}?page=${currentPage}&size=${pageSize}`);
+                const data = await response.json(); // Assuming API returns { content: [], totalElements: 0, totalPages: 0 }
+
+                const emails = data?.content || [];
+                totalPages = data?.totalPages || 0;
 
                 if (emails.length === 0) {
                     emailList.innerHTML = `
@@ -408,10 +439,10 @@
                             <div>해당 상태의 이메일이 없습니다</div>
                         </div>
                     `;
-                    return;
+                } else {
+                    emailList.innerHTML = emails.map(email => createEmailItem(email)).join('');
                 }
-
-                emailList.innerHTML = emails.map(email => createEmailItem(email)).join('');
+                updatePaginationControls();
             } catch (error) {
                 console.error('Failed to load emails:', error);
                 emailList.innerHTML = `
@@ -420,6 +451,23 @@
                         <div>이메일을 불러오는데 실패했습니다</div>
                     </div>
                 `;
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Update pagination controls
+        function updatePaginationControls() {
+            document.getElementById('pageInfo').textContent = `페이지 ${currentPage + 1} / ${totalPages}`;
+            document.getElementById('prevPageBtn').disabled = currentPage === 0;
+            document.getElementById('nextPageBtn').disabled = currentPage >= totalPages - 1;
+        }
+
+        // Change page
+        function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage >= 0 && newPage < totalPages) {
+                loadEmails(currentStatus, newPage);
             }
         }
 
@@ -469,14 +517,26 @@
             event.target.textContent = preview.classList.contains('expanded') ? '접기' : '전체보기';
         }
 
+        // Generic modal functions
+        function openModal(title, content, actions) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalContent').innerHTML = content;
+            document.getElementById('modalActions').innerHTML = actions;
+            document.getElementById('genericModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('genericModal').classList.remove('active');
+        }
+
         // View email detail
         async function viewDetail(id) {
+            showLoading();
             try {
                 const response = await fetch(`/api/email/pending/${id}`);
                 const email = await response.json();
 
-                const modalBody = document.getElementById('modalBody');
-                modalBody.innerHTML = `
+                const modalContent = `
                     <div class="modal-field">
                         <label class="modal-label">보낸사람</label>
                         <div class="modal-value">${email.fromEmail}</div>
@@ -514,17 +574,15 @@
                         </div>
                     ` : ''}
                 `;
+                const modalActions = `<button class="btn btn-view" onclick="closeModal()">닫기</button>`;
 
-                document.getElementById('detailModal').classList.add('active');
+                openModal('이메일 상세', modalContent, modalActions);
             } catch (error) {
                 console.error('Failed to load email detail:', error);
-                alert('이메일 상세 정보를 불러오는데 실패했습니다.');
+                showNotification('이메일 상세 정보를 불러오는데 실패했습니다.', 'error');
+            } finally {
+                hideLoading();
             }
-        }
-
-        // Close modal
-        function closeModal() {
-            document.getElementById('detailModal').classList.remove('active');
         }
 
         // Approve email
@@ -532,39 +590,46 @@
             if (!confirm('이 이메일을 승인하고 발송하시겠습니까?')) {
                 return;
             }
-
+            showLoading();
             try {
                 const response = await fetch(`/api/email/pending/${id}/approve`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ reviewedBy: 'admin' })
+                    body: JSON.stringify({ reviewedBy: '[[${userEmail}]]' })
                 });
 
                 const result = await response.json();
                 if (result.success) {
-                    alert('이메일이 승인되고 발송되었습니다.');
-                    loadEmails(currentStatus);
-                    loadCounts();
+                    showNotification('이메일이 승인되고 발송되었습니다.', 'success');
+                    await loadEmails(currentStatus);
+                    await loadCounts();
                 } else {
-                    alert('실패: ' + result.message);
+                    showNotification('실패: ' + result.message, 'error');
                 }
             } catch (error) {
                 console.error('Failed to approve email:', error);
-                alert('이메일 승인에 실패했습니다.');
+                showNotification('이메일 승인에 실패했습니다.', 'error');
+            } finally {
+                hideLoading();
             }
         }
 
         // Open reject modal
         function openRejectModal(id) {
             currentRejectId = id;
+            const modalContent = `
+                <div class="modal-field">
+                    <label class="modal-label">거부 사유 (선택사항)</label>
+                    <textarea class="input-field" id="rejectionReason" rows="4" placeholder="거부 사유를 입력하세요..."></textarea>
+                </div>
+            `;
+            const modalActions = `
+                <button class="btn btn-view" onclick="closeModal()">취소</button>
+                <button class="btn btn-reject" onclick="confirmReject()">거부 확인</button>
+            `;
+            openModal('거부 사유 입력', modalContent, modalActions);
+            // Clear the textarea after opening the modal
             document.getElementById('rejectionReason').value = '';
-            document.getElementById('rejectModal').classList.add('active');
-        }
-
-        // Close reject modal
-        function closeRejectModal() {
-            document.getElementById('rejectModal').classList.remove('active');
-            currentRejectId = null;
         }
 
         // Confirm reject
@@ -572,59 +637,52 @@
             if (!currentRejectId) return;
 
             const reason = document.getElementById('rejectionReason').value.trim();
-
+            showLoading();
             try {
                 const response = await fetch(`/api/email/pending/${currentRejectId}/reject`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        reviewedBy: 'admin',
+                        reviewedBy: '[[${userEmail}]]',
                         rejectionReason: reason || null
                     })
                 });
 
                 const result = await response.json();
                 if (result.success) {
-                    alert('이메일이 거부되었습니다.');
-                    closeRejectModal();
-                    loadEmails(currentStatus);
-                    loadCounts();
+                    showNotification('이메일이 거부되었습니다.', 'success');
+                    closeModal(); // Use generic closeModal
+                    await loadEmails(currentStatus);
+                    await loadCounts();
                 } else {
-                    alert('실패: ' + result.message);
+                    showNotification('실패: ' + result.message, 'error');
                 }
             } catch (error) {
                 console.error('Failed to reject email:', error);
-                alert('이메일 거부에 실패했습니다.');
+                showNotification('이메일 거부에 실패했습니다.', 'error');
+            } finally {
+                hideLoading();
             }
         }
 
-        // Filter button handlers
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                loadEmails(btn.dataset.status);
-            });
-        });
-
         // Close modals on background click
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.classList.remove('active');
-                }
-            });
+        document.getElementById('genericModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('genericModal')) {
+                closeModal();
+            }
         });
 
         // Initial load
         loadCounts();
-        loadEmails('PENDING');
+        loadEmails('PENDING', 0);
 
         // Auto refresh every 30 seconds
         setInterval(() => {
             loadCounts();
-            loadEmails(currentStatus);
+            loadEmails(currentStatus, currentPage);
         }, 30000);
     </script>
 </body>
+
+
 </html>

@@ -84,58 +84,16 @@
         </div>
     </div>
 
+    <script src="/js/treeUtils.js"></script>
+
     <script th:inline="javascript">
         /*<![CDATA[*/
         const paths = /*[[${paths}]]*/ [];
         
-        // Build tree structure from flat path list
-        function buildTree(paths) {
-            const tree = {};
-            
-            paths.forEach(path => {
-                const parts = path.split(' > ').map(p => p.trim());
-                let current = tree;
-                
-                parts.forEach((part, index) => {
-                    if (!current[part]) {
-                        current[part] = {
-                            name: part,
-                            fullPath: parts.slice(0, index + 1).join(' > '),
-                            children: {},
-                            isLeaf: index === parts.length - 1
-                        };
-                    }
-                    current = current[part].children;
-                });
-            });
-            
-            return tree;
-        }
+
+
         
-        // Render tree recursively - HTML string based (same pattern as manage.html)
-        function renderTree(node) {
-            const entries = Object.entries(node).sort((a, b) => a[0].localeCompare(b[0]));
-            
-            return entries.map(([key, value]) => {
-                const hasChildren = Object.keys(value.children).length > 0;
-                
-                return `
-                    <div class="tree-node" data-path="${value.fullPath}">
-                        <div class="tree-node-content">
-                            <span class="expand-icon">${hasChildren ? '▶' : ''}</span>
-                            <span class="node-icon">${hasChildren ? '📁' : '📄'}</span>
-                            <span class="node-label">${value.name}</span>
-                            <button class="tree-action" onclick="event.stopPropagation(); window.location.href='/admin/permissions/path/${encodeURIComponent(value.fullPath)}'">View Details</button>
-                        </div>
-                        ${hasChildren ? `
-                            <div class="tree-children">
-                                ${renderTree(value.children)}
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            }).join('');
-        }
+
         
         // Toggle functionality - same as manage.html
         document.addEventListener('click', (e) => {
@@ -167,7 +125,7 @@
         // Initialize tree
         const tree = buildTree(paths);
         const treeElement = document.getElementById('pathTree');
-        treeElement.innerHTML = renderTree(tree);
+        treeElement.innerHTML = renderTree(tree, { showActionButton: true });
         /*]]>*/
     </script>
 </body>

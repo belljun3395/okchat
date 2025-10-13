@@ -3,300 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document Permission Management</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            background: #f5f7fa; 
-            padding: 20px;
-            overflow-x: hidden;
-            user-select: none; /* Prevent text selection during drag */
-        }
-        .container { 
-            max-width: 1800px; 
-            margin: 0 auto; 
-        }
-        .header { 
-            background: white; 
-            padding: 25px 30px; 
-            border-radius: 12px; 
-            margin-bottom: 20px; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        h1 { 
-            color: #1a1a1a; 
-            font-size: 28px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .back-btn {
-            padding: 10px 20px;
-            background: #6b7280;
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-        .back-btn:hover { background: #4b5563; }
-        
-        .main-content {
-            display: grid;
-            grid-template-columns: 350px 10px 1fr;
-            gap: 0;
-            height: calc(100vh - 180px);
-        }
-
-        .splitter {
-            background: #e5e7eb;
-            cursor: col-resize;
-            transition: background 0.2s;
-        }
-        .splitter:hover {
-            background: #3b82f6;
-        }
-        
-        /* Panel min-width */
-        .user-panel, .tree-panel {
-            min-width: 150px;
-            overflow: hidden; /* Prevent content from overflowing during resize */
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* User Selection Panel */
-        .user-panel {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-        .panel-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #e5e7eb;
-            flex-shrink: 0;
-        }
-        .user-search {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 15px;
-            transition: border-color 0.2s;
-            flex-shrink: 0;
-        }
-        .user-search:focus {
-            outline: none;
-            border-color: #3b82f6;
-        }
-        .user-list {
-            list-style: none;
-            overflow-y: auto;
-            flex-grow: 1;
-        }
-        .user-item {
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 2px solid transparent;
-        }
-        .user-item:hover {
-            background: #f3f4f6;
-        }
-        .user-item.active {
-            background: #eff6ff;
-            border-color: #3b82f6;
-        }
-        .user-name {
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 4px;
-        }
-        .user-email {
-            font-size: 13px;
-            color: #6b7280;
-        }
-        
-        /* Document Tree Panel */
-        .tree-panel {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-        .tree-actions {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-shrink: 0;
-        }
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-primary {
-            background: #3b82f6;
-            color: white;
-        }
-        .btn-primary:hover { background: #2563eb; }
-        .btn-success {
-            background: #10b981;
-            color: white;
-        }
-        .btn-success:hover { background: #059669; }
-        .btn-secondary {
-            background: #e5e7eb;
-            color: #1a1a1a;
-        }
-        .btn-secondary:hover { background: #d1d5db; }
-        
-        .tree {
-            flex-grow: 1;
-            overflow-y: auto;
-        }
-        .tree-node {
-            margin-bottom: 4px;
-        }
-        .tree-node-content {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.2s;
-            gap: 8px;
-        }
-        .tree-node-content:hover {
-            background: #f3f4f6;
-        }
-        .tree-node-content.selected {
-            background: #dbeafe;
-        }
-        .expand-icon {
-            width: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #6b7280;
-            flex-shrink: 0;
-        }
-        .node-checkbox {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-        .node-icon {
-            font-size: 16px;
-            flex-shrink: 0;
-        }
-        .node-label {
-            flex: 1;
-            font-size: 14px;
-            color: #1a1a1a;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .permission-badge {
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: 500;
-            background: #10b981;
-            color: white;
-            flex-shrink: 0;
-        }
-        .tree-children {
-            margin-left: 28px;
-            display: none;
-        }
-        .tree-children.expanded {
-            display: block;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #6b7280;
-        }
-        
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 16px 24px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 1000;
-            display: none;
-            font-weight: 500;
-        }
-        .notification.success {
-            background: #10b981;
-            color: white;
-        }
-        .notification.error {
-            background: #ef4444;
-            color: white;
-        }
-        .notification.show {
-            display: block;
-            animation: slideIn 0.3s ease-out;
-        }
-        
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        
-        .stats {
-            display: flex;
-            gap: 16px;
-            margin-top: 20px;
-            padding-top: 16px;
-            border-top: 2px solid #e5e7eb;
-            flex-shrink: 0;
-        }
-        .stat-item {
-            flex: 1;
-            text-align: center;
-        }
-        .stat-number {
-            font-size: 24px;
-            font-weight: 700;
-            color: #3b82f6;
-        }
-        .stat-label {
-            font-size: 12px;
-            color: #6b7280;
-            margin-top: 4px;
-        }
-    </style>
+    <link rel="stylesheet" href="/css/permissions.css">
 </head>
 <body>
     <div class="container">
@@ -346,6 +53,8 @@
     
     <div class="notification" id="notification"></div>
     
+    <script src="/js/treeUtils.js"></script>
+
     <script th:inline="javascript">
         /*<![CDATA[*/
         let users = /*[[${users}]]*/ [];
@@ -371,7 +80,7 @@
             const tree = buildTree(paths);
             console.log('Tree built:', Object.keys(tree).length, 'root nodes');
             console.log('Rendering tree...');
-            const treeHtml = renderTree(tree);
+            const treeHtml = renderTree(tree, { showCheckboxes: true, selectedFolders: selectedFolders, showPermissionBadges: true, hasPermission: (path) => userPermissions.paths.has(path), allPaths: paths });
             console.log('Tree HTML length:', treeHtml.length);
             document.getElementById('documentTree').innerHTML = treeHtml;
             console.log('Tree rendered to DOM');
@@ -435,72 +144,9 @@
         }
         
         
-        // Build tree structure from flat path list (same as user-detail.html)
-        function buildTree(pathsList) {
-            console.log('buildTree called with:', pathsList);
-            if (!pathsList || !Array.isArray(pathsList)) {
-                console.error('buildTree received invalid paths:', pathsList);
-                return {};
-            }
-            
-            const tree = {};
-            
-            pathsList.forEach(path => {
-                if (!path || typeof path !== 'string') {
-                    console.warn('Skipping invalid path:', path);
-                    return;
-                }
-                const parts = path.split(' > ').map(p => p.trim());
-                let current = tree;
-                
-                parts.forEach((part, index) => {
-                    if (!current[part]) {
-                        current[part] = {
-                            name: part,
-                            fullPath: parts.slice(0, index + 1).join(' > '),
-                            children: {},
-                            isLeaf: index === parts.length - 1
-                        };
-                    }
-                    current = current[part].children;
-                });
-            });
-            
-            console.log('buildTree result:', tree);
-            return tree;
-        }
+
         
-        // Render tree recursively (same as user-detail.html)
-        function renderTree(node) {
-            if (!node || typeof node !== 'object') {
-                console.error('renderTree received invalid node:', node);
-                return '';
-            }
-            const entries = Object.entries(node).sort((a, b) => a[0].localeCompare(b[0]));
-            
-            return entries.map(([key, value]) => {
-                const hasChildren = Object.keys(value.children).length > 0;
-                const hasPermission = userPermissions.paths.has(value.fullPath);
-                const isChecked = selectedFolders.has(value.fullPath);
-                
-                return `
-                    <div class="tree-node" data-path="${value.fullPath}">
-                        <div class="tree-node-content">
-                            <span class="expand-icon">${hasChildren ? '▶' : ''}</span>
-                            <input type="checkbox" class="node-checkbox folder-checkbox" data-path="${value.fullPath}" ${isChecked ? 'checked' : ''}>
-                            <span class="node-icon">${hasChildren ? '📁' : '📄'}</span>
-                            <span class="node-label">${value.name}</span>
-                            ${hasPermission ? '<span class="permission-badge">✓</span>' : ''}
-                        </div>
-                        ${hasChildren ? `
-                            <div class="tree-children">
-                                ${renderTree(value.children)}
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            }).join('');
-        }
+
         
         async function selectUser(userId) {
             const user = users.find(u => u.id === userId);
@@ -538,7 +184,7 @@
                 
                 renderUserList();
                 const tree = buildTree(paths);
-                document.getElementById('documentTree').innerHTML = renderTree(tree);
+                document.getElementById('documentTree').innerHTML = renderTree(tree, { showCheckboxes: true, selectedFolders: selectedFolders, showPermissionBadges: true, hasPermission: (path) => userPermissions.paths.has(path), allPaths: paths });
                 updateStats();
                 document.getElementById('saveBtn').disabled = false;
             } catch (error) {
@@ -602,6 +248,37 @@
             }
         }
         
+        function updateParentCheckboxes(checkboxElement) {
+            let currentTreeNode = checkboxElement.closest('.tree-node');
+            while (currentTreeNode) {
+                const parentTreeNode = currentTreeNode.parentElement.closest('.tree-node');
+                if (!parentTreeNode) break; // Reached the root
+
+                const parentCheckbox = parentTreeNode.querySelector('.node-checkbox');
+                if (parentCheckbox) {
+                    const childrenCheckboxes = Array.from(parentTreeNode.querySelectorAll('.tree-children > .tree-node > .tree-node-content > .node-checkbox'));
+                    const allChildrenChecked = childrenCheckboxes.every(cb => cb.checked);
+                    const noChildrenChecked = childrenCheckboxes.every(cb => !cb.checked);
+
+                    if (allChildrenChecked) {
+                        parentCheckbox.checked = true;
+                        parentCheckbox.indeterminate = false;
+                        selectedFolders.add(parentCheckbox.dataset.path);
+                    } else if (noChildrenChecked) {
+                        parentCheckbox.checked = false;
+                        parentCheckbox.indeterminate = false;
+                        selectedFolders.delete(parentCheckbox.dataset.path);
+                    } else {
+                        parentCheckbox.checked = false;
+                        parentCheckbox.indeterminate = true;
+                        // For indeterminate, we don't add/remove the parent path from selectedFolders
+                        // as it's not fully selected or deselected.
+                    }
+                }
+                currentTreeNode = parentTreeNode;
+            }
+        }
+
         function setupEventListeners() {
             document.getElementById('userSearch').addEventListener('input', (e) => renderUserList(e.target.value));
             document.getElementById('userList').addEventListener('click', (e) => {
@@ -626,16 +303,37 @@
                 }
                 
                 if (e.target.classList.contains('node-checkbox')) {
-                    const isChecked = e.target.checked;
-                    const folderPath = e.target.dataset.path;
-                    
+                    const clickedCheckbox = e.target;
+                    const folderPath = clickedCheckbox.dataset.path;
+                    const isChecked = clickedCheckbox.checked;
+
                     if (folderPath) {
-                        // Only folder (path) selection is supported
+                        // Update current checkbox state
                         if (isChecked) {
                             selectedFolders.add(folderPath);
                         } else {
                             selectedFolders.delete(folderPath);
                         }
+
+                        // Propagate change to children
+                        const treeNode = clickedCheckbox.closest('.tree-node');
+                        if (treeNode) {
+                            const childrenCheckboxes = treeNode.querySelectorAll('.tree-children .node-checkbox');
+                            childrenCheckboxes.forEach(childCheckbox => {
+                                const childPath = childCheckbox.dataset.path;
+                                if (childPath) {
+                                    childCheckbox.checked = isChecked;
+                                    if (isChecked) {
+                                        selectedFolders.add(childPath);
+                                    } else {
+                                        selectedFolders.delete(childPath);
+                                    }
+                                }
+                            });
+                        }
+
+                        // Propagate change to parents
+                        updateParentCheckboxes(clickedCheckbox);
                     }
                     updateStats();
                 }
@@ -660,11 +358,6 @@
         function collapseAll() {
             document.querySelectorAll('.tree-children').forEach(n => n.classList.remove('expanded'));
             document.querySelectorAll('.expand-icon').forEach(i => { if (i.textContent) i.textContent = '▶'; });
-        }
-        
-        function getRootPath(path) {
-            // 경로를 그대로 반환 (최상위만 추출하지 않음)
-            return path;
         }
         
         function showNotification(message, type = 'success') {

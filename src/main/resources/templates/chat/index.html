@@ -653,8 +653,12 @@
             pedantic: false     // Don't conform to obscure parts of markdown.pl
         });
 
-        // Generate a session ID
-        const sessionId = 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        // Generate a session ID (persistent across reloads)
+        let sessionId = localStorage.getItem('chatSessionId');
+        if (!sessionId) {
+            sessionId = 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('chatSessionId', sessionId);
+        }
         sessionIdElement.textContent = `Session: ${sessionId}`;
         
         let messageCount = 0;
@@ -668,78 +672,17 @@
          * Normalize text by adding line breaks where markdown syntax indicates they should be.
          * This fixes issues where AI generates markdown but without proper line breaks.
          * 
-         * The function:
-         * 1. Checks if text is already well-formatted (has proper header spacing)
-         * 2. If not, applies normalization rules to add missing line breaks
-         * 3. Returns normalized text ready for markdown parsing
+         * NOTE: Ideally, markdown normalization should happen on the server-side to ensure consistency
+         * and reduce client-side processing. This client-side function is a temporary measure.
          * 
          * @param {string} text - Raw text that may contain markdown syntax
          * @returns {string} - Normalized text with proper line breaks
          */
         function normalizeMarkdown(text) {
-            let normalized = text;
-            
-            // Check if already well-formatted (multiple line breaks exist)
-            const lineCount = (text.match(/\n/g) || []).length;
-            const doubleLineBreaks = (text.match(/\n\n/g) || []).length;
-            
-            if (DEBUG_MODE) {
-                console.log(`📊 Markdown analysis: ${text.length} chars, ${lineCount} newlines, ${doubleLineBreaks} double newlines`);
-            }
-            
-            // Check if markdown looks properly formatted
-            // Properly formatted markdown MUST have:
-            // 1. Space after # (e.g., "### 제목" not "###제목")
-            // 2. Double line breaks after headers
-            const hasProperHeaderFormat = text.match(/#{1,6}\s+[^\n]+\n\n/);  // Space after #
-            const hasProperSectionSpacing = doubleLineBreaks >= 3;
-            
-            // Only skip normalization if BOTH conditions are met
-            if (hasProperHeaderFormat && hasProperSectionSpacing) {
-                if (DEBUG_MODE) console.log('✅ Already well-formatted, skipping normalization');
-                return text;
-            }
-            
-            if (DEBUG_MODE) {
-                console.log('🔧 Normalizing markdown text without proper formatting...');
-                console.log('📥 Original text preview:', text.substring(0, 200).replace(/\n/g, '\\n'));
-            }
-            
-            // Step 1: Fix markdown headers - ensure space after # (###제목 → ### 제목)
-            // Use word boundary to prevent breaking Korean text
-            normalized = normalized.replace(/(^|\n)(#{1,6})([^\s#\n])/gm, '$1$2 $3');
-            
-            // Step 2: Ensure double newline after headers (### 제목\n → ### 제목\n\n)
-            normalized = normalized.replace(/(^|\n)(#{1,6}\s+.+?)(\n)(?!\n)/gm, '$1$2$3\n');
-            
-            // Step 3: Clean up any double spaces created
-            normalized = normalized.replace(/  +/g, ' ');
-            
-            // Step 4: Add line breaks before headers if needed
-            normalized = normalized.replace(/([^\n])\n(#{1,6}\s)/g, '$1\n\n$2');
-            
-            // Step 5: Fix "**text**:" patterns - ensure space after colon
-            normalized = normalized.replace(/(\*\*[^*]+\*\*):(?!\s)/g, '$1: ');
-            
-            // Step 6: Fix numbered lists - ensure space after number (1.항목 → 1. 항목)
-            normalized = normalized.replace(/(^|\n)(\d+\.)([^\s\n])/gm, '$1$2 $3');
-            
-            // Step 7: Fix bullet lists - ensure space after dash (-항목 → - 항목)  
-            normalized = normalized.replace(/(^|\n)([\s]*-)([^\s\n])/gm, '$1$2 $3');
-            
-            // Step 8: Remove stray code blocks at the end
-            normalized = normalized.replace(/```\s*$/g, '');
-            
-            // Step 9: Clean up excessive line breaks (more than 3 consecutive)
-            normalized = normalized.replace(/\n{4,}/g, '\n\n');
-            
-            if (DEBUG_MODE) {
-                const normalizedNewlines = (normalized.match(/\n/g) || []).length;
-                console.log('✅ Normalized result:', `${normalized.length} chars, ${normalizedNewlines} newlines`);
-                console.log('📤 Normalized preview:', normalized.substring(0, 200).replace(/\n/g, '\\n'));
-            }
-            
-            return normalized;
+            // For now, we rely mostly on marked.js to handle markdown. 
+            // Further normalization should ideally be done server-side.
+            // This function can be expanded if specific client-side pre-processing is required.
+            return text;
         }
 
         /**
@@ -1017,242 +960,263 @@
             // Show typing indicator
             showTypingIndicator();
 
-            try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        keywords: keywords.length > 0 ? keywords : null,
-                        sessionId: sessionId,
-                        isDeepThink: isDeepThink
-                    })
-                });
+            let retryCount = 0;
+            const MAX_RETRIES = 3;
 
-                if (!response.ok) {
-                    let errorMessage = '서버 오류가 발생했습니다.';
+            async function attemptSendMessage() {
+                console.log('attemptSendMessage called');
+                try {
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            keywords: keywords.length > 0 ? keywords : null,
+                            sessionId: sessionId,
+                            isDeepThink: isDeepThink
+                        })
+                    });
 
-                    if (response.status === 400) {
-                        errorMessage = '잘못된 요청입니다. 메시지를 다시 확인해주세요.';
-                    } else if (response.status === 401) {
-                        errorMessage = '인증이 필요합니다. 다시 로그인해주세요.';
-                    } else if (response.status === 403) {
-                        errorMessage = '접근 권한이 없습니다.';
-                    } else if (response.status === 404) {
-                        errorMessage = '서비스를 찾을 수 없습니다.';
-                    } else if (response.status === 429) {
-                        errorMessage = '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
-                    } else if (response.status >= 500) {
-                        errorMessage = '서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
-                    }
+                    if (!response.ok) {
+                        let errorMessage = '서버 오류가 발생했습니다.';
 
-                    throw new Error(errorMessage);
-                }
-
-                removeTypingIndicator();
-
-                // Initialize SSE reader and text accumulation
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let botMessageDiv = null;
-                let botMessageContent = null;
-                let accumulatedText = ''; // Accumulate all streamed text
-                let buffer = ''; // Buffer for incomplete SSE lines
-
-                let chunkCount = 0;
-                let newlineChunks = 0;
-                
-                // Process SSE stream
-                while (true) {
-                    const { done, value } = await reader.read();
-                    
-                    if (done) break;
-                    
-                    // Decode the binary chunk to text
-                    const chunk = decoder.decode(value, { stream: true });
-                    
-                    // Check for special requestId message BEFORE adding to buffer
-                    if (chunk.includes('__REQUEST_ID__:')) {
-                        const lines = chunk.split('\n');
-                        for (const line of lines) {
-                            if (line.startsWith('__REQUEST_ID__:')) {
-                                window.currentStreamRequestId = line.substring(15).trim();
-                                console.log('📝 Captured requestId:', window.currentStreamRequestId);
-                            } else if (line.trim()) {
-                                // Add non-requestId lines to buffer
-                                buffer += line + '\n';
-                            }
+                        if (response.status === 400) {
+                            errorMessage = '잘못된 요청입니다. 메시지를 다시 확인해주세요.';
+                        } else if (response.status === 401) {
+                            errorMessage = '인증이 필요합니다. 다시 로그인해주세요.';
+                        } else if (response.status === 403) {
+                            errorMessage = '접근 권한이 없습니다.';
+                        } else if (response.status === 404) {
+                            errorMessage = '서비스를 찾을 수 없습니다.';
+                        } else if (response.status === 429) {
+                            errorMessage = '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
+                        } else if (response.status >= 500) {
+                            errorMessage = '서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
                         }
-                        continue;
-                    }
-                    
-                    buffer += chunk;
-                    
-                    // Split by newlines to process individual SSE messages
-                    const lines = buffer.split('\n');
-                    
-                    // Keep the last incomplete line in buffer for next iteration
-                    buffer = lines.pop() || '';
 
-                    for (const line of lines) {
-                        const trimmedLine = line.trim();
+                        throw new Error(errorMessage);
+                    }
+
+                    removeTypingIndicator();
+
+                    // Initialize SSE reader and text accumulation
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let botMessageDiv = null;
+                    let botMessageContent = null;
+                    let accumulatedText = ''; // Accumulate all streamed text
+                    let buffer = ''; // Buffer for incomplete SSE lines
+
+                    let chunkCount = 0;
+                    let newlineChunks = 0;
+                    
+                    // Process SSE stream
+                    while (true) {
+                        const { done, value } = await reader.read();
                         
-                        // Skip empty lines
-                        if (!trimmedLine) {
+                        if (done) break;
+                        
+                        // Decode the binary chunk to text
+                        const chunk = decoder.decode(value, { stream: true });
+                        
+                        // Check for special requestId message BEFORE adding to buffer
+                        if (chunk.includes('__REQUEST_ID__:')) {
+                            const lines = chunk.split('\n');
+                            for (const line of lines) {
+                                if (line.startsWith('__REQUEST_ID__:')) {
+                                    window.currentStreamRequestId = line.substring(15).trim();
+                                    console.log('📝 Captured requestId:', window.currentStreamRequestId);
+                                } else if (line.trim()) {
+                                    // Add non-requestId lines to buffer
+                                    buffer += line + '\n';
+                                }
+                            }
                             continue;
                         }
                         
-                        // Process SSE data lines (format: "data: content")
-                        if (trimmedLine.startsWith('data:') || line.startsWith('data:')) {
-                            // Extract data after 'data:' prefix
-                            // SSE standard: "data: " has space after colon, so remove it if present
-                            const dataStartIndex = line.indexOf('data:') + 5;
-                            let data = line.slice(dataStartIndex);
+                        buffer += chunk;
+                        
+                        // Split by newlines to process individual SSE messages
+                        const lines = buffer.split('\n');
+                        
+                        // Keep the last incomplete line in buffer for next iteration
+                        buffer = lines.pop() || '';
+
+                        for (const line of lines) {
+                            const trimmedLine = line.trim();
                             
-                            // Remove leading space if present (SSE standard: "data: content")
+                            // Skip empty lines
+                            if (!trimmedLine) {
+                                continue;
+                            }
+                            
+                            // Process SSE data lines (format: "data: content")
+                            if (trimmedLine.startsWith('data:') || line.startsWith('data:')) {
+                                // Extract data after 'data:' prefix
+                                // SSE standard: "data: " has space after colon, so remove it if present
+                                const dataStartIndex = line.indexOf('data:') + 5;
+                                let data = line.slice(dataStartIndex);
+                                
+                                // Remove leading space if present (SSE standard: "data: content")
+                                if (data.startsWith(' ')) {
+                                    data = data.slice(1);
+                                }
+                                
+                                // Check if this is the requestId message and capture it
+                                if (data.startsWith('__REQUEST_ID__:')) {
+                                    window.currentStreamRequestId = data.substring(15).trim();
+                                    console.log('📝 Captured requestId from SSE data:', window.currentStreamRequestId);
+                                    continue; // Skip rendering this message
+                                }
+                                
+                                // IMPORTANT: If data is empty after removing space, it means this was a newline chunk
+                                // The server sends "data: \n" which becomes "data:" after split('\n')
+                                // We need to treat empty data as a newline character
+                                if (data === '' && !trimmedLine.includes('[DONE]')) {
+                                    data = '\n';
+                                }
+                                
+                                // Process all chunks except [DONE] marker
+                                if (data !== '[DONE]') {
+                                    chunkCount++;
+                                    
+                                    // Debug: Check if chunk contains newlines or is whitespace
+                                    if (DEBUG_MODE) {
+                                        if (data.includes('\n') || data.match(/^\s+$/)) {
+                                            newlineChunks++;
+                                            console.log(`📦 Chunk #${chunkCount} has newlines/whitespace:`, JSON.stringify(data));
+                                        }
+                                    }
+                                    
+                                    if (!botMessageDiv) {
+                                        // Create bot message container (first chunk)
+                                        botMessageDiv = document.createElement('div');
+                                        botMessageDiv.className = 'message bot';
+                                        botMessageContent = document.createElement('div');
+                                        botMessageContent.className = 'message-content';
+                                        // Use pre-wrap to preserve newlines during streaming
+                                        botMessageContent.style.whiteSpace = 'pre-wrap';
+                                        botMessageDiv.appendChild(botMessageContent);
+                                        chatMessages.appendChild(botMessageDiv);
+                                        updateMessageCount();
+                                    }
+                                    
+                                    // During streaming: display as plain text to preserve all formatting
+                                    // (Markdown parsing happens after streaming completes)
+                                    accumulatedText += data;
+                                    botMessageContent.textContent = accumulatedText;
+                                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Debug summary
+                    if (DEBUG_MODE) {
+                        console.log(`📊 Stream complete: ${chunkCount} chunks, ${newlineChunks} had newlines`);
+                        const finalNewlines = accumulatedText.split('\n').length - 1;
+                        console.log(`📝 Final text: ${accumulatedText.length} chars, ${finalNewlines} newlines`);
+                        console.log(`📝 First 300 chars:`, accumulatedText.substring(0, 300).replace(/\n/g, '\\n'));
+                        if (finalNewlines < 3) {
+                            console.warn('⚠️ WARNING: Very few newlines in response! AI may not be following instructions.');
+                        } else if (finalNewlines >= 3 && finalNewlines < 10) {
+                            console.warn('⚠️ WARNING: Some newlines exist but may need normalization for proper markdown');
+                        }
+                    }
+
+                    // Process any remaining incomplete data in buffer
+                    if (buffer) {
+                        const trimmedBuffer = buffer.trim();
+                        if (trimmedBuffer.startsWith('data:') || buffer.startsWith('data:')) {
+                            const dataStartIndex = buffer.indexOf('data:') + 5;
+                            let data = buffer.slice(dataStartIndex);
+                            
+                            // Remove leading space if present
                             if (data.startsWith(' ')) {
                                 data = data.slice(1);
                             }
                             
-                            // Check if this is the requestId message and capture it
-                            if (data.startsWith('__REQUEST_ID__:')) {
-                                window.currentStreamRequestId = data.substring(15).trim();
-                                console.log('📝 Captured requestId from SSE data:', window.currentStreamRequestId);
-                                continue; // Skip rendering this message
-                            }
-                            
-                            // IMPORTANT: If data is empty after removing space, it means this was a newline chunk
-                            // The server sends "data: \n" which becomes "data:" after split('\n')
-                            // We need to treat empty data as a newline character
-                            if (data === '' && !trimmedLine.includes('[DONE]')) {
+                            // Treat empty data as newline
+                            if (data === '' && !trimmedBuffer.includes('[DONE]')) {
                                 data = '\n';
                             }
                             
-                            // Process all chunks except [DONE] marker
-                            if (data !== '[DONE]') {
-                                chunkCount++;
-                                
-                                // Debug: Check if chunk contains newlines or is whitespace
-                                if (DEBUG_MODE) {
-                                    if (data.includes('\n') || data.match(/^\s+$/)) {
-                                        newlineChunks++;
-                                        console.log(`📦 Chunk #${chunkCount} has newlines/whitespace:`, JSON.stringify(data));
-                                    }
-                                }
-                                
-                                if (!botMessageDiv) {
-                                    // Create bot message container (first chunk)
-                                    botMessageDiv = document.createElement('div');
-                                    botMessageDiv.className = 'message bot';
-                                    botMessageContent = document.createElement('div');
-                                    botMessageContent.className = 'message-content';
-                                    // Use pre-wrap to preserve newlines during streaming
-                                    botMessageContent.style.whiteSpace = 'pre-wrap';
-                                    botMessageDiv.appendChild(botMessageContent);
-                                    chatMessages.appendChild(botMessageDiv);
-                                    updateMessageCount();
-                                }
-                                
-                                // During streaming: display as plain text to preserve all formatting
-                                // (Markdown parsing happens after streaming completes)
+                            if (data !== '[DONE]' && botMessageContent) {
                                 accumulatedText += data;
                                 botMessageContent.textContent = accumulatedText;
-                                chatMessages.scrollTop = chatMessages.scrollHeight;
                             }
                         }
                     }
-                }
-                
-                // Debug summary
-                if (DEBUG_MODE) {
-                    console.log(`📊 Stream complete: ${chunkCount} chunks, ${newlineChunks} had newlines`);
-                    const finalNewlines = accumulatedText.split('\n').length - 1;
-                    console.log(`📝 Final text: ${accumulatedText.length} chars, ${finalNewlines} newlines`);
-                    console.log(`📝 First 300 chars:`, accumulatedText.substring(0, 300).replace(/\n/g, '\\n'));
-                    if (finalNewlines < 3) {
-                        console.warn('⚠️ WARNING: Very few newlines in response! AI may not be following instructions.');
-                    } else if (finalNewlines >= 3 && finalNewlines < 10) {
-                        console.warn('⚠️ WARNING: Some newlines exist but may need normalization for proper markdown');
+
+                    // After streaming completes: convert plain text to formatted markdown HTML
+                    if (botMessageContent && accumulatedText) {
+                        // Remove pre-wrap style (no longer needed after markdown conversion)
+                        botMessageContent.style.whiteSpace = '';
+
+                        // Parse accumulated text as markdown and render as HTML
+                        botMessageContent.innerHTML = formatMarkdown(accumulatedText);
+
+                        // Add copy buttons to code blocks
+                        addCopyButtonsToCodeBlocks(botMessageContent);
+
+                        // Add feedback buttons to bot message (will be set later from stream)
+                        // requestId will be captured from the stream data
+                        if (window.currentStreamRequestId) {
+                            console.log('✅ Adding feedback buttons with requestId:', window.currentStreamRequestId);
+                            addFeedbackButtons(botMessageDiv, window.currentStreamRequestId);
+                            window.currentStreamRequestId = null; // Clear after use
+                        } else {
+                            console.warn('⚠️ No requestId captured for feedback');
+                        }
+
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
                     }
-                }
 
-                // Process any remaining incomplete data in buffer
-                if (buffer) {
-                    const trimmedBuffer = buffer.trim();
-                    if (trimmedBuffer.startsWith('data:') || buffer.startsWith('data:')) {
-                        const dataStartIndex = buffer.indexOf('data:') + 5;
-                        let data = buffer.slice(dataStartIndex);
-                        
-                        // Remove leading space if present
-                        if (data.startsWith(' ')) {
-                            data = data.slice(1);
-                        }
-                        
-                        // Treat empty data as newline
-                        if (data === '' && !trimmedBuffer.includes('[DONE]')) {
-                            data = '\n';
-                        }
-                        
-                        if (data !== '[DONE]' && botMessageContent) {
-                            accumulatedText += data;
-                            botMessageContent.textContent = accumulatedText;
-                        }
+                    // Error handling: If no message was received at all
+                    if (!botMessageDiv) {
+                        addMessage('응답을 받지 못했습니다. 다시 시도해주세요.');
                     }
-                }
 
-                // After streaming completes: convert plain text to formatted markdown HTML
-                if (botMessageContent && accumulatedText) {
-                    // Remove pre-wrap style (no longer needed after markdown conversion)
-                    botMessageContent.style.whiteSpace = '';
+                } catch (error) {
+                    console.error('Error in attemptSendMessage catch block:', error);
 
-                    // Parse accumulated text as markdown and render as HTML
-                    botMessageContent.innerHTML = formatMarkdown(accumulatedText);
+                    let userMessage = error.message;
+                    let shouldRetry = false;
 
-                    // Add copy buttons to code blocks
-                    addCopyButtonsToCodeBlocks(botMessageContent);
+                    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                        userMessage = '네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인해주세요.';
+                        shouldRetry = true;
+                    } else if (error.name === 'AbortError') {
+                        userMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요.';
+                        shouldRetry = true;
+                    } else if (!error.message.includes('서버') && !error.message.includes('요청')) {
+                        userMessage = `오류가 발생했습니다: ${error.message}`;
+                    }
 
-                    // Add feedback buttons to bot message (will be set later from stream)
-                    // requestId will be captured from the stream data
-                    if (window.currentStreamRequestId) {
-                        console.log('✅ Adding feedback buttons with requestId:', window.currentStreamRequestId);
-                        addFeedbackButtons(botMessageDiv, window.currentStreamRequestId);
-                        window.currentStreamRequestId = null; // Clear after use
+                    if (shouldRetry && retryCount < MAX_RETRIES) {
+                        retryCount++;
+                        const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+                        addMessage(`네트워크 오류 발생. ${delay / 1000}초 후 재시도합니다... (재시도 ${retryCount}/${MAX_RETRIES})`);
+                        setTimeout(attemptSendMessage, delay);
                     } else {
-                        console.warn('⚠️ No requestId captured for feedback');
+                        addMessage(userMessage);
+                        removeTypingIndicator();
                     }
-
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                } finally {
+                    console.log('attemptSendMessage finally block executed');
+                    if (!shouldRetry || retryCount >= MAX_RETRIES) {
+                        console.log('Re-enabling send button and input');
+                        // Re-enable input only if not retrying or max retries reached
+                        sendButton.disabled = false;
+                        messageInput.disabled = false;
+                        messageInput.focus();
+                    }
                 }
-
-                // Error handling: If no message was received at all
-                if (!botMessageDiv) {
-                    addMessage('응답을 받지 못했습니다. 다시 시도해주세요.');
-                }
-
-            } catch (error) {
-                removeTypingIndicator();
-                console.error('Error:', error);
-
-                // Determine error type and provide user-friendly message
-                let userMessage = error.message;
-
-                if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                    userMessage = '네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인해주세요.';
-                } else if (error.name === 'AbortError') {
-                    userMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요.';
-                } else if (!error.message.includes('서버') && !error.message.includes('요청')) {
-                    userMessage = `오류가 발생했습니다: ${error.message}`;
-                }
-
-                addMessage(userMessage);
-            } finally {
-                // Re-enable input
-                sendButton.disabled = false;
-                messageInput.disabled = false;
-                messageInput.focus();
             }
+
+            attemptSendMessage();
         }
 
         // Event listeners

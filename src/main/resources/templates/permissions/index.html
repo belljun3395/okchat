@@ -3,110 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Permission Management</title>
-    <link rel="stylesheet" th:href="@{/css/permissions.css}">
+    <title>Permission Management - OKChat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="header-content">
-                <h1>🔐 Permission Management</h1>
-                <p class="subtitle">Manage document access permissions for users</p>
-            </div>
-            <button class="btn-analytics" onclick="location.href='/admin/chat/analytics'">📊 Analytics</button>
-        </div>
-
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-number" th:text="${totalUsers}">0</div>
-                <div class="stat-label">Total Users</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" th:text="${totalPaths}">0</div>
-                <div class="stat-label">Document Paths</div>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2 class="section-title">Quick Actions</h2>
-            <div class="quick-links">
-                <a href="/chat" class="quick-link" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                    <div class="quick-link-title">🤖 Chat Interface</div>
-                    <div class="quick-link-desc">AI-powered document search and Q&A</div>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar-header">
+                <a href="/admin/permissions" class="nav-brand">
+                    OKChat Admin
                 </a>
-                    <a href="/admin/permissions/manage" class="quick-link">
-                        <h3 class="quick-link-title">⚙️ Manage Permissions</h3>
-                        <p class="quick-link-desc">Define and adjust access levels for paths and users.</p>
-                    </a>
-                    <a href="/admin/permissions/paths" class="quick-link">
-                        <h3 class="quick-link-title">📄 View All Paths</h3>
-                        <p class="quick-link-desc">Browse all protected paths and their configurations.</p>
-                    </a>
-                    <a href="/admin/permissions/users" class="quick-link">
-                        <h3 class="quick-link-title">👥 View All Users</h3>
-                        <p class="quick-link-desc">See all users and their assigned permissions.</p>
-                    </a>
             </div>
-        </div>
+            <nav class="admin-sidebar-nav">
+                <a href="/admin/permissions" class="nav-item active">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="/admin/permissions/users" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                    </svg>
+                    Users
+                </a>
+                <a href="/admin/permissions/paths" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+                    </svg>
+                    Paths
+                </a>
+                <a href="/admin/permissions/manage" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                    </svg>
+                    Permissions
+                </a>
+                <a href="/admin/chat/analytics" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
+                    </svg>
+                    Analytics
+                </a>
+                <a href="/admin/email/review" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                    </svg>
+                    Email Review
+                </a>
+            </nav>
+            <div class="admin-sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                          <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">Admin</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
 
-        <div class="section">
-            <h2 class="section-title">Recent Users</h2>
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="background: #f9fafb; text-align: left;">
-                        <th style="padding: 12px; font-weight: 600; color: #374151;">Email</th>
-                        <th style="padding: 12px; font-weight: 600; color: #374151;">Name</th>
-                        <th style="padding: 12px; font-weight: 600; color: #374151;">Status</th>
-                        <th style="padding: 12px; font-weight: 600; color: #374151;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="recentUsersTableBody">
-                    <tr>
-                        <td colspan="4" style="text-align: center; padding: 20px;">Loading recent users...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Header -->
+            <div class="flex justify-between items-center mb-8 animate-fade-in">
+                <div>
+                    <h1 class="mb-2">Dashboard</h1>
+                    <p class="text-secondary">Overview of system permissions and user activity</p>
+                </div>
+                <a href="/admin/chat/analytics" class="btn btn-primary">
+                    View Analytics
+                </a>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 gap-lg mb-8 animate-fade-in delay-100">
+                <div class="card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-secondary text-sm font-medium uppercase tracking-wide m-0">Total Users</h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-muted" style="width: 24px; height: 24px;">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                        </svg>
+                    </div>
+                    <div class="text-4xl font-bold text-main mb-2" th:text="${totalUsers}">0</div>
+                    <div class="text-sm text-secondary">Registered accounts</div>
+                </div>
+                <div class="card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-secondary text-sm font-medium uppercase tracking-wide m-0">Document Paths</h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-muted" style="width: 24px; height: 24px;">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+                        </svg>
+                    </div>
+                    <div class="text-4xl font-bold text-main mb-2" th:text="${totalPaths}">0</div>
+                    <div class="text-sm text-secondary">Secured directories</div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <h2 class="mb-4 animate-fade-in delay-200 text-lg">Quick Actions</h2>
+            <div class="grid grid-cols-4 gap-md mb-8 animate-fade-in delay-200">
+                <a href="/chat" class="card hover:border-primary transition-colors group p-6">
+                    <div class="mb-3 text-primary bg-blue-50 w-12 h-12 flex items-center justify-center rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6" style="width: 24px; height: 24px;">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-base font-semibold mb-1 group-hover:text-primary">Chat Interface</h3>
+                    <p class="text-sm text-secondary m-0">AI-powered search & Q&A</p>
+                </a>
+                <a href="/admin/permissions/manage" class="card hover:border-primary transition-colors group p-6">
+                    <div class="mb-3 text-primary bg-blue-50 w-12 h-12 flex items-center justify-center rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6" style="width: 24px; height: 24px;">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                        </svg>
+                    </div>
+                    <h3 class="text-base font-semibold mb-1 group-hover:text-primary">Permission Manager</h3>
+                    <p class="text-sm text-secondary m-0">Tree view control</p>
+                </a>
+                <a href="/admin/permissions/users" class="card hover:border-primary transition-colors group p-6">
+                    <div class="mb-3 text-primary bg-blue-50 w-12 h-12 flex items-center justify-center rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6" style="width: 24px; height: 24px;">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-base font-semibold mb-1 group-hover:text-primary">Manage Users</h3>
+                    <p class="text-sm text-secondary m-0">User list & details</p>
+                </a>
+                <a href="/admin/permissions/paths" class="card hover:border-primary transition-colors group p-6">
+                    <div class="mb-3 text-primary bg-blue-50 w-12 h-12 flex items-center justify-center rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6" style="width: 24px; height: 24px;">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-base font-semibold mb-1 group-hover:text-primary">Browse Paths</h3>
+                    <p class="text-sm text-secondary m-0">Directory explorer</p>
+                </a>
+            </div>
+
+            <!-- Recent Users Table -->
+            <div class="card animate-fade-in delay-300 p-0 overflow-hidden">
+                <div class="p-6 border-b flex justify-between items-center">
+                    <h2 class="text-lg m-0">Recent Users</h2>
+                    <a href="/admin/permissions/users" class="btn btn-secondary btn-sm">View All</a>
+                </div>
+                
+                <div class="table-container border-0 rounded-none">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="user : ${users}">
+                                <td class="font-medium" th:text="${user.email}">user@example.com</td>
+                                <td th:text="${user.name}">User Name</td>
+                                <td>
+                                    <span class="badge badge-success" th:if="${user.active}">Active</span>
+                                    <span class="badge badge-secondary" th:unless="${user.active}">Inactive</span>
+                                </td>
+                                <td>
+                                    <a th:href="@{/admin/permissions/user/{email}(email=${user.email})}" class="text-primary hover:underline text-sm font-medium">
+                                        Manage
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
     </div>
-
-    <script>
-        async function loadRecentUsers() {
-            const tableBody = document.getElementById('recentUsersTableBody');
-            tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">Loading recent users...</td></tr>';
-
-            try {
-                const response = await fetch('/api/admin/users/recent');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const users = await response.json();
-
-                if (users.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #6b7280;">No recent users found.</td></tr>';
-                    return;
-                }
-
-                tableBody.innerHTML = users.map(user => `
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td class="px-4 py-3">${user.email}</td>
-                        <td class="px-4 py-3">${user.name}</td>
-                        <td class="px-4 py-3">
-                            <span class="status-badge ${user.active ? 'status-active' : 'status-inactive'}">${user.active ? 'Active' : 'Inactive'}</span>
-                        </td>
-                        <td class="px-4 py-3">
-                            <a href="/admin/permissions/user/${user.email}" class="btn btn-view-details">View Details</a>
-                        </td>
-                    </tr>
-                `).join('');
-
-            } catch (error) {
-                console.error('Failed to load recent users:', error);
-                tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #ef4444;">Failed to load recent users.</td></tr>';
-            }
-        }
-
-        // Initial load
-        document.addEventListener('DOMContentLoaded', loadRecentUsers);
-    </script>
 </body>
 </html>

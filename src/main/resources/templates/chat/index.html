@@ -3,83 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OKChat - 챗봇</title>
-    <!-- Marked.js for Markdown parsing -->
+    <title>OKChat - AI Assistant</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Design System -->
+    <link rel="stylesheet" href="/css/style.css">
+    
+    <!-- Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-    <!-- DOMPurify for XSS protection -->
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-
-        .chat-container {
-            width: 90%;
-            max-width: 1200px;
-            height: 90vh;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .chat-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 25px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .header-title {
-            font-size: 28px;
-            font-weight: 700;
-        }
-
-        .back-btn {
-            padding: 10px 20px;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .back-btn:hover { 
-            background: rgba(255, 255, 255, 0.3); 
-        }
-
+        /* Chat specific overrides for Clean Theme */
         .chat-messages {
             flex: 1;
-            padding: 30px;
+            padding: var(--space-xl);
             overflow-y: auto;
-            background: #f5f7fa;
+            background: #F9FAFB;
+            display: flex;
+            flex-direction: column;
+            scroll-behavior: smooth;
         }
 
         .message {
-            margin-bottom: 20px;
+            margin-bottom: var(--space-lg);
             display: flex;
+            flex-direction: column;
+            max-width: 80%;
             animation: slideIn 0.3s ease-out;
         }
 
@@ -95,1153 +49,286 @@
         }
 
         .message.user {
-            justify-content: flex-end;
+            align-self: flex-end;
+            align-items: flex-end;
         }
 
         .message.bot {
-            justify-content: flex-start;
+            align-self: flex-start;
+            align-items: flex-start;
         }
 
         .message-content {
-            max-width: 70%;
-            padding: 14px 20px;
-            border-radius: 18px;
-            word-wrap: break-word;
-            line-height: 1.5;
+            padding: 1rem 1.25rem;
+            border-radius: var(--radius-lg);
+            position: relative;
+            line-height: 1.6;
+            font-size: 0.95rem;
+            box-shadow: var(--shadow-sm);
         }
 
         .message.user .message-content {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary);
             color: white;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            border-bottom-right-radius: 4px;
         }
 
         .message.bot .message-content {
             background: white;
-            color: #1a1a1a;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            line-height: 1.6;
-        }
-        
-        /* Headers */
-        .message.bot .message-content h1 {
-            font-size: 1.75em;
-            font-weight: 700;
-            margin: 1em 0 0.5em 0;
-            color: #1a1a1a;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 0.3em;
-        }
-        
-        .message.bot .message-content h2 {
-            font-size: 1.5em;
-            font-weight: 700;
-            margin: 0.9em 0 0.5em 0;
-            color: #1a1a1a;
-            border-bottom: 2px solid #d1d5db;
-            padding-bottom: 0.3em;
-        }
-        
-        .message.bot .message-content h3 {
-            font-size: 1.25em;
-            font-weight: 700;
-            margin: 0.8em 0 0.5em 0;
-            color: #1a1a1a;
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 0.3em;
-        }
-        
-        .message.bot .message-content h4 {
-            font-size: 1.1em;
-            font-weight: 600;
-            margin: 0.7em 0 0.4em 0;
-            color: #374151;
-        }
-        
-        .message.bot .message-content h5,
-        .message.bot .message-content h6 {
-            font-size: 1em;
-            font-weight: 600;
-            margin: 0.6em 0 0.4em 0;
-            color: #4b5563;
-        }
-        
-        /* First element margin fix */
-        .message.bot .message-content > *:first-child {
-            margin-top: 0;
-        }
-        
-        .message.bot .message-content > *:last-child {
-            margin-bottom: 0;
-        }
-        
-        /* Paragraphs */
-        .message.bot .message-content p {
-            margin: 0.8em 0;
-            line-height: 1.7;
-        }
-        
-        /* Lists */
-        .message.bot .message-content ul,
-        .message.bot .message-content ol {
-            margin: 0.8em 0;
-            padding-left: 2em;
-            line-height: 1.7;
-        }
-        
-        .message.bot .message-content ul {
-            list-style-type: disc;
-        }
-        
-        .message.bot .message-content ol {
-            list-style-type: decimal;
-        }
-        
-        .message.bot .message-content li {
-            margin: 0.4em 0;
-        }
-        
-        .message.bot .message-content li > p {
-            margin: 0.3em 0;
-        }
-        
-        .message.bot .message-content li > ul,
-        .message.bot .message-content li > ol {
-            margin: 0.4em 0;
-        }
-        
-        /* Links */
-        .message.bot .message-content a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            border-bottom: 1px solid transparent;
-            transition: all 0.2s;
-        }
-        
-        .message.bot .message-content a:hover {
-            border-bottom-color: #667eea;
-            color: #764ba2;
-        }
-        
-        /* Text formatting */
-        .message.bot .message-content strong {
-            font-weight: 600;
-            color: #1a1a1a;
-        }
-        
-        .message.bot .message-content em {
-            font-style: italic;
-            color: #4b5563;
-        }
-        
-        .message.bot .message-content del {
-            text-decoration: line-through;
-            color: #9ca3af;
-        }
-        
-        /* Code */
-        .message.bot .message-content code {
-            background: #f3f4f6;
-            padding: 0.15em 0.4em;
-            border-radius: 3px;
-            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-            font-size: 0.9em;
-            color: #d63384;
-        }
-        
-        .message.bot .message-content pre {
-            background: #1e1e1e;
-            color: #d4d4d4;
-            padding: 1em;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin: 1em 0;
-            line-height: 1.5;
-        }
-        
-        .message.bot .message-content pre code {
-            background: none;
-            padding: 0;
-            color: inherit;
-            font-size: 0.9em;
-            border-radius: 0;
-        }
-        
-        /* Blockquote */
-        .message.bot .message-content blockquote {
-            border-left: 4px solid #667eea;
-            padding-left: 1em;
-            margin: 1em 0;
-            color: #6b7280;
-            font-style: italic;
-        }
-        
-        .message.bot .message-content blockquote > p {
-            margin: 0.5em 0;
-        }
-        
-        /* Horizontal rule */
-        .message.bot .message-content hr {
-            border: none;
-            border-top: 2px solid #e5e7eb;
-            margin: 1.5em 0;
-        }
-        
-        /* Tables (if needed) */
-        .message.bot .message-content table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 1em 0;
-        }
-        
-        .message.bot .message-content table th,
-        .message.bot .message-content table td {
-            border: 1px solid #e5e7eb;
-            padding: 0.5em;
-            text-align: left;
-        }
-        
-        .message.bot .message-content table th {
-            background: #f3f4f6;
-            font-weight: 600;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 4px;
         }
 
-        .chat-input-container {
-            padding: 25px 30px;
+        .message-timestamp {
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            color: var(--text-muted);
+        }
+        
+        .message.user .message-timestamp {
+            text-align: right;
+        }
+
+        .chat-input-area {
+            padding: var(--space-lg);
             background: white;
-            border-top: 2px solid #e5e7eb;
-            flex-shrink: 0;
-        }
-
-        .options-container {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .checkbox-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background: #f3f4f6;
-            border-radius: 8px;
-            transition: background 0.2s;
-        }
-
-        .checkbox-wrapper:hover {
-            background: #e5e7eb;
-        }
-
-        .checkbox-wrapper input[type="checkbox"] {
-            cursor: pointer;
-            width: 18px;
-            height: 18px;
-        }
-
-        .checkbox-wrapper label {
-            cursor: pointer;
-            font-size: 14px;
-            color: #374151;
-            font-weight: 500;
-        }
-
-        .keywords-input {
-            flex: 1;
-            min-width: 250px;
-            padding: 10px 16px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .keywords-input:focus {
-            border-color: #667eea;
-        }
-
-        .chat-input-wrapper {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .chat-input {
-            flex: 1;
-            padding: 14px 20px;
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            font-size: 16px;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-
-        .chat-input:focus {
-            border-color: #667eea;
-        }
-
-        .send-button {
-            padding: 14px 32px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .send-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .send-button:active {
-            transform: translateY(0);
-        }
-
-        .send-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .typing-indicator {
-            display: none;
-            padding: 12px 18px;
-            background: white;
-            border-radius: 18px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            max-width: 80px;
-        }
-
-        .typing-indicator.active {
-            display: inline-block;
+            border-top: 1px solid var(--border-color);
         }
 
         .typing-indicator span {
-            height: 8px;
-            width: 8px;
-            background: #667eea;
-            border-radius: 50%;
             display: inline-block;
-            margin-right: 5px;
+            width: 6px;
+            height: 6px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            margin-right: 4px;
             animation: typing 1.4s infinite;
         }
 
-        .typing-indicator span:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .typing-indicator span:nth-child(3) {
-            animation-delay: 0.4s;
-        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
 
         @keyframes typing {
-            0%, 60%, 100% {
-                transform: translateY(0);
-            }
-            30% {
-                transform: translateY(-10px);
-            }
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        
+        /* Enhanced Markdown Styles within Bot Messages */
+        .message.bot .message-content h1 {
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
         }
 
-        .session-info {
-            font-size: 12px;
-            color: #9ca3af;
-            margin-top: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .message.bot .message-content h1:first-child {
+            margin-top: 0;
+        }
+        
+        .message.bot .message-content h2 {
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-main);
         }
 
-        .stats {
-            display: flex;
-            gap: 20px;
-            font-size: 12px;
-            color: #6b7280;
+        .message.bot .message-content h2:first-child {
+            margin-top: 0;
+        }
+        
+        .message.bot .message-content h3 {
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-main);
         }
 
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
+        .message.bot .message-content h3:first-child {
+            margin-top: 0;
         }
 
-        /* Scrollbar styling */
-        .chat-messages::-webkit-scrollbar {
-            width: 8px;
+        .message.bot .message-content p {
+            margin-bottom: 0.75rem;
+            color: var(--text-main);
         }
 
-        .chat-messages::-webkit-scrollbar-track {
-            background: #f1f1f1;
+        .message.bot .message-content p:last-child {
+            margin-bottom: 0;
         }
 
-        .chat-messages::-webkit-scrollbar-thumb {
-            background: #667eea;
+        .message.bot .message-content ul,
+        .message.bot .message-content ol {
+            margin: 0.75rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .message.bot .message-content li {
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+
+        .message.bot .message-content strong {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .message.bot .message-content em {
+            font-style: italic;
+        }
+
+        .message.bot .message-content hr {
+            margin: 1.5rem 0;
+            border: none;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .message.bot .message-content blockquote {
+            margin: 1rem 0;
+            padding-left: 1rem;
+            border-left: 3px solid var(--primary);
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .message.bot .message-content code {
+            background: #F3F4F6;
+            padding: 0.2em 0.4em;
             border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: var(--primary-dark);
+            font-size: 0.9em;
+        }
+        
+        .message.bot .message-content pre {
+            background: #1F2937;
+            color: #F9FAFB;
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        
+        .message.bot .message-content pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
         }
 
-        .chat-messages::-webkit-scrollbar-thumb:hover {
-            background: #764ba2;
+        .message.bot .message-content a {
+            color: var(--primary);
+            text-decoration: underline;
         }
 
-        /* Code block with copy button */
-        .code-block-wrapper {
-            position: relative;
-            margin: 1em 0;
-        }
-
-        .code-copy-button {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            padding: 6px 12px;
-            background: rgba(255, 255, 255, 0.9);
-            color: #374151;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            z-index: 10;
-        }
-
-        .code-copy-button:hover {
-            background: white;
-            border-color: #667eea;
-            color: #667eea;
-        }
-
-        .code-copy-button.copied {
-            background: #10b981;
-            color: white;
-            border-color: #10b981;
-        }
-
-        /* Timestamp styling */
-        .message-timestamp {
-            font-size: 11px;
-            color: #9ca3af;
-            margin-top: 6px;
-            display: block;
-        }
-
-        .message.user .message-timestamp {
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        /* Feedback buttons */
-        .feedback-buttons {
-            margin-top: 10px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .feedback-btn {
-            padding: 6px 12px;
-            border: 1px solid #e5e7eb;
-            background: white;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .feedback-btn:hover {
-            background: #f3f4f6;
-            border-color: #667eea;
-        }
-
-        .feedback-btn.active {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-
-        .feedback-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .feedback-message {
-            font-size: 12px;
-            color: #667eea;
-            margin-left: 10px;
-            font-weight: 500;
+        .message.bot .message-content a:hover {
+            color: var(--primary-dark);
         }
     </style>
 </head>
 <body>
-    <div class="chat-container">
-        <div class="chat-header">
-            <div class="header-left">
-                <span>🤖</span>
-                <span class="header-title">OKChat</span>
-            </div>
-            <a href="/admin/permissions" class="back-btn">← Back to Admin</a>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="flex items-center gap-lg">
+            <a href="/" class="nav-brand">
+                OKChat
+            </a>
         </div>
+        <div class="flex items-center gap-md">
+            <a href="/admin/permissions" class="btn btn-secondary btn-sm">
+                Admin Dashboard
+            </a>
+        </div>
+    </nav>
 
-        <div class="chat-messages" id="chatMessages">
-            <div class="message bot">
-                <div class="message-content">
-                    <p><strong>안녕하세요! 무엇을 도와드릴까요?</strong></p>
-                    <p>문서 검색, 회의록 조회 등 다양한 질문을 해주세요.</p>
+    <!-- Main Chat Layout -->
+    <div class="chat-layout">
+        <!-- Sidebar -->
+        <aside class="chat-sidebar p-6">
+            <h3 class="text-sm font-semibold text-secondary uppercase tracking-wider mb-4">Settings</h3>
+            
+            <div class="input-group">
+                <label class="input-label">Session ID</label>
+                <div id="sessionId" class="text-xs font-mono text-muted bg-gray-50 p-2 rounded border border-gray-200 truncate">Initializing...</div>
+            </div>
+            
+            <div class="mt-auto pt-6 border-t border-gray-200">
+                <div class="flex items-center justify-between text-sm text-secondary">
+                    <span>Messages</span>
+                    <span id="messageCount" class="font-medium text-main">0</span>
                 </div>
             </div>
-        </div>
+        </aside>
 
-        <div class="chat-input-container">
-            <div class="options-container">
-                <div class="checkbox-wrapper">
-                    <input type="checkbox" id="deepThinkCheckbox">
-                    <label for="deepThinkCheckbox">심층 분석</label>
-                </div>
-                <input type="text" 
-                       class="keywords-input" 
-                       id="keywordsInput" 
-                       placeholder="키워드 (쉼표로 구분, 예: 회의록, 2025년, 프로젝트)">
-            </div>
-            <div class="chat-input-wrapper">
-                <input type="text" 
-                       class="chat-input" 
-                       id="messageInput" 
-                       placeholder="메시지를 입력하세요..." 
-                       autocomplete="off">
-                <button class="send-button" id="sendButton">전송</button>
-            </div>
-            <div class="session-info">
-                <span id="sessionId">Session: Loading...</span>
-                <div class="stats">
-                    <div class="stat-item">
-                        <span>💬</span>
-                        <span id="messageCount">0 messages</span>
+        <!-- Chat Area -->
+        <main class="chat-main">
+            <div class="chat-messages" id="chatMessages">
+                <!-- Welcome Message -->
+                <div class="message bot animate-fade-in">
+                    <div class="message-content">
+                        <p style="margin-bottom: 0.75rem;">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 inline-block align-text-bottom mr-1" style="width: 18px; height: 18px;">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                            </svg>
+                            <strong>Hello! I'm OKChat.</strong>
+                        </p>
+                        <p>I can help you search documents, summarize meetings, and answer questions.</p>
+                        <p class="text-sm text-secondary mt-2">Try asking: "What was discussed in the last marketing meeting?"</p>
                     </div>
+                    <span class="message-timestamp">Just now</span>
                 </div>
             </div>
-        </div>
+
+            <div class="chat-input-area">
+                <!-- Analysis Options (expanded above input) -->
+                <div class="max-w-4xl mx-auto mb-4">
+                    <details class="border border-gray-200 rounded-lg overflow-hidden">
+                        <summary class="cursor-pointer px-4 py-2 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between text-sm font-medium text-secondary">
+                            <span>Analysis Options</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                            </svg>
+                        </summary>
+                        <div class="p-4 bg-white space-y-3">
+                            <label class="flex items-center gap-sm p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                <input type="checkbox" id="deepThinkCheckbox" class="w-3.5 h-3.5 text-primary rounded border-gray-300 focus:ring-primary">
+                                <span class="text-sm font-medium">Enable Deep Think</span>
+                            </label>
+                            <div>
+                                <label class="input-label text-sm">Context Keywords</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="keywordsInput" 
+                                       placeholder="e.g. meeting, 2025, project">
+                                <small class="text-muted mt-1 block text-xs">Comma separated keywords</small>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <!-- Message Input -->
+                <div class="flex gap-md max-w-4xl mx-auto">
+                    <input type="text" 
+                           class="form-control" 
+                           id="messageInput" 
+                           placeholder="Type your message here..." 
+                           autocomplete="off"
+                           style="padding: 0.75rem 1rem; font-size: 1rem;">
+                    <button class="btn btn-primary btn-lg" id="sendButton">
+                        Send
+                    </button>
+                </div>
+                <div class="text-center mt-2">
+                    <span class="text-xs text-muted">AI can make mistakes. Please verify important information.</span>
+                </div>
+            </div>
+        </main>
     </div>
 
-    <script th:inline="none">
-        const chatMessages = document.getElementById('chatMessages');
-        const messageInput = document.getElementById('messageInput');
-        const sendButton = document.getElementById('sendButton');
-        const deepThinkCheckbox = document.getElementById('deepThinkCheckbox');
-        const keywordsInput = document.getElementById('keywordsInput');
-        const sessionIdElement = document.getElementById('sessionId');
-        const messageCountElement = document.getElementById('messageCount');
-        
-        // Debug mode toggle (set to false in production)
-        const DEBUG_MODE = true;
-
-        // Configure marked.js for better markdown rendering
-        marked.setOptions({
-            breaks: true,        // Convert \n to <br>
-            gfm: true,          // GitHub Flavored Markdown
-            headerIds: false,   // Don't add IDs to headers
-            mangle: false,      // Don't escape autolinked email addresses
-            pedantic: false     // Don't conform to obscure parts of markdown.pl
-        });
-
-        // Generate a session ID (persistent across reloads)
-        let sessionId = localStorage.getItem('chatSessionId');
-        if (!sessionId) {
-            sessionId = 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('chatSessionId', sessionId);
-        }
-        sessionIdElement.textContent = `Session: ${sessionId}`;
-        
-        let messageCount = 0;
-
-        function updateMessageCount() {
-            messageCount++;
-            messageCountElement.textContent = `${messageCount} messages`;
-        }
-        
-        /**
-         * Normalize text by adding line breaks where markdown syntax indicates they should be.
-         * This fixes issues where AI generates markdown but without proper line breaks.
-         * 
-         * NOTE: Ideally, markdown normalization should happen on the server-side to ensure consistency
-         * and reduce client-side processing. This client-side function is a temporary measure.
-         * 
-         * @param {string} text - Raw text that may contain markdown syntax
-         * @returns {string} - Normalized text with proper line breaks
-         */
-        function normalizeMarkdown(text) {
-            // For now, we rely mostly on marked.js to handle markdown. 
-            // Further normalization should ideally be done server-side.
-            // This function can be expanded if specific client-side pre-processing is required.
-            return text;
-        }
-
-        /**
-         * Format markdown text to HTML using marked.js with XSS protection.
-         * 
-         * Process:
-         * 1. Normalize markdown (add missing line breaks)
-         * 2. Parse markdown to HTML with marked.js
-         * 3. Sanitize HTML with DOMPurify to prevent XSS attacks
-         * 
-         * @param {string} text - Raw markdown text
-         * @returns {string} - Safe HTML string ready for innerHTML
-         */
-        function formatMarkdown(text) {
-            try {
-                // Step 1: Normalize markdown (add line breaks if needed)
-                const normalizedText = normalizeMarkdown(text);
-                
-                if (DEBUG_MODE) {
-                    console.log('🔄 Before marked.parse:', normalizedText.substring(0, 200));
-                }
-                
-                // Step 2: Parse markdown with marked.js
-                const rawHtml = marked.parse(normalizedText);
-                
-                if (DEBUG_MODE) {
-                    console.log('📄 After marked.parse:', rawHtml.substring(0, 300));
-                    console.log('📊 Detected tags:', {
-                        h1: (rawHtml.match(/<h1/g) || []).length,
-                        h2: (rawHtml.match(/<h2/g) || []).length,
-                        h3: (rawHtml.match(/<h3/g) || []).length,
-                        ul: (rawHtml.match(/<ul/g) || []).length,
-                        ol: (rawHtml.match(/<ol/g) || []).length,
-                        strong: (rawHtml.match(/<strong/g) || []).length
-                    });
-                }
-                
-                // Step 3: Sanitize HTML to prevent XSS attacks
-                const cleanHtml = DOMPurify.sanitize(rawHtml, {
-                    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'code', 'pre', 'a', 'ul', 'ol', 'li', 
-                                   'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'hr', 'del', 'table', 
-                                   'thead', 'tbody', 'tr', 'th', 'td', 'span', 'div'],
-                    ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
-                    ALLOW_DATA_ATTR: false
-                });
-                
-                if (DEBUG_MODE) {
-                    console.log('✨ After DOMPurify:', cleanHtml.substring(0, 300));
-                }
-                
-                return cleanHtml;
-            } catch (error) {
-                console.error('❌ Markdown parsing error:', error);
-                // Fallback: return safely escaped text with line breaks
-                return text.replace(/&/g, '&amp;')
-                          .replace(/</g, '&lt;')
-                          .replace(/>/g, '&gt;')
-                          .replace(/"/g, '&quot;')
-                          .replace(/'/g, '&#39;')
-                          .replace(/\n/g, '<br>');
-            }
-        }
-
-        /**
-         * Format current time as HH:MM
-         */
-        function getCurrentTime() {
-            const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            return `${hours}:${minutes}`;
-        }
-
-        /**
-         * Add copy buttons to all code blocks in the given element
-         */
-        function addCopyButtonsToCodeBlocks(element) {
-            const codeBlocks = element.querySelectorAll('pre');
-
-            codeBlocks.forEach((pre) => {
-                // Skip if already has copy button
-                if (pre.parentElement.classList.contains('code-block-wrapper')) {
-                    return;
-                }
-
-                // Create wrapper
-                const wrapper = document.createElement('div');
-                wrapper.className = 'code-block-wrapper';
-
-                // Create copy button
-                const copyButton = document.createElement('button');
-                copyButton.className = 'code-copy-button';
-                copyButton.textContent = '복사';
-                copyButton.setAttribute('aria-label', '코드 복사');
-
-                // Copy functionality
-                copyButton.addEventListener('click', async () => {
-                    const code = pre.querySelector('code')?.textContent || pre.textContent;
-
-                    try {
-                        await navigator.clipboard.writeText(code);
-                        copyButton.textContent = '✓ 복사됨';
-                        copyButton.classList.add('copied');
-
-                        setTimeout(() => {
-                            copyButton.textContent = '복사';
-                            copyButton.classList.remove('copied');
-                        }, 2000);
-                    } catch (err) {
-                        console.error('Failed to copy code:', err);
-                        copyButton.textContent = '실패';
-                        setTimeout(() => {
-                            copyButton.textContent = '복사';
-                        }, 2000);
-                    }
-                });
-
-                // Wrap the pre element
-                pre.parentNode.insertBefore(wrapper, pre);
-                wrapper.appendChild(pre);
-                wrapper.appendChild(copyButton);
-            });
-        }
-
-        function addMessage(content, isUser = false, requestId = null) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
-
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content';
-
-            if (isUser) {
-                contentDiv.textContent = content;
-            } else {
-                // Format bot messages with markdown
-                contentDiv.innerHTML = formatMarkdown(content);
-                // Add copy buttons to code blocks
-                addCopyButtonsToCodeBlocks(contentDiv);
-            }
-
-            messageDiv.appendChild(contentDiv);
-
-            // Add timestamp
-            const timestamp = document.createElement('span');
-            timestamp.className = 'message-timestamp';
-            timestamp.textContent = getCurrentTime();
-            messageDiv.appendChild(timestamp);
-
-            // Add feedback buttons for bot messages (if requestId is provided)
-            if (!isUser && requestId) {
-                addFeedbackButtons(messageDiv, requestId);
-            }
-
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-
-            if (isUser) updateMessageCount();
-        }
-
-        function addFeedbackButtons(messageDiv, requestId) {
-            const feedbackContainer = document.createElement('div');
-            feedbackContainer.className = 'feedback-buttons';
-
-            // Helpful button
-            const helpfulBtn = document.createElement('button');
-            helpfulBtn.className = 'feedback-btn';
-            helpfulBtn.innerHTML = '👍 도움됨';
-            helpfulBtn.onclick = () => submitFeedback(requestId, true, helpfulBtn, notHelpfulBtn, feedbackContainer);
-
-            // Not helpful button
-            const notHelpfulBtn = document.createElement('button');
-            notHelpfulBtn.className = 'feedback-btn';
-            notHelpfulBtn.innerHTML = '👎 도움안됨';
-            notHelpfulBtn.onclick = () => submitFeedback(requestId, false, helpfulBtn, notHelpfulBtn, feedbackContainer);
-
-            feedbackContainer.appendChild(helpfulBtn);
-            feedbackContainer.appendChild(notHelpfulBtn);
-
-            messageDiv.appendChild(feedbackContainer);
-        }
-
-        async function submitFeedback(requestId, wasHelpful, helpfulBtn, notHelpfulBtn, feedbackContainer) {
-            try {
-                // Disable buttons to prevent multiple submissions
-                helpfulBtn.disabled = true;
-                notHelpfulBtn.disabled = true;
-
-                const response = await fetch('/api/admin/chat/analytics/feedback', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        requestId: requestId,
-                        wasHelpful: wasHelpful,
-                        rating: wasHelpful ? 5 : 2
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    // Mark the clicked button as active
-                    if (wasHelpful) {
-                        helpfulBtn.classList.add('active');
-                    } else {
-                        notHelpfulBtn.classList.add('active');
-                    }
-
-                    // Show success message
-                    const feedbackMsg = document.createElement('span');
-                    feedbackMsg.className = 'feedback-message';
-                    feedbackMsg.textContent = '피드백 감사합니다!';
-                    feedbackContainer.appendChild(feedbackMsg);
-
-                    // Remove message after 3 seconds
-                    setTimeout(() => {
-                        if (feedbackMsg.parentNode) {
-                            feedbackMsg.remove();
-                        }
-                    }, 3000);
-                } else {
-                    alert('피드백 제출에 실패했습니다.');
-                    helpfulBtn.disabled = false;
-                    notHelpfulBtn.disabled = false;
-                }
-            } catch (error) {
-                console.error('Error submitting feedback:', error);
-                alert('피드백 제출 중 오류가 발생했습니다.');
-                helpfulBtn.disabled = false;
-                notHelpfulBtn.disabled = false;
-            }
-        }
-
-        function showTypingIndicator() {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message bot';
-            messageDiv.id = 'typingIndicator';
-            
-            const indicator = document.createElement('div');
-            indicator.className = 'typing-indicator active';
-            indicator.innerHTML = '<span></span><span></span><span></span>';
-            
-            messageDiv.appendChild(indicator);
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        function removeTypingIndicator() {
-            const indicator = document.getElementById('typingIndicator');
-            if (indicator) {
-                indicator.remove();
-            }
-        }
-
-        async function sendMessage() {
-            const message = messageInput.value.trim();
-            if (!message) {
-                messageInput.focus();
-                return;
-            }
-
-            const isDeepThink = deepThinkCheckbox.checked;
-            const keywordsValue = keywordsInput.value.trim();
-            const keywords = keywordsValue ? keywordsValue.split(',').map(k => k.trim()).filter(k => k) : [];
-
-            // Add user message to chat
-            addMessage(message, true);
-            messageInput.value = '';
-            
-            // Disable input while processing
-            sendButton.disabled = true;
-            messageInput.disabled = true;
-            
-            // Show typing indicator
-            showTypingIndicator();
-
-            let retryCount = 0;
-            const MAX_RETRIES = 3;
-
-            async function attemptSendMessage() {
-                console.log('attemptSendMessage called');
-                try {
-                    const response = await fetch('/api/chat', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            message: message,
-                            keywords: keywords.length > 0 ? keywords : null,
-                            sessionId: sessionId,
-                            isDeepThink: isDeepThink
-                        })
-                    });
-
-                    if (!response.ok) {
-                        let errorMessage = '서버 오류가 발생했습니다.';
-
-                        if (response.status === 400) {
-                            errorMessage = '잘못된 요청입니다. 메시지를 다시 확인해주세요.';
-                        } else if (response.status === 401) {
-                            errorMessage = '인증이 필요합니다. 다시 로그인해주세요.';
-                        } else if (response.status === 403) {
-                            errorMessage = '접근 권한이 없습니다.';
-                        } else if (response.status === 404) {
-                            errorMessage = '서비스를 찾을 수 없습니다.';
-                        } else if (response.status === 429) {
-                            errorMessage = '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
-                        } else if (response.status >= 500) {
-                            errorMessage = '서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
-                        }
-
-                        throw new Error(errorMessage);
-                    }
-
-                    removeTypingIndicator();
-
-                    // Initialize SSE reader and text accumulation
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder();
-                    let botMessageDiv = null;
-                    let botMessageContent = null;
-                    let accumulatedText = ''; // Accumulate all streamed text
-                    let buffer = ''; // Buffer for incomplete SSE lines
-
-                    let chunkCount = 0;
-                    let newlineChunks = 0;
-                    
-                    // Process SSE stream
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        
-                        if (done) break;
-                        
-                        // Decode the binary chunk to text
-                        const chunk = decoder.decode(value, { stream: true });
-                        
-                        // Check for special requestId message BEFORE adding to buffer
-                        if (chunk.includes('__REQUEST_ID__:')) {
-                            const lines = chunk.split('\n');
-                            for (const line of lines) {
-                                if (line.startsWith('__REQUEST_ID__:')) {
-                                    window.currentStreamRequestId = line.substring(15).trim();
-                                    console.log('📝 Captured requestId:', window.currentStreamRequestId);
-                                } else if (line.trim()) {
-                                    // Add non-requestId lines to buffer
-                                    buffer += line + '\n';
-                                }
-                            }
-                            continue;
-                        }
-                        
-                        buffer += chunk;
-                        
-                        // Split by newlines to process individual SSE messages
-                        const lines = buffer.split('\n');
-                        
-                        // Keep the last incomplete line in buffer for next iteration
-                        buffer = lines.pop() || '';
-
-                        for (const line of lines) {
-                            const trimmedLine = line.trim();
-                            
-                            // Skip empty lines
-                            if (!trimmedLine) {
-                                continue;
-                            }
-                            
-                            // Process SSE data lines (format: "data: content")
-                            if (trimmedLine.startsWith('data:') || line.startsWith('data:')) {
-                                // Extract data after 'data:' prefix
-                                // SSE standard: "data: " has space after colon, so remove it if present
-                                const dataStartIndex = line.indexOf('data:') + 5;
-                                let data = line.slice(dataStartIndex);
-                                
-                                // Remove leading space if present (SSE standard: "data: content")
-                                if (data.startsWith(' ')) {
-                                    data = data.slice(1);
-                                }
-                                
-                                // Check if this is the requestId message and capture it
-                                if (data.startsWith('__REQUEST_ID__:')) {
-                                    window.currentStreamRequestId = data.substring(15).trim();
-                                    console.log('📝 Captured requestId from SSE data:', window.currentStreamRequestId);
-                                    continue; // Skip rendering this message
-                                }
-                                
-                                // IMPORTANT: If data is empty after removing space, it means this was a newline chunk
-                                // The server sends "data: \n" which becomes "data:" after split('\n')
-                                // We need to treat empty data as a newline character
-                                if (data === '' && !trimmedLine.includes('[DONE]')) {
-                                    data = '\n';
-                                }
-                                
-                                // Process all chunks except [DONE] marker
-                                if (data !== '[DONE]') {
-                                    chunkCount++;
-                                    
-                                    // Debug: Check if chunk contains newlines or is whitespace
-                                    if (DEBUG_MODE) {
-                                        if (data.includes('\n') || data.match(/^\s+$/)) {
-                                            newlineChunks++;
-                                            console.log(`📦 Chunk #${chunkCount} has newlines/whitespace:`, JSON.stringify(data));
-                                        }
-                                    }
-                                    
-                                    if (!botMessageDiv) {
-                                        // Create bot message container (first chunk)
-                                        botMessageDiv = document.createElement('div');
-                                        botMessageDiv.className = 'message bot';
-                                        botMessageContent = document.createElement('div');
-                                        botMessageContent.className = 'message-content';
-                                        // Use pre-wrap to preserve newlines during streaming
-                                        botMessageContent.style.whiteSpace = 'pre-wrap';
-                                        botMessageDiv.appendChild(botMessageContent);
-                                        chatMessages.appendChild(botMessageDiv);
-                                        updateMessageCount();
-                                    }
-                                    
-                                    // During streaming: display as plain text to preserve all formatting
-                                    // (Markdown parsing happens after streaming completes)
-                                    accumulatedText += data;
-                                    botMessageContent.textContent = accumulatedText;
-                                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Debug summary
-                    if (DEBUG_MODE) {
-                        console.log(`📊 Stream complete: ${chunkCount} chunks, ${newlineChunks} had newlines`);
-                        const finalNewlines = accumulatedText.split('\n').length - 1;
-                        console.log(`📝 Final text: ${accumulatedText.length} chars, ${finalNewlines} newlines`);
-                        console.log(`📝 First 300 chars:`, accumulatedText.substring(0, 300).replace(/\n/g, '\\n'));
-                        if (finalNewlines < 3) {
-                            console.warn('⚠️ WARNING: Very few newlines in response! AI may not be following instructions.');
-                        } else if (finalNewlines >= 3 && finalNewlines < 10) {
-                            console.warn('⚠️ WARNING: Some newlines exist but may need normalization for proper markdown');
-                        }
-                    }
-
-                    // Process any remaining incomplete data in buffer
-                    if (buffer) {
-                        const trimmedBuffer = buffer.trim();
-                        if (trimmedBuffer.startsWith('data:') || buffer.startsWith('data:')) {
-                            const dataStartIndex = buffer.indexOf('data:') + 5;
-                            let data = buffer.slice(dataStartIndex);
-                            
-                            // Remove leading space if present
-                            if (data.startsWith(' ')) {
-                                data = data.slice(1);
-                            }
-                            
-                            // Treat empty data as newline
-                            if (data === '' && !trimmedBuffer.includes('[DONE]')) {
-                                data = '\n';
-                            }
-                            
-                            if (data !== '[DONE]' && botMessageContent) {
-                                accumulatedText += data;
-                                botMessageContent.textContent = accumulatedText;
-                            }
-                        }
-                    }
-
-                    // After streaming completes: convert plain text to formatted markdown HTML
-                    if (botMessageContent && accumulatedText) {
-                        // Remove pre-wrap style (no longer needed after markdown conversion)
-                        botMessageContent.style.whiteSpace = '';
-
-                        // Parse accumulated text as markdown and render as HTML
-                        botMessageContent.innerHTML = formatMarkdown(accumulatedText);
-
-                        // Add copy buttons to code blocks
-                        addCopyButtonsToCodeBlocks(botMessageContent);
-
-                        // Add feedback buttons to bot message (will be set later from stream)
-                        // requestId will be captured from the stream data
-                        if (window.currentStreamRequestId) {
-                            console.log('✅ Adding feedback buttons with requestId:', window.currentStreamRequestId);
-                            addFeedbackButtons(botMessageDiv, window.currentStreamRequestId);
-                            window.currentStreamRequestId = null; // Clear after use
-                        } else {
-                            console.warn('⚠️ No requestId captured for feedback');
-                        }
-
-                        chatMessages.scrollTop = chatMessages.scrollHeight;
-                    }
-
-                    // Error handling: If no message was received at all
-                    if (!botMessageDiv) {
-                        addMessage('응답을 받지 못했습니다. 다시 시도해주세요.');
-                    }
-
-                } catch (error) {
-                    console.error('Error in attemptSendMessage catch block:', error);
-
-                    let userMessage = error.message;
-                    let shouldRetry = false;
-
-                    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                        userMessage = '네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인해주세요.';
-                        shouldRetry = true;
-                    } else if (error.name === 'AbortError') {
-                        userMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요.';
-                        shouldRetry = true;
-                    } else if (!error.message.includes('서버') && !error.message.includes('요청')) {
-                        userMessage = `오류가 발생했습니다: ${error.message}`;
-                    }
-
-                    if (shouldRetry && retryCount < MAX_RETRIES) {
-                        retryCount++;
-                        const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
-                        addMessage(`네트워크 오류 발생. ${delay / 1000}초 후 재시도합니다... (재시도 ${retryCount}/${MAX_RETRIES})`);
-                        setTimeout(attemptSendMessage, delay);
-                    } else {
-                        addMessage(userMessage);
-                        removeTypingIndicator();
-                    }
-                } finally {
-                    console.log('attemptSendMessage finally block executed');
-                    if (!shouldRetry || retryCount >= MAX_RETRIES) {
-                        console.log('Re-enabling send button and input');
-                        // Re-enable input only if not retrying or max retries reached
-                        sendButton.disabled = false;
-                        messageInput.disabled = false;
-                        messageInput.focus();
-                    }
-                }
-            }
-
-            attemptSendMessage();
-        }
-
-        // Event listeners
-        sendButton.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-
-        // Add timestamp to initial welcome message
-        const initialMessage = document.querySelector('.message.bot');
-        if (initialMessage && !initialMessage.querySelector('.message-timestamp')) {
-            const timestamp = document.createElement('span');
-            timestamp.className = 'message-timestamp';
-            timestamp.textContent = getCurrentTime();
-            initialMessage.appendChild(timestamp);
-        }
-
-        // Focus on input on load
-        messageInput.focus();
-
-        if (DEBUG_MODE) {
-            console.log('Chat interface initialized with session:', sessionId);
-        }
-    </script>
+    <script src="/js/chat.js?v=5"></script>
 </body>
 </html>

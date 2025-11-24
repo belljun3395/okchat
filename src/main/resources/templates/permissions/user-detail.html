@@ -3,452 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Permissions</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .header { background: white; padding: 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        h1 { color: #333; margin-bottom: 10px; }
-        .user-info { color: #666; font-size: 14px; margin-top: 10px; }
-        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; display: inline-block; margin-top: 15px; }
-        .btn-secondary { background: #6b7280; color: white; }
-        .btn-secondary:hover { background: #4b5563; }
-        .btn-delete {
-            background: #ef4444;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-delete:hover { background: #dc2626; }
-        .btn-delete:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-        .btn-success {
-            background: #10b981;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-success:hover { background: #059669; }
-        .node-checkbox {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-        .section { background: white; padding: 25px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; }
-        .section-title { font-size: 18px; font-weight: 600; color: #333; margin: 0; }
-        .permission-list { list-style: none; }
-        .permission-item { padding: 15px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
-        .permission-item:last-child { border-bottom: none; }
-        .permission-path { font-weight: 500; color: #333; }
-        .empty-state { text-align: center; padding: 40px; color: #9ca3af; }
-
-        /* Tree styles - same as manage.html */
-        .tree-node {
-            margin-bottom: 4px;
-        }
-        .tree-node-content {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.2s;
-            gap: 8px;
-        }
-        .tree-node-content:hover {
-            background: #f3f4f6;
-        }
-        .expand-icon {
-            width: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #6b7280;
-            flex-shrink: 0;
-        }
-        .node-icon {
-            font-size: 16px;
-            flex-shrink: 0;
-        }
-        .node-label {
-            flex: 1;
-            font-size: 14px;
-            color: #1a1a1a;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .permission-badge {
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: 500;
-            background: #10b981;
-            color: white;
-            flex-shrink: 0;
-        }
-        .tree-children {
-            margin-left: 28px;
-            display: none;
-        }
-        .tree-children.expanded {
-            display: block;
-        }
-    </style>
+    <title>User Details - OKChat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>👤 User Permissions</h1>
-            <div class="user-info">
-                <strong th:text="${user.name}">User Name</strong> (<span th:text="${user.email}">email@example.com</span>)
-                <br>Total Permissions: <strong id="totalPermissions" th:text="${totalPermissions}">0</strong>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar-header">
+                <a href="/admin/permissions" class="nav-brand">
+                    OKChat Admin
+                </a>
             </div>
-            <a href="/admin/permissions/users" class="btn btn-secondary">← Back to Users</a>
-        </div>
-
-        <div class="section">
-            <div class="section-header">
-                <h2 class="section-title">📁 Accessible Paths (<span id="pathPermsCount" th:text="${#lists.size(pathPermissions)}">0</span>)</h2>
-                <div style="display: flex; gap: 10px;">
-                    <button id="addPermissionBtn" class="btn-success">➕ Add Permission</button>
-                    <button id="expandAllBtn" class="btn btn-secondary" style="margin-top: 0;">⊕ Expand All</button>
-                    <button id="collapseAllBtn" class="btn btn-secondary" style="margin-top: 0;">⊖ Collapse All</button>
-                    <button id="deleteSelectedPaths" class="btn-delete">🗑️ Delete Selected</button>
+            <nav class="admin-sidebar-nav">
+                <a href="/admin/permissions" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="/admin/permissions/users" class="nav-item active">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                    </svg>
+                    Users
+                </a>
+                <a href="/admin/permissions/paths" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+                    </svg>
+                    Paths
+                </a>
+                <a href="/admin/permissions/manage" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                    </svg>
+                    Permissions
+                </a>
+                <a href="/admin/chat/analytics" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
+                    </svg>
+                    Analytics
+                </a>
+                <a href="/admin/email/review" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                    </svg>
+                    Email Review
+                </a>
+            </nav>
+            <div class="admin-sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                          <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">Admin</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
                 </div>
             </div>
-            <div class="info-box" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px; margin-bottom: 15px; font-size: 13px; color: #1e40af;">
-                ℹ️ Path-based permissions grant access to all documents under the selected path. Deleting a path will remove access to all documents within it.
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <div class="flex items-center gap-md mb-6">
+                <a href="/admin/permissions/users" class="btn btn-secondary btn-sm">← Back to Users</a>
             </div>
-            <div id="pathTree"></div>
-        </div>
+
+            <div class="grid grid-cols-3 gap-lg">
+                <!-- User Profile Card -->
+                <div class="card animate-fade-in">
+                    <div class="flex flex-col items-center text-center mb-6">
+                        <div class="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-primary text-2xl font-bold mb-4 border border-blue-200">
+                            <span th:text="${#strings.substring(user.name,0,1)}">U</span>
+                        </div>
+                        <h2 class="text-lg font-bold mb-1" th:text="${user.name}">User Name</h2>
+                        <p class="text-sm text-secondary mb-2" th:text="${user.email}">user@example.com</p>
+                        <div>
+                            <span class="badge badge-success" th:if="${user.active}">Active</span>
+                            <span class="badge badge-danger" th:unless="${user.active}">Inactive</span>
+                        </div>
+                    </div>
+                    
+                    <hr class="border-gray-200 my-4">
+                    
+                    <div class="flex flex-col gap-md">
+                        <div>
+                            <div class="text-xs text-secondary uppercase font-bold tracking-wider mb-1">Role</div>
+                            <div class="font-medium text-main">User</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-secondary uppercase font-bold tracking-wider mb-1">Joined</div>
+                            <div class="font-medium text-main">-</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-gray-200">
+                        <button class="btn btn-danger w-full">Deactivate Account</button>
+                    </div>
+                </div>
+
+                <!-- Permissions & Activity -->
+                <div class="col-span-2 flex flex-col gap-lg animate-fade-in delay-100" style="grid-column: span 2;">
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold m-0">Assigned Permissions</h3>
+                            <button class="btn btn-secondary btn-sm">+ Grant Permission</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Path</th>
+                                        <th>Access Level</th>
+                                        <th>Source</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="perm : ${permissions}">
+                                        <td class="font-mono text-sm text-main" th:text="${perm.path}">/docs/shared</td>
+                                        <td><span class="badge badge-info">Read/Write</span></td>
+                                        <td class="text-sm text-secondary">Direct Assignment</td>
+                                        <td><button class="text-danger hover:underline text-sm font-medium">Revoke</button></td>
+                                    </tr>
+                                    <tr th:if="${#lists.isEmpty(permissions)}">
+                                        <td colspan="4" class="text-center text-secondary p-4">No permissions assigned</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="mb-4 text-lg font-semibold">Recent Activity</h3>
+                        <div class="flex flex-col">
+                            <div class="p-4 text-center text-secondary text-sm">
+                                No recent activity found.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
-
-    <script src="/js/treeUtils.js"></script>
-
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        const paths = /*[[${paths}]]*/ [];
-        let pathPermissions = /*[[${pathPermissions}]]*/ [];
-        let documentPermissions = /*[[${permissions}]]*/ [];
-        const userEmail = /*[[${user.email}]]*/ '';
-        /*]]>*/
-
-        // Ensure arrays are initialized
-        if (!pathPermissions) pathPermissions = [];
-        if (!documentPermissions) documentPermissions = [];
-
-        let grantedPaths = new Set();
-        let grantedDocuments = new Set();
-        let selectedPaths = new Set();
-
-        let deniedPaths = new Set();
-        
-        // Initialize with granted paths and documents
-        if (pathPermissions && pathPermissions.length > 0) {
-            pathPermissions.forEach(p => {
-                if (p.permissionLevel === 'DENY') {
-                    deniedPaths.add(p.documentPath);
-                } else {
-                    grantedPaths.add(p.documentPath);
-                }
-            });
-        }
-        
-        if (documentPermissions && documentPermissions.length > 0) {
-            grantedDocuments = new Set(documentPermissions.map(p => p.documentId));
-        }
-        
-        console.log('=== USER-DETAIL PAGE INITIALIZED ===');
-        console.log('Path permissions (raw):', pathPermissions);
-        console.log('Document permissions (raw):', documentPermissions);
-        console.log('Granted paths:', Array.from(grantedPaths));
-        console.log('Denied paths:', Array.from(deniedPaths));
-        console.log('Granted documents:', Array.from(grantedDocuments));
-        console.log('Total paths in system:', paths.length);
-        console.log('=====================================');
-        
-        // Check if a path has permission (directly or inherited from parent)
-        function hasPermission(path) {
-            // Direct permission
-            if (grantedPaths.has(path)) return true;
-            
-            // Check if any parent path has permission
-            for (const grantedPath of grantedPaths) {
-                if (path.startsWith(grantedPath + ' > ')) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        
-        // Check if a path has DIRECT permission (not inherited)
-        function hasDirectPermission(path) {
-            return grantedPaths.has(path);
-        }
-        
-        // Find the parent path that grants permission to this path
-        function findGrantingParentPath(path) {
-            const parts = path.split(' > ');
-            for (let i = parts.length - 1; i > 0; i--) {
-                const parentPath = parts.slice(0, i).join(' > ');
-                if (grantedPaths.has(parentPath)) {
-                    return parentPath;
-                }
-            }
-            return null;
-        }
-        
-        // Check if a document has DIRECT permission
-        function hasDocumentPermission(docId) {
-            return grantedDocuments.has(docId);
-        }
-
-
-        
-        // Check if path is explicitly denied
-        function isDenied(path) {
-            // Direct DENY
-            if (deniedPaths.has(path)) return true;
-            
-            // Check if any parent path is denied
-            for (const deniedPath of deniedPaths) {
-                if (path.startsWith(deniedPath + ' > ')) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        
-
-
-        // Toggle functionality (same as paths.html)
-        document.addEventListener('click', (e) => {
-            // Checkbox selection
-            if (e.target.classList.contains('node-checkbox')) {
-                const path = e.target.dataset.path;
-                const isDirect = e.target.dataset.isDirect === 'true';
-                
-                console.log('Checkbox clicked:', {path, isDirect, checked: e.target.checked});
-                
-                if (path) {
-                    if (e.target.checked) {
-                        // Always add the clicked path itself
-                        console.log('Adding path to selection:', path);
-                        selectedPaths.add(path);
-                    } else {
-                        // Remove the clicked path
-                        console.log('Removing path from selection:', path);
-                        selectedPaths.delete(path);
-                    }
-                }
-                
-                console.log('Selected paths now:', Array.from(selectedPaths));
-                updateDeleteButton();
-                e.stopPropagation();
-                return;
-            }
-            
-            // Tree node toggle
-            if (e.target.classList.contains('expand-icon') || e.target.closest('.tree-node-content')) {
-                const nodeContent = e.target.closest('.tree-node-content');
-                if (nodeContent && !e.target.classList.contains('node-checkbox')) {
-                    const treeNode = nodeContent.parentElement;
-                    const children = treeNode.querySelector('.tree-children');
-                    const icon = treeNode.querySelector('.expand-icon');
-                    
-                    if (children && icon && icon.textContent) {
-                        children.classList.toggle('expanded');
-                        icon.textContent = children.classList.contains('expanded') ? '▼' : '▶';
-                    }
-                }
-            }
-        });
-        
-        function expandAll() {
-            document.querySelectorAll('.tree-children').forEach(n => n.classList.add('expanded'));
-            document.querySelectorAll('.expand-icon').forEach(i => { if (i.textContent) i.textContent = '▼'; });
-        }
-        
-        function collapseAll() {
-            document.querySelectorAll('.tree-children').forEach(n => n.classList.remove('expanded'));
-            document.querySelectorAll('.expand-icon').forEach(i => { if (i.textContent) i.textContent = '▶'; });
-        }
-        
-        function updateDeleteButton() {
-            const deleteBtn = document.getElementById('deleteSelectedPaths');
-            const totalSelected = selectedPaths.size;
-            if (totalSelected > 0) {
-                deleteBtn.disabled = false;
-                deleteBtn.textContent = `🗑️ Delete Selected (${totalSelected})`;
-            } else {
-                deleteBtn.disabled = true;
-                deleteBtn.textContent = '🗑️ Delete Selected';
-            }
-        }
-        
-        async function deleteSelectedPermissions() {
-            console.log('=== DELETE BUTTON CLICKED ===');
-            console.log('Selected paths:', Array.from(selectedPaths));
-            console.log('Selected paths size:', selectedPaths.size);
-            
-            if (selectedPaths.size === 0) {
-                alert('Please select items to delete');
-                return;
-            }
-            
-            // Group selected paths into direct ALLOW, DENY, and inherited permissions
-            const directAllowPaths = [];
-            const denyPaths = [];
-            const inheritedPaths = [];
-            
-            selectedPaths.forEach(path => {
-                if (deniedPaths.has(path)) {
-                    denyPaths.push(path);
-                } else if (grantedPaths.has(path)) {
-                    directAllowPaths.push(path);
-                } else {
-                    inheritedPaths.push(path);
-                }
-            });
-            
-            let message = '';
-            const hasMultipleTypes = (directAllowPaths.length > 0 ? 1 : 0) + (denyPaths.length > 0 ? 1 : 0) + (inheritedPaths.length > 0 ? 1 : 0) > 1;
-            
-            if (hasMultipleTypes) {
-                message = `You have selected multiple types of permissions:\n\n`;
-                if (directAllowPaths.length > 0) {
-                    message += `✓ ${directAllowPaths.length} direct ALLOW permission(s) → will be DELETED\n`;
-                }
-                if (denyPaths.length > 0) {
-                    message += `❌ ${denyPaths.length} DENY permission(s) → will be REMOVED\n`;
-                }
-                if (inheritedPaths.length > 0) {
-                    message += `✓ ${inheritedPaths.length} inherited permission(s) → will be blocked (DENY)\n`;
-                }
-                message += `\nContinue?`;
-            } else if (directAllowPaths.length > 0) {
-                message = `Delete ${directAllowPaths.length} direct ALLOW permission(s)?\n\n${directAllowPaths.join('\n')}`;
-            } else if (denyPaths.length > 0) {
-                message = `Remove ${denyPaths.length} DENY permission(s)?\n\nThis will restore access to:\n${denyPaths.join('\n')}\n\nContinue?`;
-            } else if (inheritedPaths.length > 0) {
-                message = `Block access to ${inheritedPaths.length} inherited path(s)?\n\nThis will create DENY permissions for:\n${inheritedPaths.join('\n')}\n\nContinue?`;
-            }
-            
-            console.log('Showing confirmation dialog...');
-            if (!confirm(message)) {
-                console.log('User cancelled operation');
-                return;
-            }
-            
-            try {
-                // Delete direct ALLOW permissions
-                if (directAllowPaths.length > 0) {
-                    console.log('Deleting direct ALLOW permissions...');
-                    const deleteResponse = await fetch('/api/admin/permissions/path/bulk', {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            userEmail: userEmail,
-                            documentPaths: directAllowPaths
-                        })
-                    });
-                    
-                    if (!deleteResponse.ok) {
-                        throw new Error(`Failed to delete ALLOW permissions: HTTP ${deleteResponse.status}`);
-                    }
-                    console.log('Direct ALLOW permissions deleted successfully');
-                }
-                
-                // Remove DENY permissions
-                if (denyPaths.length > 0) {
-                    console.log('Removing DENY permissions...');
-                    const removeDenyResponse = await fetch('/api/admin/permissions/path/bulk', {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            userEmail: userEmail,
-                            documentPaths: denyPaths
-                        })
-                    });
-                    
-                    if (!removeDenyResponse.ok) {
-                        throw new Error(`Failed to remove DENY permissions: HTTP ${removeDenyResponse.status}`);
-                    }
-                    console.log('DENY permissions removed successfully');
-                }
-                
-                // Add DENY for inherited permissions
-                if (inheritedPaths.length > 0) {
-                    console.log('Adding DENY permissions...');
-                    const denyResponse = await fetch('/api/admin/permissions/path/bulk/deny', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            userEmail: userEmail,
-                            documentPaths: inheritedPaths
-                        })
-                    });
-                    
-                    if (!denyResponse.ok) {
-                        throw new Error(`Failed to add DENY permissions: HTTP ${denyResponse.status}`);
-                    }
-                    console.log('DENY permissions added successfully');
-                }
-                
-                alert('Permissions updated successfully!\n\n' +
-                      `Deleted ALLOW: ${directAllowPaths.length}\n` +
-                      `Removed DENY: ${denyPaths.length}\n` +
-                      `Added DENY: ${inheritedPaths.length}`);
-                window.location.reload();
-            } catch (error) {
-                console.error('Error updating permissions:', error);
-                alert('Error updating permissions: ' + error.message);
-            }
-        }
-        
-        function addPermission() {
-            // Navigate to manage page with user pre-selected
-            window.location.href = '/admin/permissions/manage?user=' + encodeURIComponent(userEmail);
-        }
-        
-        // Initialize
-        // Initialize tree (same as paths.html)
-        console.log('Building tree from paths...');
-        const tree = buildTree(paths);
-        console.log('Tree structure:', tree);
-        console.log('Rendering tree...');
-        const treeElement = document.getElementById('pathTree');
-        const treeHtml = renderTree(tree, { showUserDetailCheckboxes: true, selectedFolders: selectedPaths, showPermissionBadges: true, hasDirectPermission: hasDirectPermission, hasPermission: hasPermission, isDenied: isDenied });
-        console.log('Tree HTML length:', treeHtml.length);
-        treeElement.innerHTML = treeHtml;
-        console.log('Tree rendered to DOM');
-        
-        // Add button event listeners
-        document.getElementById('expandAllBtn').addEventListener('click', expandAll);
-        document.getElementById('collapseAllBtn').addEventListener('click', collapseAll);
-        document.getElementById('deleteSelectedPaths').addEventListener('click', deleteSelectedPermissions);
-        document.getElementById('addPermissionBtn').addEventListener('click', addPermission);
-        
-        // Initialize delete button state
-        updateDeleteButton();
-
-    </script>
-
 </body>
 </html>

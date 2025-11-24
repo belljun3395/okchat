@@ -3,375 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/css/permissions.css">
+    <title>Permission Manager - OKChat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>
-                <span>🔐</span>
-                <span>Document Permission Management</span>
-            </h1>
-            <a href="/admin/permissions" class="back-btn">← Back to Overview</a>
-        </div>
-        
-        <div class="main-content" id="mainContent">
-            <!-- User Selection Panel -->
-            <div class="user-panel">
-                <div class="panel-title">👥 Select User</div>
-                <input type="text" class="user-search" id="userSearch" placeholder="Search users...">
-                <ul class="user-list" id="userList"></ul>
-                <div class="stats">
-                    <div class="stat-item">
-                        <div class="stat-number" id="totalSelected">0</div>
-                        <div class="stat-label">Selected Paths</div>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar-header">
+                <a href="/admin/permissions" class="nav-brand">
+                    OKChat Admin
+                </a>
+            </div>
+            <nav class="admin-sidebar-nav">
+                <a href="/admin/permissions" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="/admin/permissions/users" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                    </svg>
+                    Users
+                </a>
+                <a href="/admin/permissions/paths" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+                    </svg>
+                    Paths
+                </a>
+                <a href="/admin/permissions/manage" class="nav-item active">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                    </svg>
+                    Permissions
+                </a>
+                <a href="/admin/chat/analytics" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
+                    </svg>
+                    Analytics
+                </a>
+                <a href="/admin/email/review" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                    </svg>
+                    Email Review
+                </a>
+            </nav>
+            <div class="admin-sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                          <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd" />
+                        </svg>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-number" id="totalDocs">0</div>
-                        <div class="stat-label">Total Paths</div>
+                    <div class="user-info">
+                        <div class="user-name">Admin</div>
+                        <div class="user-role">Administrator</div>
                     </div>
                 </div>
             </div>
+        </aside>
 
-            <div class="splitter" id="splitter1"></div>
-            
-            <!-- Document Tree Panel -->
-            <div class="tree-panel">
-                <div class="panel-title">📁 Document Tree</div>
-                <div class="tree-actions">
-                    <button class="btn btn-success" id="saveBtn" disabled>💾 Save Permissions</button>
-                    <button class="btn btn-secondary" id="expandAllBtn">⊕ Expand All</button>
-                    <button class="btn btn-secondary" id="collapseAllBtn">⊖ Collapse All</button>
-                </div>
-                <div class="tree" id="documentTree">
-                    <div class="loading">Loading documents...</div>
-                </div>
+        <!-- Main Content -->
+        <main class="admin-main">
+            <div class="mb-8 animate-fade-in">
+                <h1 class="mb-2">Permission Manager</h1>
+                <p class="text-secondary">Configure global access policies and inheritance</p>
             </div>
 
-        </div>
+            <div class="grid grid-cols-3 gap-lg">
+                <!-- Sidebar / Tree View -->
+                <div class="card animate-fade-in delay-100 h-full">
+                    <h3 class="mb-4 text-base font-semibold">Structure</h3>
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Search hierarchy...">
+                    </div>
+                    <!-- Tree Structure (Dynamic) -->
+                    <div class="flex flex-col gap-1">
+                        <div class="p-4 text-center text-secondary text-sm">
+                            Tree structure will be loaded here.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="card col-span-2 animate-fade-in delay-200" style="grid-column: span 2;">
+                    <div class="flex justify-between items-center mb-6 border-b pb-4">
+                        <h3 class="text-lg font-semibold m-0">Policy Settings</h3>
+                        <button class="btn btn-primary btn-sm">Save Changes</button>
+                    </div>
+
+                    <div class="input-group max-w-md">
+                        <label class="input-label">Default Access Level</label>
+                        <select class="form-control">
+                            <option>Read Only</option>
+                            <option>Write</option>
+                            <option>No Access</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Inheritance</label>
+                        <label class="flex items-center gap-sm p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" checked class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary">
+                            <div>
+                                <div class="font-medium text-sm text-main">Inherit from parent</div>
+                                <div class="text-xs text-secondary">Permissions will cascade down to sub-directories</div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="mt-8">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-base font-semibold m-0">Explicit Overrides</h4>
+                            <button class="btn btn-secondary btn-sm">+ Add Override</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Group/User</th>
+                                        <th>Permission</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="3" class="text-center text-secondary p-4">No overrides configured</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
-    
-    <div class="notification" id="notification"></div>
-    
-    <script src="/js/treeUtils.js"></script>
-
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        let users = /*[[${users}]]*/ [];
-        const paths = /*[[${paths}]]*/ [];
-        /*]]>*/
-        
-        console.log('=== MANAGE PAGE INITIALIZED ===');
-        console.log('Users count:', users.length);
-        console.log('Paths count:', paths.length);
-        console.log('Paths:', paths.slice(0, 5)); // Show first 5 paths
-        console.log('================================');
-        
-        let selectedUser = null;
-        let userPermissions = {
-            paths: new Set()  // Only path-based permissions now
-        };
-        let selectedFolders = new Set();  // Only folders (paths) can be selected
-        
-        function init() {
-            console.log('Initializing manage page...');
-            renderUserList();
-            console.log('Building tree from paths...');
-            const tree = buildTree(paths);
-            console.log('Tree built:', Object.keys(tree).length, 'root nodes');
-            console.log('Rendering tree...');
-            const treeHtml = renderTree(tree, { showCheckboxes: true, selectedFolders: selectedFolders, showPermissionBadges: true, hasPermission: (path) => userPermissions.paths.has(path), allPaths: paths });
-            console.log('Tree HTML length:', treeHtml.length);
-            document.getElementById('documentTree').innerHTML = treeHtml;
-            console.log('Tree rendered to DOM');
-            updateStats();
-            setupEventListeners();
-            initSplitters(); // Initialize resizable panels
-            
-            // Auto-select user from URL parameter
-            const urlParams = new URLSearchParams(window.location.search);
-            const userEmail = urlParams.get('user');
-            if (userEmail) {
-                const user = users.find(u => u.email === userEmail);
-                if (user) {
-                    selectUser(user.id);
-                }
-            }
-        }
-        
-        function initSplitters() {
-            const mainContent = document.getElementById('mainContent');
-            const splitter1 = document.getElementById('splitter1');
-
-            let isDragging1 = false;
-
-            splitter1.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                isDragging1 = true;
-            });
-
-            document.addEventListener('mouseup', () => {
-                isDragging1 = false;
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (!isDragging1) return;
-                e.preventDefault();
-
-                const containerRect = mainContent.getBoundingClientRect();
-                const userPanel = mainContent.children[0];
-
-                const newWidth = e.clientX - containerRect.left;
-                if (newWidth > 150) { // Set a min width
-                    mainContent.style.gridTemplateColumns = `${newWidth}px 10px 1fr`;
-                }
-            });
-        }
-
-        function renderUserList(filter = '') {
-            const userList = document.getElementById('userList');
-            const filtered = users.filter(u => 
-                u.email.toLowerCase().includes(filter.toLowerCase()) ||
-                u.name.toLowerCase().includes(filter.toLowerCase())
-            );
-            
-            userList.innerHTML = filtered.map(user => `
-                <li class="user-item ${selectedUser?.id === user.id ? 'active' : ''}" data-user-id="${user.id}">
-                    <div class="user-name">${user.name}</div>
-                    <div class="user-email">${user.email}</div>
-                </li>
-            `).join('');
-        }
-        
-        
-
-        
-
-        
-        async function selectUser(userId) {
-            const user = users.find(u => u.id === userId);
-            if (!user) {
-                console.error('User not found:', userId);
-                return;
-            }
-            
-            selectedUser = user;
-            console.log('=== SELECTING USER ===');
-            console.log('User:', user);
-            
-            try {
-                console.log('Fetching permissions for:', user.email);
-                const response = await fetch(`/api/admin/permissions/user/${user.email}`);
-                console.log('Response status:', response.status);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                
-                const data = await response.json();
-                console.log('Permission data received:', data);
-                
-                userPermissions.paths.clear();
-                selectedFolders.clear();
-                
-                // Only process path-based permissions
-                if (data.pathPermissions) {
-                    data.pathPermissions.forEach(pathPerm => {
-                        userPermissions.paths.add(pathPerm.documentPath);
-                        selectedFolders.add(pathPerm.documentPath);
-                    });
-                }
-                
-                renderUserList();
-                const tree = buildTree(paths);
-                document.getElementById('documentTree').innerHTML = renderTree(tree, { showCheckboxes: true, selectedFolders: selectedFolders, showPermissionBadges: true, hasPermission: (path) => userPermissions.paths.has(path), allPaths: paths });
-                updateStats();
-                document.getElementById('saveBtn').disabled = false;
-            } catch (error) {
-                console.error('Failed to load user permissions:', error);
-                showNotification('Failed to load user permissions', 'error');
-            }
-        }
-        
-        
-        async function savePermissions() {
-            console.log('Save permissions clicked');
-            console.log('Selected user:', selectedUser);
-            console.log('Selected folders:', selectedFolders);
-            
-            if (!selectedUser) {
-                showNotification('Please select a user first', 'error');
-                return;
-            }
-
-            // Only path-based permissions
-            const pathsToGrant = [...selectedFolders].filter(p => !userPermissions.paths.has(p));
-            const pathsToRevoke = [...userPermissions.paths].filter(p => !selectedFolders.has(p));
-
-            try {
-                if (pathsToGrant.length > 0) {
-                    console.log('Granting path permissions...', pathsToGrant);
-                    const response = await fetch('/api/admin/permissions/path/bulk', { 
-                        method: 'POST', 
-                        headers: {'Content-Type': 'application/json'}, 
-                        body: JSON.stringify({ userEmail: selectedUser.email, documentPaths: pathsToGrant }) 
-                    });
-                    console.log('Grant paths response:', response.status);
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('Grant paths error:', errorText);
-                        throw new Error(`Failed to grant paths: ${response.status} - ${errorText}`);
-                    }
-                }
-                
-                if (pathsToRevoke.length > 0) {
-                    console.log('Revoking path permissions...', pathsToRevoke);
-                    const response = await fetch('/api/admin/permissions/path/bulk', { 
-                        method: 'DELETE', 
-                        headers: {'Content-Type': 'application/json'}, 
-                        body: JSON.stringify({ userEmail: selectedUser.email, documentPaths: pathsToRevoke }) 
-                    });
-                    console.log('Revoke paths response:', response.status);
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('Revoke paths error:', errorText);
-                        throw new Error(`Failed to revoke paths: ${response.status} - ${errorText}`);
-                    }
-                }
-
-                showNotification('Permissions updated successfully', 'success');
-                await selectUser(selectedUser.id);
-
-            } catch (error) {
-                console.error('Failed to save permissions:', error);
-                showNotification('Failed to save permissions: ' + error.message, 'error');
-            }
-        }
-        
-        function updateParentCheckboxes(checkboxElement) {
-            let currentTreeNode = checkboxElement.closest('.tree-node');
-            while (currentTreeNode) {
-                const parentTreeNode = currentTreeNode.parentElement.closest('.tree-node');
-                if (!parentTreeNode) break; // Reached the root
-
-                const parentCheckbox = parentTreeNode.querySelector('.node-checkbox');
-                if (parentCheckbox) {
-                    const childrenCheckboxes = Array.from(parentTreeNode.querySelectorAll('.tree-children > .tree-node > .tree-node-content > .node-checkbox'));
-                    const allChildrenChecked = childrenCheckboxes.every(cb => cb.checked);
-                    const noChildrenChecked = childrenCheckboxes.every(cb => !cb.checked);
-
-                    if (allChildrenChecked) {
-                        parentCheckbox.checked = true;
-                        parentCheckbox.indeterminate = false;
-                        selectedFolders.add(parentCheckbox.dataset.path);
-                    } else if (noChildrenChecked) {
-                        parentCheckbox.checked = false;
-                        parentCheckbox.indeterminate = false;
-                        selectedFolders.delete(parentCheckbox.dataset.path);
-                    } else {
-                        parentCheckbox.checked = false;
-                        parentCheckbox.indeterminate = true;
-                        // For indeterminate, we don't add/remove the parent path from selectedFolders
-                        // as it's not fully selected or deselected.
-                    }
-                }
-                currentTreeNode = parentTreeNode;
-            }
-        }
-
-        function setupEventListeners() {
-            document.getElementById('userSearch').addEventListener('input', (e) => renderUserList(e.target.value));
-            document.getElementById('userList').addEventListener('click', (e) => {
-                const userItem = e.target.closest('.user-item');
-                if (userItem) selectUser(parseInt(userItem.dataset.userId));
-            });
-            
-            document.getElementById('documentTree').addEventListener('click', (e) => {
-                // Toggle tree nodes - same pattern as other pages
-                if (e.target.classList.contains('expand-icon') || e.target.closest('.tree-node-content')) {
-                    const nodeContent = e.target.closest('.tree-node-content');
-                    if (nodeContent && !e.target.classList.contains('node-checkbox')) {
-                        const treeNode = nodeContent.parentElement;
-                        const children = treeNode.querySelector('.tree-children');
-                        const icon = treeNode.querySelector('.expand-icon');
-                        
-                        if (children && icon && icon.textContent) {
-                            children.classList.toggle('expanded');
-                            icon.textContent = children.classList.contains('expanded') ? '▼' : '▶';
-                        }
-                    }
-                }
-                
-                if (e.target.classList.contains('node-checkbox')) {
-                    const clickedCheckbox = e.target;
-                    const folderPath = clickedCheckbox.dataset.path;
-                    const isChecked = clickedCheckbox.checked;
-
-                    if (folderPath) {
-                        // Update current checkbox state
-                        if (isChecked) {
-                            selectedFolders.add(folderPath);
-                        } else {
-                            selectedFolders.delete(folderPath);
-                        }
-
-                        // Propagate change to children
-                        const treeNode = clickedCheckbox.closest('.tree-node');
-                        if (treeNode) {
-                            const childrenCheckboxes = treeNode.querySelectorAll('.tree-children .node-checkbox');
-                            childrenCheckboxes.forEach(childCheckbox => {
-                                const childPath = childCheckbox.dataset.path;
-                                if (childPath) {
-                                    childCheckbox.checked = isChecked;
-                                    if (isChecked) {
-                                        selectedFolders.add(childPath);
-                                    } else {
-                                        selectedFolders.delete(childPath);
-                                    }
-                                }
-                            });
-                        }
-
-                        // Propagate change to parents
-                        updateParentCheckboxes(clickedCheckbox);
-                    }
-                    updateStats();
-                }
-                
-            });
-            
-            document.getElementById('saveBtn').addEventListener('click', savePermissions);
-            document.getElementById('expandAllBtn').addEventListener('click', expandAll);
-            document.getElementById('collapseAllBtn').addEventListener('click', collapseAll);
-        }
-        
-        function updateStats() {
-            document.getElementById('totalSelected').textContent = selectedFolders.size;
-            document.getElementById('totalDocs').textContent = paths.length;
-        }
-        
-        function expandAll() {
-            document.querySelectorAll('.tree-children').forEach(n => n.classList.add('expanded'));
-            document.querySelectorAll('.expand-icon').forEach(i => { if (i.textContent) i.textContent = '▼'; });
-        }
-        
-        function collapseAll() {
-            document.querySelectorAll('.tree-children').forEach(n => n.classList.remove('expanded'));
-            document.querySelectorAll('.expand-icon').forEach(i => { if (i.textContent) i.textContent = '▶'; });
-        }
-        
-        function showNotification(message, type = 'success') {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            if (type === 'warning') notification.style.background = '#f59e0b';
-            else if (type === 'error') notification.style.background = '#ef4444';
-            else notification.style.background = '#10b981';
-            notification.className = `notification show`;
-            setTimeout(() => { notification.classList.remove('show'); }, 5000);
-        }
-        
-        init();
-        /*]]>*/
-    </script>
 </body>
 </html>

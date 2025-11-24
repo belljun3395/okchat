@@ -3,123 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/css/permissions.css">
+    <title>Path Details - OKChat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📁 Path Details</h1>
-            <div class="path-info">
-                <strong th:text="${path}">Path > To > Document</strong>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar-header">
+                <a href="/admin/permissions" class="nav-brand">
+                    OKChat Admin
+                </a>
             </div>
-            <a href="/admin/permissions/paths" class="btn btn-secondary">← Back to Paths</a>
-        </div>
-
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-number" th:text="${totalDocuments}">0</div>
-                <div class="stat-label">Documents</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" th:text="${totalUsers}">0</div>
-                <div class="stat-label">Users with Access</div>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2 class="section-title">📄 Documents (<span th:text="${totalDocuments}">0</span>)</h2>
-            <ul class="list" th:if="${!#lists.isEmpty(documents)}">
-                <li class="list-item" th:each="doc : ${documents}">
-                    <div class="list-item-details">
-                        <div class="list-item-title" th:text="${doc.title}">Document Title</div>
-                        <div class="list-item-meta">
-                            ID: <code th:text="${doc.id}">123456789</code>
-                            <span th:if="${doc.createdAt}"> | Created: <span th:text="${#dates.format(doc.createdAt, 'yyyy-MM-dd HH:mm')}"></span></span>
-                            <span th:if="${doc.updatedAt}"> | Last Updated: <span th:text="${#dates.format(doc.updatedAt, 'yyyy-MM-dd HH:mm')}"></span></span>
-                        </div>
+            <nav class="admin-sidebar-nav">
+                <a href="/admin/permissions" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="/admin/permissions/users" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                    </svg>
+                    Users
+                </a>
+                <a href="/admin/permissions/paths" class="nav-item active">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+                    </svg>
+                    Paths
+                </a>
+                <a href="/admin/permissions/manage" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                    </svg>
+                    Permissions
+                </a>
+                <a href="/admin/chat/analytics" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
+                    </svg>
+                    Analytics
+                </a>
+                <a href="/admin/email/review" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                    </svg>
+                    Email Review
+                </a>
+            </nav>
+            <div class="admin-sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                          <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd" />
+                        </svg>
                     </div>
-                </li>
-            </ul>
-            <div class="empty-state" th:if="${#lists.isEmpty(documents)}">
-                No documents found in this path
+                    <div class="user-info">
+                        <div class="user-name">Admin</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                </div>
             </div>
-        </div>
+        </aside>
 
-        <div class="section">
-            <h2 class="section-title">👥 Users with Access (<span th:text="${totalUsers}">0</span>)</h2>
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        const allUsers = /*[[${usersWithAccess}]]*/ [];
-        let currentPage = 1;
-        const pageSize = 5; // Display 5 users per page
+        <!-- Main Content -->
+        <main class="admin-main">
+            <div class="flex items-center gap-md mb-6">
+                <a href="/admin/permissions/paths" class="btn btn-secondary btn-sm">← Back to Paths</a>
+            </div>
 
-        function renderUsers() {
-            const userList = document.getElementById('usersWithAccessList');
-            userList.innerHTML = ''; // Clear current list
-
-            const startIndex = (currentPage - 1) * pageSize;
-            const endIndex = startIndex + pageSize;
-            const usersToDisplay = allUsers.slice(startIndex, endIndex);
-
-            if (usersToDisplay.length === 0) {
-                userList.innerHTML = '<div class="empty-state">No users have been granted access to this path</div>';
-                return;
-            }
-
-            usersToDisplay.forEach(user => {
-                const listItem = document.createElement('li');
-                listItem.className = 'list-item';
-                listItem.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="grid grid-cols-3 gap-lg">
+                <!-- Path Info Card -->
+                <div class="card animate-fade-in h-fit">
+                    <div class="flex items-center gap-md mb-4">
+                        <div class="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center text-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6" style="width: 24px; height: 24px;">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+                            </svg>
+                        </div>
                         <div>
-                            <div style="font-weight: 500;">${user.name}</div>
-                            <div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${user.email}</div>
-                        </div>
-                        <div style="display: flex; align-items: center;">
-                            <span class="user-permission-badge">Access Granted</span>
-                            <a href="/admin/permissions/user/${user.email}" class="btn btn-secondary" style="padding: 6px 16px; font-size: 13px; margin: 0 0 0 10px;">View Details</a>
+                            <div class="text-xs text-secondary uppercase font-bold tracking-wider">Directory</div>
+                            <div class="font-mono font-medium text-main truncate" style="max-width: 200px;" th:text="${path.path}">/docs/finance</div>
                         </div>
                     </div>
-                `;
-                userList.appendChild(listItem);
-            });
-        }
+                    
+                    <hr class="border-gray-200 my-4">
+                    
+                    <div class="flex flex-col gap-md">
+                        <div>
+                            <div class="text-xs text-secondary uppercase font-bold tracking-wider mb-1">Security Level</div>
+                            <span class="badge badge-warning">Restricted</span>
+                        </div>
+                        <div>
+                            <div class="text-xs text-secondary uppercase font-bold tracking-wider mb-1">Inheritance</div>
+                            <span class="badge badge-success">Enabled</span>
+                        </div>
+                    </div>
+                </div>
 
-        function updatePaginationControls() {
-            const totalPages = Math.ceil(allUsers.length / pageSize);
-            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages === 0 ? 1 : totalPages}`;
-            document.getElementById('prevPage').disabled = currentPage === 1;
-            document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
-        }
+                <!-- ACL & Settings -->
+                <div class="card col-span-2 animate-fade-in delay-100" style="grid-column: span 2;">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold m-0">Access Control List</h3>
+                        <button class="btn btn-primary btn-sm">+ Add Rule</button>
+                    </div>
 
-        function changePage(direction) {
-            currentPage += direction;
-            renderUsers();
-            updatePaginationControls();
-        }
+                    <div class="table-container mb-8">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Principal</th>
+                                    <th>Type</th>
+                                    <th>Permissions</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="4" class="text-center text-secondary p-4">No access rules defined</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // Replace the Thymeleaf generated list with a placeholder for JS rendering
-            const usersSection = document.querySelector('.section:last-of-type');
-            const usersListThymeleaf = usersSection.querySelector('ul');
-            if (usersListThymeleaf) {
-                usersListThymeleaf.id = 'usersWithAccessList'; // Give it an ID for JS to target
-                usersListThymeleaf.innerHTML = ''; // Clear Thymeleaf content
-            } else {
-                // If no ul exists (e.g., empty list initially), create one
-                const newUl = document.createElement('ul');
-                newUl.className = 'list';
-                newUl.id = 'usersWithAccessList';
-                usersSection.insertBefore(newUl, document.getElementById('userPagination'));
-            }
+                    <h3 class="text-lg font-semibold mb-4 pt-4 border-t border-gray-100">Settings</h3>
+                    <div class="grid grid-cols-2 gap-md">
+                        <div class="input-group">
+                            <label class="input-label">Description</label>
+                            <input type="text" class="form-control" placeholder="Enter description">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Owner</label>
+                            <select class="form-control">
+                                <option>System Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-md mt-2">
+                        <label class="flex items-center gap-sm cursor-pointer">
+                            <input type="checkbox" class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary">
+                            <span class="text-sm">Enable Audit Logging</span>
+                        </label>
+                    </div>
 
-            renderUsers();
-            updatePaginationControls();
-
-            document.getElementById('prevPage').addEventListener('click', () => changePage(-1));
-            document.getElementById('nextPage').addEventListener('click', () => changePage(1));
-        });
-        /*]]>*/
-    </script>
+                    <div class="mt-6 flex justify-end">
+                        <button class="btn btn-primary">Save Configuration</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
 </body>
 </html>

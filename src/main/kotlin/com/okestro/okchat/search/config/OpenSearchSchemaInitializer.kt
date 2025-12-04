@@ -24,38 +24,68 @@ private val log = KotlinLogging.logger {}
 class OpenSearchSchemaInitializer(
     private val openSearchClient: OpenSearchClient,
     @Value("\${spring.ai.vectorstore.opensearch.index-name}") private val indexName: String,
-    @Value("\${spring.ai.vectorstore.opensearch.embedding-dimension}") private val embeddingDimension: Int
+    @Value("\${spring.ai.vectorstore.opensearch.embedding-dimension}") private val embeddingDimension: Int,
+    @Value("\${spring.ai.vectorstore.opensearch.host:localhost}") private val host: String,
+    @Value("\${spring.ai.vectorstore.opensearch.port:9200}") private val port: Int,
+    @Value("\${spring.ai.vectorstore.opensearch.scheme:http}") private val scheme: String
 ) {
 
     @EventListener(ApplicationStartedEvent::class)
     fun initializeKoreanSupportedSchema() {
         try {
             log.info { "Initializing OpenSearch schema for index: $indexName" }
+            log.info { "Connected to OpenSearch at: $scheme://$host:$port" }
 
-            // Check if index exists
-            val existsResponse = try {
-                openSearchClient.indices().exists { e ->
-                    e.index(indexName)
+            // Try to get index directly - this is more reliable than exists() check
+            val indexInfo = try {
+                val response = openSearchClient.indices().get { g ->
+                    g.index(indexName)
+                }
+                response.get(indexName)
+            } catch (e: org.opensearch.client.opensearch._types.OpenSearchException) {
+                if (e.status() == 404) {
+                    log.info { "Index '$indexName' does not exist (404 Not Found)" }
+                    null
+                } else {
+                    log.warn { "Failed to get index details: ${e.message}" }
+                    null
                 }
             } catch (e: Exception) {
-                log.warn { "Failed to check if index exists (might be permission issue): ${e.message}" }
-                log.warn { "Skipping schema initialization. Please create index manually if needed." }
+                log.warn { "Failed to check index existence: ${e.message}" }
+                log.warn { "Skipping schema initialization. Please verify OpenSearch connection." }
                 return
             }
 
-            if (existsResponse.value()) {
+            if (indexInfo != null) {
+                // Index exists - get detailed information
+                val settings = indexInfo.settings()
+                val mappings = indexInfo.mappings()
+                
                 val docCount = try {
-                    openSearchClient.indices().stats { s ->
+                    val stats = openSearchClient.indices().stats { s ->
                         s.index(indexName)
-                    }.indices()?.get(indexName)?.primaries()?.docs()?.count() ?: 0
-                } catch (_: Exception) {
+                    }
+                    val indexStats = stats.indices()?.get(indexName)
+                    val primariesDocs = indexStats?.primaries()?.docs()?.count() ?: 0
+                    val totalDocs = indexStats?.total()?.docs()?.count() ?: 0
+                    val storeSize = indexStats?.primaries()?.store()?.sizeInBytes() ?: 0
+                    
+                    // Log detailed information
+                    log.info { "Index '$indexName' EXISTS and is accessible" }
+                    log.info { "  - Primary shard document count: $primariesDocs" }
+                    log.info { "  - Total document count: $totalDocs" }
+                    log.info { "  - Number of shards: ${settings?.index()?.numberOfShards() ?: "unknown"}" }
+                    log.info { "  - Number of replicas: ${settings?.index()?.numberOfReplicas() ?: "unknown"}" }
+                    log.info { "  - Store size: ${storeSize / 1024}KB" }
+                    log.info { "  - Mappings: ${mappings?.properties()?.size ?: 0} fields configured" }
+                    
+                    primariesDocs
+                } catch (e: Exception) {
+                    log.warn { "Failed to get document count: ${e.message}" }
                     0L
                 }
 
                 log.info { "Index '$indexName' already exists with approximately $docCount documents" }
-
-                // Check if Korean analyzer is configured
-                log.info { "Index already exists with existing mappings" }
                 log.info { "Note: For better Korean language support, consider installing analysis-nori plugin" }
 
                 return

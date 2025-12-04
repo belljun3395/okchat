@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { userService, permissionService } from '../../services';
 
 const DashboardPage: React.FC = () => {
     const [stats, setStats] = useState({
@@ -13,8 +13,8 @@ const DashboardPage: React.FC = () => {
         const fetchStats = async () => {
             try {
                 const [usersRes, pathsRes] = await Promise.all([
-                    axios.get('/admin/users'),
-                    axios.get('/api/admin/permissions/paths')
+                    userService.getAll(),
+                    permissionService.getAllPaths()
                 ]);
 
                 setStats({

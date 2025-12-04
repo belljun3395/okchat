@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { permissionService } from '../../services';
 
 interface TreeNode {
     name: string;
@@ -32,8 +32,7 @@ const PathManagementPage: React.FC = () => {
     const fetchPaths = async () => {
         try {
             setLoading(true);
-            // Calling existing backend API
-            const response = await axios.get<string[]>('/api/admin/permissions/paths');
+            const response = await permissionService.getAllPaths();
             setPaths(response.data);
             setError('');
         } catch (err) {

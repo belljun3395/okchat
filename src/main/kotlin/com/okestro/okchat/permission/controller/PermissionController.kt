@@ -11,6 +11,7 @@ import com.okestro.okchat.permission.application.dto.GrantPathPermissionUseCaseI
 import com.okestro.okchat.permission.application.dto.RevokeAllUserPermissionsUseCaseIn
 import com.okestro.okchat.permission.application.dto.RevokePathPermissionUseCaseIn
 import com.okestro.okchat.permission.model.entity.DocumentPathPermission
+import com.okestro.okchat.permission.service.dto.DocumentSearchResult
 import com.okestro.okchat.user.application.FindUserByEmailUseCase
 import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
 import com.okestro.okchat.user.model.entity.User
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 private val log = KotlinLogging.logger {}
@@ -42,8 +44,69 @@ class PermissionController(
     private val revokeAllUserPermissionsUseCase: RevokeAllUserPermissionsUseCase,
     private val grantPathPermissionUseCase: GrantPathPermissionUseCase,
     private val grantDenyPathPermissionUseCase: GrantDenyPathPermissionUseCase,
-    private val revokePathPermissionUseCase: RevokePathPermissionUseCase
+    private val revokePathPermissionUseCase: RevokePathPermissionUseCase,
+    private val documentPermissionService: com.okestro.okchat.permission.service.DocumentPermissionService,
+    private val getAllActiveUsersUseCase: com.okestro.okchat.user.application.GetAllActiveUsersUseCase,
+    private val getPathPermissionsUseCase: com.okestro.okchat.permission.application.GetPathPermissionsUseCase
 ) {
+
+    @GetMapping("/paths")
+    @Operation(summary = "모든 문서 경로 조회")
+    suspend fun getAllPaths(): ResponseEntity<List<String>> {
+        log.info { "Get all paths request" }
+        val paths = documentPermissionService.searchAllPaths()
+        return ResponseEntity.ok(paths)
+    }
+
+    @GetMapping("/path/detail")
+    @Operation(summary = "경로 상세 정보 조회")
+    suspend fun getPathDetail(@RequestParam path: String): ResponseEntity<PathDetailResponse> {
+        log.info { "Get path detail request: path=$path" }
+
+        val documents = documentPermissionService.searchAllByPath(path)
+            .map { doc ->
+                DocumentSearchResult(
+                    id = doc.id,
+                    title = doc.title,
+                    url = doc.path,
+                    spaceKey = doc.spaceKey
+                )
+            }
+        val permissions = getPathPermissionsUseCase.execute(com.okestro.okchat.permission.application.dto.GetPathPermissionsUseCaseIn(path)).permissions
+        
+        val allUsers = getAllActiveUsersUseCase.execute(com.okestro.okchat.user.application.dto.GetAllActiveUsersUseCaseIn()).users
+        val usersWithAccess = permissions.mapNotNull { perm ->
+            allUsers.find { it.id == perm.userId }
+        }
+
+        return ResponseEntity.ok(
+            PathDetailResponse(
+                path = path,
+                documents = documents,
+                usersWithAccess = usersWithAccess,
+                totalDocuments = documents.size,
+                totalUsers = usersWithAccess.size
+            )
+        )
+    }
+
+    @GetMapping("/users")
+    @Operation(summary = "사용자별 권한 현황 조회")
+    suspend fun getAllUsersWithPermissions(): ResponseEntity<List<UserPermissionStat>> {
+        log.info { "Get all users with permissions request" }
+
+        val users = getAllActiveUsersUseCase.execute(com.okestro.okchat.user.application.dto.GetAllActiveUsersUseCaseIn()).users
+        
+        val userStats = users.map { user ->
+            val permissions = getUserPermissionsUseCase.execute(GetUserPermissionsUseCaseIn(user.id!!)).permissions
+            UserPermissionStat(
+                user = user,
+                permissionCount = permissions.size
+            )
+        }
+
+        return ResponseEntity.ok(userStats)
+    }
 
     @GetMapping("/user/{email}")
     @Operation(summary = "사용자 권한 조회")
@@ -197,4 +260,17 @@ data class UserPermissionsResponse(
     val user: User,
     val pathPermissions: List<DocumentPathPermission> = emptyList(),
     val totalDocuments: Int
+)
+
+data class PathDetailResponse(
+    val path: String,
+    val documents: List<DocumentSearchResult>,
+    val usersWithAccess: List<User>,
+    val totalDocuments: Int,
+    val totalUsers: Int
+)
+
+data class UserPermissionStat(
+    val user: User,
+    val permissionCount: Int
 )

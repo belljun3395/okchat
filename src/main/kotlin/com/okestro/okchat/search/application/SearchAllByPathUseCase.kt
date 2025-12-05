@@ -35,13 +35,22 @@ class SearchAllByPathUseCase(
                         .size(size)
                         .query { q ->
                             q.bool { b ->
+                                // Match exact path or any sub-path
                                 b.should { sh ->
-                                    // Exact match
+                                    // Exact match for the path itself
                                     sh.term { t ->
                                         t.field(MetadataFields.PATH)
                                             .value(FieldValue.of(documentPath))
                                     }
                                 }
+                                    .should { sh ->
+                                        // Prefix match for sub-paths (path starts with documentPath + " > ")
+                                        sh.prefix { p ->
+                                            p.field(MetadataFields.PATH)
+                                                .value(documentPath)
+                                        }
+                                    }
+                                    .minimumShouldMatch("1")
                             }
                         }
                         .source { src ->
@@ -51,7 +60,8 @@ class SearchAllByPathUseCase(
                                         "id",
                                         MetadataFields.ID,
                                         MetadataFields.TITLE,
-                                        MetadataFields.PATH
+                                        MetadataFields.PATH,
+                                        MetadataFields.SPACE_KEY
                                     )
                                 )
                             }
@@ -73,11 +83,13 @@ class SearchAllByPathUseCase(
                             if (!documents.containsKey(baseId)) {
                                 val title = source[MetadataFields.TITLE]?.toString() ?: "Untitled"
                                 val path = source[MetadataFields.PATH]?.toString() ?: ""
+                                val spaceKey = source[MetadataFields.SPACE_KEY]?.toString()
 
                                 documents[baseId] = Document(
                                     id = baseId,
                                     title = title,
-                                    path = path
+                                    path = path,
+                                    spaceKey = spaceKey
                                 )
                             }
                         }

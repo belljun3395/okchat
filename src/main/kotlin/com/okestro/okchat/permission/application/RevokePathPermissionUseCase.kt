@@ -15,7 +15,6 @@ private val log = KotlinLogging.logger {}
 class RevokePathPermissionUseCase(
     private val documentPathPermissionRepository: DocumentPathPermissionRepository
 ) {
-    @Transactional("transactionManager")
     suspend fun execute(useCaseIn: RevokePathPermissionUseCaseIn): RevokePathPermissionUseCaseOut =
         withContext(Dispatchers.IO) {
             val (userId, documentPaths) = useCaseIn

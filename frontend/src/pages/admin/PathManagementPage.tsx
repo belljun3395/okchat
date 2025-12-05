@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { permissionService } from '../../services';
 
 interface TreeNode {
     name: string;
@@ -32,8 +32,7 @@ const PathManagementPage: React.FC = () => {
     const fetchPaths = async () => {
         try {
             setLoading(true);
-            // Calling existing backend API
-            const response = await axios.get<string[]>('/api/admin/permissions/paths');
+            const response = await permissionService.getAllPaths();
             setPaths(response.data);
             setError('');
         } catch (err) {
@@ -47,14 +46,14 @@ const PathManagementPage: React.FC = () => {
     // Build tree structure from paths
     const treeRoot = useMemo(() => {
         const root: TreeNode = { name: 'Root', fullPath: '', children: new Map(), isLeaf: false };
-        
+
         paths.forEach(path => {
             const parts = path.split('>').map(p => p.trim()).filter(p => p);
             let current = root;
-            
+
             parts.forEach((part, index) => {
                 const fullPath = parts.slice(0, index + 1).join(' > ');
-                
+
                 if (!current.children.has(part)) {
                     current.children.set(part, {
                         name: part,
@@ -62,11 +61,25 @@ const PathManagementPage: React.FC = () => {
                         children: new Map(),
                         isLeaf: index === parts.length - 1
                     });
+                } else {
+                    // Update isLeaf if this node appears as an intermediate node
+                    const existingNode = current.children.get(part)!;
+                    if (index < parts.length - 1) {
+                        existingNode.isLeaf = false;
+                    }
                 }
                 current = current.children.get(part)!;
             });
         });
-        
+
+        console.log('Tree Root:', root);
+        console.log('First level children:', Array.from(root.children.keys()));
+
+        // Log second level children
+        root.children.forEach((child, key) => {
+            console.log(`Children of "${key}":`, Array.from(child.children.keys()).slice(0, 10));
+        });
+
         return root;
     }, [paths]);
 
@@ -97,14 +110,21 @@ const PathManagementPage: React.FC = () => {
 
         const hasChildren = node.children.size > 0;
         const isExpanded = expandedPaths.has(node.fullPath);
-        const indentSize = level > 1 ? (level - 1) * 24 : 0;
+        const indentSize = level * 24;
         const isRoot = level === 0;
         const isFirstLevel = level === 1;
+
+        if (!isRoot && level <= 3) {
+            console.log(`Rendering "${node.name}" at level ${level}, indentSize: ${indentSize}, paddingLeft: ${indentSize + 16}px`);
+        }
 
         const nodes: React.ReactNode[] = [];
 
         // Render current node (skip root)
         if (!isRoot) {
+            if (level <= 2) {
+                console.log(`[RENDER] "${node.name.substring(0, 30)}..." level=${level}, indent=${indentSize + 16}px`);
+            }
             nodes.push(
                 <tr key={node.fullPath} className={`path-row path-row-level-${level} ${isFirstLevel ? 'path-row-first-level' : ''}`}>
                     <td className="path-cell" style={{ paddingLeft: `${indentSize + 16}px` }}>

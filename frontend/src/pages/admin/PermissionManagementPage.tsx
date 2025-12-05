@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
-import type { PathDetailResponse } from '../../types';
+import { permissionService, userService } from '../../services';
+import type { PathDetailResponse, User } from '../../types';
 
 interface TreeNode {
     name: string;
     fullPath: string;
     children: Map<string, TreeNode>;
-    isExpanded?: boolean;
+    isLeaf: boolean;
 }
 
 interface Override {
     id: string;
     userEmail: string;
     userName: string;
-    permission: 'Read Only' | 'Write' | 'No Access';
+    permission: 'READ' | 'DENY';
 }
 
 const PermissionManagementPage: React.FC = () => {
@@ -25,23 +25,31 @@ const PermissionManagementPage: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
-    
-    const [defaultAccess, setDefaultAccess] = useState<'Read Only' | 'Write' | 'No Access'>('Read Only');
+
+    const [defaultAccess, setDefaultAccess] = useState<'READ' | 'DENY'>('READ');
     const [inherit, setInherit] = useState(true);
     const [overrides, setOverrides] = useState<Override[]>([]);
     const [showAddOverride, setShowAddOverride] = useState(false);
-    const [newOverride, setNewOverride] = useState({ userEmail: '', permission: 'Read Only' as const });
+    const [newOverride, setNewOverride] = useState({ userEmail: '', permission: 'READ' as const });
+
+    // Users list for dropdown
+    const [users, setUsers] = useState<User[]>([]);
+    const [userSearchTerm, setUserSearchTerm] = useState('');
 
     const fetchPaths = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await axios.get<string[]>('/api/admin/permissions/paths');
-            setPaths(response.data);
-            if (response.data.length > 0 && !selectedPath) {
-                setSelectedPath(response.data[0]);
+            const [pathsResponse, usersResponse] = await Promise.all([
+                permissionService.getAllPaths(),
+                userService.getAll()
+            ]);
+            setPaths(pathsResponse.data);
+            setUsers(usersResponse.data);
+            if (pathsResponse.data.length > 0 && !selectedPath) {
+                setSelectedPath(pathsResponse.data[0]);
             }
         } catch (err) {
-            console.error('Failed to fetch paths:', err);
+            console.error('Failed to fetch data:', err);
         } finally {
             setLoading(false);
         }
@@ -59,14 +67,14 @@ const PermissionManagementPage: React.FC = () => {
 
     const fetchPathDetail = async (path: string) => {
         try {
-            const response = await axios.get<PathDetailResponse>(`/api/admin/permissions/path/detail?path=${encodeURIComponent(path)}`);
+            const response = await permissionService.getPathDetail(path);
             setPathDetail(response.data);
             // Initialize overrides from users with access
             const initialOverrides: Override[] = response.data.usersWithAccess.map((user, idx) => ({
                 id: `override-${idx}`,
                 userEmail: user.email,
                 userName: user.name,
-                permission: 'Read Only' // Default, could be enhanced to fetch actual permission type
+                permission: 'READ' // Default permission type
             }));
             setOverrides(initialOverrides);
         } catch (err) {
@@ -76,28 +84,29 @@ const PermissionManagementPage: React.FC = () => {
 
     // Build tree structure from paths
     const treeRoot = useMemo(() => {
-        const root: TreeNode = { name: 'Root', fullPath: '', children: new Map() };
-        
+        const root: TreeNode = { name: 'Root', fullPath: '', children: new Map(), isLeaf: false };
+
         paths.forEach(path => {
-            const parts = path.split('/').filter(p => p);
+            const parts = path.split('>').map(p => p.trim()).filter(p => p);
             let current = root;
-            
+
             parts.forEach((part, index) => {
+                const fullPath = parts.slice(0, index + 1).join(' > ');
+
                 if (!current.children.has(part)) {
-                    const fullPath = '/' + parts.slice(0, index + 1).join('/');
                     current.children.set(part, {
                         name: part,
                         fullPath,
                         children: new Map(),
-                        isExpanded: expandedPaths.has(fullPath)
+                        isLeaf: index === parts.length - 1
                     });
                 }
                 current = current.children.get(part)!;
             });
         });
-        
+
         return root;
-    }, [paths, expandedPaths]);
+    }, [paths]);
 
     // Filter paths based on search term
     const filteredPaths = useMemo(() => {
@@ -105,6 +114,16 @@ const PermissionManagementPage: React.FC = () => {
         const term = searchTerm.toLowerCase();
         return paths.filter(path => path.toLowerCase().includes(term));
     }, [paths, searchTerm]);
+
+    // Filter users based on search term
+    const filteredUsers = useMemo(() => {
+        if (!userSearchTerm) return users;
+        const term = userSearchTerm.toLowerCase();
+        return users.filter(user =>
+            user.name.toLowerCase().includes(term) ||
+            user.email.toLowerCase().includes(term)
+        );
+    }, [users, userSearchTerm]);
 
     const toggleExpand = (path: string) => {
         setExpandedPaths(prev => {
@@ -118,101 +137,131 @@ const PermissionManagementPage: React.FC = () => {
         });
     };
 
-    const renderTreeNode = (node: TreeNode, level: number = 0): React.ReactNode => {
+    // Filter tree based on search term
+    const shouldShowNode = (node: TreeNode): boolean => {
+        if (!searchTerm) return true;
+        const term = searchTerm.toLowerCase();
+        return node.fullPath.toLowerCase().includes(term) ||
+               node.name.toLowerCase().includes(term) ||
+               Array.from(node.children.values()).some(child => shouldShowNode(child));
+    };
+
+    // Render tree node as table rows
+    const renderTreeNode = (node: TreeNode, level: number = 0): React.ReactNode[] => {
+        if (!shouldShowNode(node)) return [];
+
         const hasChildren = node.children.size > 0;
         const isExpanded = expandedPaths.has(node.fullPath);
         const isSelected = selectedPath === node.fullPath;
-        const matchesSearch = !searchTerm || node.fullPath.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            Array.from(node.children.keys()).some(child => child.toLowerCase().includes(searchTerm.toLowerCase()));
-
-        if (!matchesSearch && searchTerm) return null;
-
-        const indentSize = level * 20;
+        const indentSize = level > 1 ? (level - 1) * 24 : 0;
         const isRoot = level === 0;
+        const isFirstLevel = level === 1;
 
-        return (
-            <div key={node.fullPath || 'root'} className="tree-node-wrapper">
-                <div
-                    className={`tree-node flex items-center gap-2 py-2.5 px-3 rounded-md cursor-pointer transition-all ${
-                        isSelected 
-                            ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500 shadow-sm font-semibold' 
-                            : 'hover:bg-gray-50 text-gray-700 border-l-4 border-transparent'
-                    }`}
-                    style={{ 
-                        paddingLeft: `${indentSize + 12}px`,
-                        marginBottom: '1px'
-                    }}
+        const nodes: React.ReactNode[] = [];
+
+        // Render current node (skip root)
+        if (!isRoot) {
+            nodes.push(
+                <tr
+                    key={node.fullPath}
+                    className={`path-row path-row-level-${level} ${isFirstLevel ? 'path-row-first-level' : ''} ${isSelected ? 'path-row-selected' : ''}`}
                     onClick={() => {
                         if (node.fullPath) {
                             setSelectedPath(node.fullPath);
                         }
-                        if (hasChildren) {
-                            toggleExpand(node.fullPath);
-                        }
                     }}
-                    title={node.fullPath || node.name}
+                    style={{
+                        cursor: 'pointer',
+                        backgroundColor: isSelected ? '#EFF6FF' : undefined,
+                        borderLeft: isSelected ? '4px solid #3B82F6' : '4px solid transparent'
+                    }}
                 >
-                    {/* Expand/Collapse icon */}
-                    <div className="flex-shrink-0 tree-icon-wrapper" style={{ width: '20px', textAlign: 'center' }}>
-                        {hasChildren ? (
-                            <span className="tree-icon text-gray-600" style={{ 
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                display: 'inline-block',
-                                transition: 'transform 0.2s',
-                                transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)'
-                            }}>
-                                ▼
-                            </span>
-                        ) : (
-                            <span className="tree-icon text-gray-400" style={{ fontSize: '6px' }}>
-                                ●
-                            </span>
-                        )}
-                    </div>
-                    
-                    {/* Node name */}
-                    <span 
-                        className={`tree-node-name flex-1 ${
-                            isSelected ? 'font-semibold' : 'font-normal'
-                        }`}
-                        style={{ 
-                            fontSize: isRoot ? '14px' : level === 1 ? '13px' : '12px',
-                            lineHeight: '1.5',
-                            color: isSelected ? '#1e40af' : level > 2 ? '#6b7280' : '#374151'
-                        }}
-                    >
-                        {node.name}
-                    </span>
-                </div>
-                
-                {/* Children */}
-                {hasChildren && isExpanded && (
-                    <div className="tree-children" style={{ position: 'relative' }}>
-                        {Array.from(node.children.values()).map(child => 
-                            renderTreeNode(child, level + 1)
-                        )}
-                    </div>
-                )}
-            </div>
-        );
+                    <td className="path-cell" style={{ paddingLeft: `${indentSize + 16}px` }}>
+                        <div className="flex items-center gap-3">
+                            {hasChildren ? (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleExpand(node.fullPath);
+                                    }}
+                                    className="tree-toggle-btn"
+                                    title={isExpanded ? 'Collapse' : 'Expand'}
+                                >
+                                    <span
+                                        className="tree-toggle-icon"
+                                        style={{
+                                            transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                        }}
+                                    >
+                                        ▼
+                                    </span>
+                                </button>
+                            ) : (
+                                <span className="tree-icon-spacer"></span>
+                            )}
+
+                            <div className="path-node-content flex items-center gap-2 flex-1">
+                                {hasChildren ? (
+                                    <span className="path-icon path-icon-folder">
+                                        {isExpanded ? '📂' : '📁'}
+                                    </span>
+                                ) : (
+                                    <span className="path-icon path-icon-file">📄</span>
+                                )}
+
+                                <span className="path-segment-text">
+                                    {node.name}
+                                </span>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            );
+        }
+
+        // Render children if expanded
+        if (hasChildren && (isRoot || isExpanded)) {
+            Array.from(node.children.values()).forEach(child => {
+                nodes.push(...renderTreeNode(child, level + 1));
+            });
+        }
+
+        return nodes;
+    };
+
+    // Get all sub-paths for a given path (including the path itself)
+    const getSubPaths = (path: string): string[] => {
+        return paths.filter(p => p === path || p.startsWith(path + ' > '));
     };
 
     const handleSaveChanges = async () => {
         if (!selectedPath) return;
-        
+
         try {
             setSaving(true);
-            // TODO: Implement actual save API call
-            // await axios.put(`/api/admin/permissions/path/${encodeURIComponent(selectedPath)}`, {
-            //     defaultAccess,
-            //     inherit,
-            //     overrides
-            // });
-            
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 500));
-            alert('Changes saved successfully!');
+
+            // Get selected path and all sub-paths
+            const targetPaths = getSubPaths(selectedPath);
+
+            // Process each override
+            for (const override of overrides) {
+                if (override.permission === 'DENY') {
+                    // Deny access to all paths
+                    await permissionService.denyBulk({
+                        userEmail: override.userEmail,
+                        documentPaths: targetPaths
+                    });
+                } else {
+                    // Grant READ access to all paths
+                    await permissionService.grantBulk({
+                        userEmail: override.userEmail,
+                        documentPaths: targetPaths
+                    });
+                }
+            }
+
+            alert(`Permissions saved successfully for ${targetPaths.length} path(s)!`);
+            await fetchPathDetail(selectedPath);
         } catch (err) {
             console.error('Failed to save changes:', err);
             alert('Failed to save changes. Please try again.');
@@ -223,25 +272,80 @@ const PermissionManagementPage: React.FC = () => {
 
     const handleAddOverride = () => {
         if (!newOverride.userEmail) {
-            alert('Please enter a user email');
+            alert('Please select a user');
             return;
         }
-        
-        // TODO: Validate user exists
+
+        // Check if user already has an override
+        if (overrides.find(o => o.userEmail === newOverride.userEmail)) {
+            alert('This user already has an override');
+            return;
+        }
+
+        // Find the selected user
+        const selectedUser = users.find(u => u.email === newOverride.userEmail);
+        if (!selectedUser) {
+            alert('User not found');
+            return;
+        }
+
         const override: Override = {
             id: `override-${Date.now()}`,
-            userEmail: newOverride.userEmail,
-            userName: newOverride.userEmail.split('@')[0], // Temporary
+            userEmail: selectedUser.email,
+            userName: selectedUser.name,
             permission: newOverride.permission
         };
-        
+
         setOverrides([...overrides, override]);
-        setNewOverride({ userEmail: '', permission: 'Read Only' });
+        setNewOverride({ userEmail: '', permission: 'READ' });
         setShowAddOverride(false);
     };
 
-    const handleRemoveOverride = (id: string) => {
-        setOverrides(overrides.filter(o => o.id !== id));
+    const handleRemoveOverride = async (id: string, userEmail: string) => {
+        if (!selectedPath) return;
+
+        if (!window.confirm('Are you sure you want to remove this permission override?')) {
+            return;
+        }
+
+        try {
+            // Revoke the permission from the backend
+            await permissionService.revokeBulk({
+                userEmail: userEmail,
+                documentPaths: [selectedPath]
+            });
+
+            // Remove from local state
+            setOverrides(overrides.filter(o => o.id !== id));
+
+            // Refresh path detail
+            await fetchPathDetail(selectedPath);
+        } catch (err) {
+            console.error('Failed to remove override:', err);
+            alert('Failed to remove permission. Please try again.');
+        }
+    };
+
+    const handleAddUserFromList = (user: User) => {
+        if (!selectedPath) {
+            alert('Please select a path first');
+            return;
+        }
+
+        // Check if user already has an override
+        if (overrides.find(o => o.userEmail === user.email)) {
+            alert('This user already has an override for this path');
+            return;
+        }
+
+        const override: Override = {
+            id: `override-${Date.now()}`,
+            userEmail: user.email,
+            userName: user.name,
+            permission: 'READ'
+        };
+
+        setOverrides([...overrides, override]);
     };
 
     return (
@@ -251,44 +355,90 @@ const PermissionManagementPage: React.FC = () => {
                 <p className="text-secondary">Configure global access policies and inheritance</p>
             </div>
 
-            <div className="grid grid-cols-3 gap-lg" style={{ minHeight: '600px' }}>
+            <div className="grid grid-cols-4 gap-lg" style={{ minHeight: '600px' }}>
                 {/* Sidebar / Tree View */}
-                <div className="card h-full flex flex-col" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-                    <h3 className="mb-4 text-base font-semibold">Structure</h3>
-                    <div className="input-group mb-4">
-                        <input
-                            type="text"
-                            className="form-control"
-                            placeholder="Search hierarchy..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    
-                    {loading ? (
-                        <div className="text-center text-secondary p-4">Loading paths...</div>
-                    ) : (
-                        <div className="tree-container flex flex-col overflow-y-auto flex-1" style={{ 
-                            padding: '8px 4px',
-                            backgroundColor: '#ffffff'
-                        }}>
-                            {renderTreeNode(treeRoot)}
-                            {filteredPaths.length === 0 && (
-                                <div className="text-center text-secondary p-4 text-sm">
-                                    No paths found
-                                </div>
-                            )}
+                <div className="card p-0 overflow-hidden h-full flex flex-col" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                    <div className="path-toolbar p-4 border-b bg-gradient-to-r from-gray-50 to-gray-100">
+                        <h3 className="mb-3 text-base font-semibold">Structure</h3>
+                        <div className="relative">
+                            <div className="search-wrapper">
+                                <span className="search-icon">🔍</span>
+                                <input
+                                    type="text"
+                                    className="form-control path-search-input"
+                                    placeholder="Search paths..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
                         </div>
-                    )}
+                    </div>
+
+                    <div className="table-container path-table-container flex-1 overflow-y-auto">
+                        <table className="table path-table">
+                            <tbody>
+                                {loading ? (
+                                    <tr>
+                                        <td className="text-center p-8 text-secondary">Loading paths...</td>
+                                    </tr>
+                                ) : filteredPaths.length === 0 ? (
+                                    <tr>
+                                        <td className="text-center p-8 text-secondary">No paths found</td>
+                                    </tr>
+                                ) : (
+                                    renderTreeNode(treeRoot)
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="path-footer p-3 border-t bg-gray-50 flex justify-between items-center">
+                        <div className="path-stats text-xs text-secondary">
+                            <span className="font-medium text-gray-700">{filteredPaths.length}</span>
+                            <span className="ml-1">paths</span>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => {
+                                    // Expand all
+                                    const allPaths = new Set<string>();
+                                    const collectPaths = (node: TreeNode) => {
+                                        if (node.children.size > 0) {
+                                            allPaths.add(node.fullPath);
+                                            node.children.forEach(child => collectPaths(child));
+                                        }
+                                    };
+                                    collectPaths(treeRoot);
+                                    setExpandedPaths(allPaths);
+                                }}
+                                className="btn btn-secondary btn-sm path-control-btn"
+                                style={{ fontSize: '11px', padding: '4px 8px' }}
+                            >
+                                Expand All
+                            </button>
+                            <button
+                                onClick={() => setExpandedPaths(new Set())}
+                                className="btn btn-secondary btn-sm path-control-btn"
+                                style={{ fontSize: '11px', padding: '4px 8px' }}
+                            >
+                                Collapse All
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Main Content */}
-                <div className="card col-span-2 h-full overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                <div className="card col-span-2 h-full overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)', gridColumn: 'span 2' }}>
                     <div className="flex justify-between items-center mb-6 border-b pb-4">
                         <div>
                             <h3 className="text-lg font-semibold m-0">Policy Settings</h3>
                             {selectedPath && (
-                                <p className="text-sm text-secondary mt-1 m-0">{selectedPath}</p>
+                                <>
+                                    <p className="text-sm text-secondary mt-1 m-0">{selectedPath}</p>
+                                    <p className="text-xs text-blue-600 mt-1 m-0">
+                                        {getSubPaths(selectedPath).length} path(s) including sub-directories
+                                    </p>
+                                </>
                             )}
                         </div>
                         <div className="flex gap-2">
@@ -358,26 +508,19 @@ const PermissionManagementPage: React.FC = () => {
                                     value={defaultAccess}
                                     onChange={(e) => setDefaultAccess(e.target.value as typeof defaultAccess)}
                                 >
-                                    <option>Read Only</option>
-                                    <option>Write</option>
-                                    <option>No Access</option>
+                                    <option value="READ">Read</option>
+                                    <option value="DENY">Deny Access</option>
                                 </select>
                             </div>
 
                             <div className="input-group mb-6">
                                 <label className="input-label">Inheritance</label>
-                                <label className="flex items-center gap-sm p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                                    <input
-                                        type="checkbox"
-                                        checked={inherit}
-                                        onChange={(e) => setInherit(e.target.checked)}
-                                        className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
-                                    />
-                                    <div>
-                                        <div className="font-medium text-sm text-main">Inherit from parent</div>
-                                        <div className="text-xs text-secondary">Permissions will cascade down to sub-directories</div>
+                                <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
+                                    <div className="font-medium text-sm text-blue-900">Auto-apply to sub-directories</div>
+                                    <div className="text-xs text-blue-700 mt-1">
+                                        Permissions will automatically apply to all {getSubPaths(selectedPath).length - 1} sub-paths under this directory
                                     </div>
-                                </label>
+                                </div>
                             </div>
 
                             <div className="mt-8">
@@ -395,14 +538,22 @@ const PermissionManagementPage: React.FC = () => {
                                     <div className="card p-4 mb-4 bg-gray-50 border border-blue-200">
                                         <div className="grid grid-cols-2 gap-md mb-3">
                                             <div>
-                                                <label className="input-label text-sm">User Email</label>
-                                                <input
-                                                    type="email"
+                                                <label className="input-label text-sm">Select User</label>
+                                                <select
                                                     className="form-control"
-                                                    placeholder="user@example.com"
                                                     value={newOverride.userEmail}
                                                     onChange={(e) => setNewOverride({ ...newOverride, userEmail: e.target.value })}
-                                                />
+                                                >
+                                                    <option value="">-- Select a user --</option>
+                                                    {users
+                                                        .filter(user => !overrides.find(o => o.userEmail === user.email))
+                                                        .map(user => (
+                                                            <option key={user.email} value={user.email}>
+                                                                {user.name} ({user.email})
+                                                            </option>
+                                                        ))
+                                                    }
+                                                </select>
                                             </div>
                                             <div>
                                                 <label className="input-label text-sm">Permission</label>
@@ -411,13 +562,12 @@ const PermissionManagementPage: React.FC = () => {
                                                     value={newOverride.permission}
                                                     onChange={(e) => setNewOverride({ ...newOverride, permission: e.target.value as typeof newOverride.permission })}
                                                 >
-                                                    <option>Read Only</option>
-                                                    <option>Write</option>
-                                                    <option>No Access</option>
+                                                    <option value="READ">Read</option>
+                                                    <option value="DENY">Deny Access</option>
                                                 </select>
                                             </div>
                                         </div>
-                                        <button 
+                                        <button
                                             className="btn btn-primary btn-sm"
                                             onClick={handleAddOverride}
                                         >
@@ -449,18 +599,27 @@ const PermissionManagementPage: React.FC = () => {
                                                         <td className="font-medium">{override.userName}</td>
                                                         <td className="text-sm text-secondary">{override.userEmail}</td>
                                                         <td>
-                                                            <span className={`badge ${
-                                                                override.permission === 'Read Only' ? 'badge-info' :
-                                                                override.permission === 'Write' ? 'badge-success' :
-                                                                'badge-secondary'
-                                                            }`}>
-                                                                {override.permission}
-                                                            </span>
+                                                            <select
+                                                                className="form-control form-control-sm"
+                                                                value={override.permission}
+                                                                onChange={(e) => {
+                                                                    const newPermission = e.target.value as typeof override.permission;
+                                                                    setOverrides(overrides.map(o =>
+                                                                        o.id === override.id
+                                                                            ? { ...o, permission: newPermission }
+                                                                            : o
+                                                                    ));
+                                                                }}
+                                                                style={{ minWidth: '140px' }}
+                                                            >
+                                                                <option value="READ">Read</option>
+                                                                <option value="DENY">Deny Access</option>
+                                                            </select>
                                                         </td>
                                                         <td>
                                                             <button
                                                                 className="btn btn-danger btn-sm"
-                                                                onClick={() => handleRemoveOverride(override.id)}
+                                                                onClick={() => handleRemoveOverride(override.id, override.userEmail)}
                                                             >
                                                                 Remove
                                                             </button>
@@ -474,6 +633,77 @@ const PermissionManagementPage: React.FC = () => {
                             </div>
                         </>
                     )}
+                </div>
+
+                {/* User List Panel */}
+                <div className="card p-0 overflow-hidden h-full flex flex-col" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                    <div className="p-4 border-b bg-gradient-to-r from-gray-50 to-gray-100">
+                        <h3 className="mb-3 text-base font-semibold">Users</h3>
+                        <div className="relative">
+                            <div className="search-wrapper">
+                                <span className="search-icon">🔍</span>
+                                <input
+                                    type="text"
+                                    className="form-control path-search-input"
+                                    placeholder="Search users..."
+                                    value={userSearchTerm}
+                                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto">
+                        {loading ? (
+                            <div className="text-center p-8 text-secondary">Loading users...</div>
+                        ) : filteredUsers.length === 0 ? (
+                            <div className="text-center p-8 text-secondary">No users found</div>
+                        ) : (
+                            <div className="divide-y">
+                                {filteredUsers.map(user => {
+                                    const hasOverride = overrides.find(o => o.userEmail === user.email);
+                                    return (
+                                        <div
+                                            key={user.email}
+                                            className={`p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
+                                                hasOverride ? 'bg-blue-50' : ''
+                                            }`}
+                                            onClick={() => handleAddUserFromList(user)}
+                                            title={hasOverride ? 'Already has permission' : 'Click to add permission'}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex-shrink-0">
+                                                    <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium">
+                                                        {user.name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-medium text-sm text-gray-900 truncate">
+                                                        {user.name}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 truncate">
+                                                        {user.email}
+                                                    </div>
+                                                </div>
+                                                {hasOverride && (
+                                                    <div className="flex-shrink-0">
+                                                        <span className="text-xs text-blue-600">✓</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-3 border-t bg-gray-50">
+                        <div className="text-xs text-secondary text-center">
+                            <span className="font-medium text-gray-700">{filteredUsers.length}</span>
+                            <span className="ml-1">users</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -5,15 +5,20 @@ export interface User {
     email: string;
     name: string;
     active: boolean;
-    role?: string; // Added for frontend display
+    createdAt: string;
+    updatedAt: string;
 }
+
+export type PermissionLevel = 'READ' | 'WRITE' | 'ADMIN' | 'DENY';
 
 export interface DocumentPathPermission {
     id: number;
     userId: number;
-    path: string;
+    documentPath: string;
     spaceKey?: string;
-    permissionType: 'GRANT' | 'DENY';
+    permissionLevel: PermissionLevel;
+    grantedAt: string;
+    grantedBy?: number;
 }
 
 export interface DocumentSearchResult {

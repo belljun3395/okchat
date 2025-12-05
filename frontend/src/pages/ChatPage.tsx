@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { sendChatMessage } from '../services/chat.service';
 
 /**
  * ChatPage Component
- * 
+ *
  * This is the main chat interface. It handles:
  * 1. Sending messages to the backend via POST /api/chat
  * 2. Receiving streaming responses (SSE) from the backend
@@ -78,91 +79,61 @@ const ChatPage: React.FC = () => {
         setMessages(prev => [...prev, newMessage]);
         setIsTyping(true);
 
-        try {
-            // Prepare request data
-            const requestData = {
-                message: userMessage,
-                sessionId: sessionId,
-                isDeepThink: isDeepThink,
-                keywords: keywords ? keywords.split(',').map(k => k.trim()).filter(k => k) : []
-            };
+        // Prepare request data
+        const requestData = {
+            message: userMessage,
+            sessionId: sessionId,
+            isDeepThink: isDeepThink,
+            keywords: keywords ? keywords.split(',').map(k => k.trim()).filter(k => k) : []
+        };
 
-            // TODO: API Integration
-            // Calling the existing backend API at /api/chat
-            // The backend returns a stream of text (Server-Sent Events)
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'text/event-stream'
-                },
-                body: JSON.stringify(requestData)
-            });
+        // Initialize bot response state
+        let botResponse = '';
+        let isFirstChunk = true;
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+        // Use the chat service with enhanced error handling
+        await sendChatMessage(requestData, {
+            onData: (chunk) => {
+                // Skip request ID metadata
+                if (chunk && !chunk.startsWith('__REQUEST_ID__:')) {
+                    botResponse += chunk;
 
-            // Initialize bot response state
-            let botResponse = '';
-            let isFirstChunk = true;
-
-            // Handle the stream
-            const reader = response.body?.getReader();
-            const decoder = new TextDecoder();
-
-            if (reader) {
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    const chunk = decoder.decode(value, { stream: true });
-                    const lines = chunk.split('\n');
-
-                    for (const line of lines) {
-                        if (line.startsWith('data:')) {
-                            let data = line.substring(5);
-                            if (data.startsWith(' ')) data = data.substring(1);
-
-                            // Skip request ID metadata
-                            if (data && !data.startsWith('__REQUEST_ID__:')) {
-                                botResponse += data;
-
-                                if (isFirstChunk) {
-                                    setIsTyping(false);
-                                    // Add the bot message for the first time
-                                    setMessages(prev => [...prev, {
-                                        content: botResponse,
-                                        isUser: false,
-                                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                    }]);
-                                    isFirstChunk = false;
-                                } else {
-                                    // Update the existing last message
-                                    setMessages(prev => {
-                                        const newMessages = [...prev];
-                                        const lastMsg = newMessages[newMessages.length - 1];
-                                        lastMsg.content = botResponse;
-                                        return newMessages;
-                                    });
-                                }
-                            }
-                        }
+                    if (isFirstChunk) {
+                        setIsTyping(false);
+                        // Add the bot message for the first time
+                        setMessages(prev => [...prev, {
+                            content: botResponse,
+                            isUser: false,
+                            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        }]);
+                        isFirstChunk = false;
+                    } else {
+                        // Update the existing last message
+                        setMessages(prev => {
+                            const newMessages = [...prev];
+                            const lastMsg = newMessages[newMessages.length - 1];
+                            lastMsg.content = botResponse;
+                            return newMessages;
+                        });
                     }
                 }
-            }
+            },
+            onError: (error) => {
+                console.error('Error sending message:', error);
+                setIsTyping(false);
 
-        } catch (error) {
-            console.error('Error sending message:', error);
-            setIsTyping(false); // Ensure typing stops on error
-            setMessages(prev => [...prev, {
-                content: "Sorry, I encountered an error connecting to the server.",
-                isUser: false,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            }]);
-        } finally {
-            setIsTyping(false);
-        }
+                const errorMessage = error.message || 'An unknown error occurred';
+                setMessages(prev => [...prev, {
+                    content: `**Error**: ${errorMessage}\n\nPlease try again or contact support if the problem persists.`,
+                    isUser: false,
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                }]);
+            },
+            onComplete: () => {
+                setIsTyping(false);
+                console.log('Chat stream completed');
+            }
+        });
     };
 
     /**

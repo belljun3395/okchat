@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import { permissionService } from '../../services';
 import type { PathDetailResponse } from '../../types';
 
 /**
@@ -28,9 +28,7 @@ const PathDetailPage: React.FC = () => {
     const fetchPathDetails = async () => {
         try {
             setLoading(true);
-            const response = await axios.get<PathDetailResponse>(`/api/admin/permissions/path/detail`, {
-                params: { path }
-            });
+            const response = await permissionService.getPathDetail(path!);
             setDetails(response.data);
         } catch (err) {
             console.error('Failed to fetch path details:', err);
@@ -111,7 +109,7 @@ const PathDetailPage: React.FC = () => {
                                             </td>
                                             <td>
                                                 <Link
-                                                    to={`/admin/permissions/user/${user.email}`}
+                                                    to={`/admin/permissions/user/${encodeURIComponent(user.email)}`}
                                                     className="text-primary hover:underline text-sm"
                                                 >
                                                     Manage

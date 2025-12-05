@@ -12,6 +12,7 @@ import {
 } from 'chart.js';
 import type { ScriptableContext } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import { analyticsService } from '../../services';
 
 // Register ChartJS components
 ChartJS.register(
@@ -99,11 +100,8 @@ const AnalyticsPage: React.FC = () => {
 
     const fetchUsageStats = async (startDate: string, endDate: string) => {
         try {
-            const response = await fetch(`/api/admin/chat/analytics/usage/daily?startDate=${startDate}&endDate=${endDate}`);
-            if (response.ok) {
-                const data = await response.json();
-                setUsageStats(data);
-            }
+            const response = await analyticsService.getDailyUsage(startDate, endDate);
+            setUsageStats(response.data);
         } catch (e) {
             console.error("Failed to fetch usage stats", e);
         }
@@ -111,11 +109,8 @@ const AnalyticsPage: React.FC = () => {
 
     const fetchQualityStats = async (startDate: string, endDate: string) => {
         try {
-            const response = await fetch(`/api/admin/chat/analytics/quality/trend?startDate=${startDate}&endDate=${endDate}`);
-            if (response.ok) {
-                const data = await response.json();
-                setQualityStats(data);
-            }
+            const response = await analyticsService.getQualityTrend(startDate, endDate);
+            setQualityStats(response.data);
         } catch (e) {
             console.error("Failed to fetch quality stats", e);
         }
@@ -123,11 +118,8 @@ const AnalyticsPage: React.FC = () => {
 
     const fetchQueryTypeStats = async (startDate: string, endDate: string) => {
         try {
-            const response = await fetch(`/api/admin/chat/analytics/query-types?startDate=${startDate}&endDate=${endDate}`);
-            if (response.ok) {
-                const data = await response.json();
-                setQueryTypeStats(data);
-            }
+            const response = await analyticsService.getQueryTypeStats(startDate, endDate);
+            setQueryTypeStats(response.data);
         } catch (e) {
             console.error("Failed to fetch query type stats", e);
         }

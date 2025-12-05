@@ -1,33 +1,23 @@
 import React, { useState, useEffect } from 'react';
-
-interface Email {
-    id: number;
-    fromEmail: string;
-    toEmail: string;
-    originalSubject: string;
-    originalContent: string;
-    replyContent: string;
-    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SENT' | 'FAILED';
-    createdAt: string;
-    rejectionReason?: string;
-}
+import { emailService, type PendingEmailReply, type EmailStatus } from '../../services';
 
 interface EmailCounts {
-    pending: number;
-    approved: number;
-    sent: number;
-    rejected: number;
+    PENDING: number;
+    APPROVED: number;
+    SENT: number;
+    REJECTED: number;
+    FAILED: number;
 }
 
 const EmailReviewPage: React.FC = () => {
-    const [emails, setEmails] = useState<Email[]>([]);
-    const [counts, setCounts] = useState<EmailCounts>({ pending: 0, approved: 0, sent: 0, rejected: 0 });
-    const [currentStatus, setCurrentStatus] = useState<string>('PENDING');
+    const [emails, setEmails] = useState<PendingEmailReply[]>([]);
+    const [counts, setCounts] = useState<EmailCounts>({ PENDING: 0, APPROVED: 0, SENT: 0, REJECTED: 0, FAILED: 0 });
+    const [currentStatus, setCurrentStatus] = useState<EmailStatus>('PENDING');
     const [loading, setLoading] = useState(true);
     const [expandedPreviews, setExpandedPreviews] = useState<number[]>([]);
 
     // Modal States
-    const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+    const [selectedEmail, setSelectedEmail] = useState<PendingEmailReply | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
@@ -46,26 +36,18 @@ const EmailReviewPage: React.FC = () => {
 
     const loadCounts = async () => {
         try {
-            const response = await fetch('/api/email/pending/count');
-            if (response.ok) {
-                const data = await response.json();
-                setCounts(data);
-            }
+            const response = await emailService.getCounts();
+            setCounts(response.data);
         } catch (error) {
             console.error('Failed to load counts:', error);
         }
     };
 
-    const loadEmails = async (status: string) => {
+    const loadEmails = async (status: EmailStatus) => {
         setLoading(true);
         try {
-            const response = await fetch(`/api/email/pending/status/${status}`);
-            if (response.ok) {
-                const data = await response.json();
-                setEmails(data);
-            } else {
-                setEmails([]);
-            }
+            const response = await emailService.getByStatus(status);
+            setEmails(response.data);
         } catch (error) {
             console.error('Failed to load emails:', error);
             setEmails([]);
@@ -82,12 +64,9 @@ const EmailReviewPage: React.FC = () => {
 
     const handleViewDetail = async (id: number) => {
         try {
-            const response = await fetch(`/api/email/pending/${id}`);
-            if (response.ok) {
-                const data = await response.json();
-                setSelectedEmail(data);
-                setIsDetailModalOpen(true);
-            }
+            const response = await emailService.getById(id);
+            setSelectedEmail(response.data);
+            setIsDetailModalOpen(true);
         } catch (error) {
             console.error('Failed to load email detail:', error);
             alert('Failed to load email details.');
@@ -98,18 +77,12 @@ const EmailReviewPage: React.FC = () => {
         if (!window.confirm('Are you sure you want to approve and send this email?')) return;
 
         try {
-            const response = await fetch(`/api/email/pending/${id}/approve`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reviewedBy: 'admin' })
-            });
-
-            const result = await response.json();
-            if (result.success) {
+            const result = await emailService.approve(id, 'admin');
+            if (result.data.success) {
                 loadData();
                 if (isDetailModalOpen) setIsDetailModalOpen(false);
             } else {
-                alert('Failed: ' + result.message);
+                alert('Failed: ' + result.data.message);
             }
         } catch (error) {
             console.error('Failed to approve email:', error);
@@ -127,23 +100,18 @@ const EmailReviewPage: React.FC = () => {
         if (!emailToReject) return;
 
         try {
-            const response = await fetch(`/api/email/pending/${emailToReject}/reject`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    reviewedBy: 'admin',
-                    rejectionReason: rejectReason || null
-                })
+            const result = await emailService.reject(emailToReject, {
+                reviewedBy: 'admin',
+                rejectionReason: rejectReason || undefined
             });
 
-            const result = await response.json();
-            if (result.success) {
+            if (result.data.success) {
                 setIsRejectModalOpen(false);
                 setEmailToReject(null);
                 loadData();
                 if (isDetailModalOpen) setIsDetailModalOpen(false);
             } else {
-                alert('Failed: ' + result.message);
+                alert('Failed: ' + result.data.message);
             }
         } catch (error) {
             console.error('Failed to reject email:', error);
@@ -174,19 +142,19 @@ const EmailReviewPage: React.FC = () => {
             {/* Stats Grid */}
             <div className="grid grid-cols-4 gap-md mb-8">
                 <div className="card text-center p-4">
-                    <div className="text-3xl font-bold text-warning mb-1">{counts.pending}</div>
+                    <div className="text-3xl font-bold text-warning mb-1">{counts.PENDING}</div>
                     <div className="text-xs font-medium text-secondary uppercase tracking-wide">Pending</div>
                 </div>
                 <div className="card text-center p-4">
-                    <div className="text-3xl font-bold text-success mb-1">{counts.approved}</div>
+                    <div className="text-3xl font-bold text-success mb-1">{counts.APPROVED}</div>
                     <div className="text-xs font-medium text-secondary uppercase tracking-wide">Approved</div>
                 </div>
                 <div className="card text-center p-4">
-                    <div className="text-3xl font-bold text-info mb-1">{counts.sent}</div>
+                    <div className="text-3xl font-bold text-info mb-1">{counts.SENT}</div>
                     <div className="text-xs font-medium text-secondary uppercase tracking-wide">Sent</div>
                 </div>
                 <div className="card text-center p-4">
-                    <div className="text-3xl font-bold text-danger mb-1">{counts.rejected}</div>
+                    <div className="text-3xl font-bold text-danger mb-1">{counts.REJECTED}</div>
                     <div className="text-xs font-medium text-secondary uppercase tracking-wide">Rejected</div>
                 </div>
             </div>

@@ -60,7 +60,7 @@ class OpenSearchSchemaInitializer(
                 // Index exists - get detailed information
                 val settings = indexInfo.settings()
                 val mappings = indexInfo.mappings()
-                
+
                 val docCount = try {
                     val stats = openSearchClient.indices().stats { s ->
                         s.index(indexName)
@@ -69,7 +69,7 @@ class OpenSearchSchemaInitializer(
                     val primariesDocs = indexStats?.primaries()?.docs()?.count() ?: 0
                     val totalDocs = indexStats?.total()?.docs()?.count() ?: 0
                     val storeSize = indexStats?.primaries()?.store()?.sizeInBytes() ?: 0
-                    
+
                     // Log detailed information
                     log.info { "Index '$indexName' EXISTS and is accessible" }
                     log.info { "  - Primary shard document count: $primariesDocs" }
@@ -78,7 +78,7 @@ class OpenSearchSchemaInitializer(
                     log.info { "  - Number of replicas: ${settings?.index()?.numberOfReplicas() ?: "unknown"}" }
                     log.info { "  - Store size: ${storeSize / 1024}KB" }
                     log.info { "  - Mappings: ${mappings?.properties()?.size ?: 0} fields configured" }
-                    
+
                     primariesDocs
                 } catch (e: Exception) {
                     log.warn { "Failed to get document count: ${e.message}" }

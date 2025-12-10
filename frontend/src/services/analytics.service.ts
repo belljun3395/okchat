@@ -37,6 +37,16 @@ export interface FeedbackRequest {
     feedback?: string;
 }
 
+export interface TimeSeriesDataPoint {
+    date: string;
+    value: number;
+}
+
+export interface InteractionTimeSeries {
+    dataPoints: TimeSeriesDataPoint[];
+    dateRange: DateRange;
+}
+
 /**
  * Analytics Service
  *
@@ -45,6 +55,7 @@ export interface FeedbackRequest {
  * - GET /api/admin/chat/analytics/quality/trend - Get quality trend
  * - GET /api/admin/chat/analytics/query-types - Get query type stats
  * - GET /api/admin/chat/analytics/performance - Get performance metrics
+ * - GET /api/admin/chat/analytics/timeseries/interactions - Get interaction time series
  * - POST /api/admin/chat/analytics/feedback - Submit feedback
  */
 export const analyticsService = {
@@ -77,6 +88,14 @@ export const analyticsService = {
      */
     getPerformanceMetrics: (startDate: string, endDate: string) =>
         apiClient.get<PerformanceMetrics>('/api/admin/chat/analytics/performance', {
+            params: { startDate, endDate }
+        }),
+
+    /**
+     * Get interaction time series data
+     */
+    getInteractionTimeSeries: (startDate: string, endDate: string) =>
+        apiClient.get<InteractionTimeSeries>('/api/admin/chat/analytics/timeseries/interactions', {
             params: { startDate, endDate }
         }),
 

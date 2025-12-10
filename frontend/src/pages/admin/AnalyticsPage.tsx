@@ -74,22 +74,15 @@ const AnalyticsPage: React.FC = () => {
             startDate.setDate(1); // First day of current month
         }
 
-        const startStr = startDate.toISOString().slice(0, 16);
-        const endStr = endDate.toISOString().slice(0, 16);
+        const startStr = startDate.toISOString().slice(0, 19);
+        const endStr = endDate.toISOString().slice(0, 19);
 
         try {
             await Promise.all([
                 fetchUsageStats(startStr, endStr),
                 fetchQualityStats(startStr, endStr),
                 fetchQueryTypeStats(startStr, endStr),
-                // In a real app, we would fetch chart data here too. 
-                // For now, I'll mock the chart data or use a placeholder if the API isn't ready for it.
-                // The original template implied usage stats might populate the chart, but let's simulate it for now 
-                // or try to fetch if an endpoint exists. The template had `loadUsageStats` but the chart data seemed separate?
-                // Actually, let's look at the template: `loadUsageStats` just updated the KPI cards.
-                // The chart data was empty in the template initially.
-                // I'll simulate chart data for visual completeness as the API might not return time-series data yet.
-                simulateChartData(dateRange)
+                fetchChartData(startStr, endStr)
             ]);
         } catch (error) {
             console.error("Error loading analytics", error);
@@ -125,40 +118,48 @@ const AnalyticsPage: React.FC = () => {
         }
     };
 
-    const simulateChartData = (range: string) => {
-        const labels = [];
-        const dataPoints = [];
-        const days = range === '7days' ? 7 : range === '30days' ? 30 : 10;
+    const fetchChartData = async (startDate: string, endDate: string) => {
+        try {
+            const response = await analyticsService.getInteractionTimeSeries(startDate, endDate);
+            const timeSeries = response.data;
 
-        for (let i = days; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            labels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
-            dataPoints.push(Math.floor(Math.random() * 50) + 10); // Random data for demo
-        }
+            // Transform API data to chart format
+            const labels = timeSeries.dataPoints.map(point => {
+                const date = new Date(point.date);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            });
+            const dataPoints = timeSeries.dataPoints.map(point => point.value);
 
-        setChartData({
-            labels,
-            datasets: [
-                {
-                    label: 'Interactions',
-                    data: dataPoints,
-                    borderColor: '#2563EB',
-                    backgroundColor: (context: ScriptableContext<'line'>) => {
-                        const ctx = context.chart.ctx;
-                        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-                        gradient.addColorStop(0, 'rgba(37, 99, 235, 0.1)');
-                        gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
-                        return gradient;
+            setChartData({
+                labels,
+                datasets: [
+                    {
+                        label: 'Interactions',
+                        data: dataPoints,
+                        borderColor: '#2563EB',
+                        backgroundColor: (context: ScriptableContext<'line'>) => {
+                            const ctx = context.chart.ctx;
+                            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+                            gradient.addColorStop(0, 'rgba(37, 99, 235, 0.1)');
+                            gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+                            return gradient;
+                        },
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
                     },
-                    borderWidth: 3,
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 0,
-                    pointHoverRadius: 6,
-                },
-            ],
-        });
+                ],
+            });
+        } catch (e) {
+            console.error("Failed to fetch chart data", e);
+            // Set empty chart data on error
+            setChartData({
+                labels: [],
+                datasets: []
+            });
+        }
     };
 
     const chartOptions = {

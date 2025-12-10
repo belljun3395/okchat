@@ -63,3 +63,25 @@ data class DateRange(
     val startDate: LocalDateTime,
     val endDate: LocalDateTime
 )
+
+/**
+ * Single data point in a time series
+ *
+ * @property date Date of the data point
+ * @property value Value at this point (e.g., interaction count)
+ */
+data class TimeSeriesDataPoint(
+    val date: String,
+    val value: Long
+)
+
+/**
+ * Time series data for interaction volume
+ *
+ * @property dataPoints List of data points over time
+ * @property dateRange Date range for this data
+ */
+data class InteractionTimeSeries(
+    val dataPoints: List<TimeSeriesDataPoint>,
+    val dateRange: DateRange
+)

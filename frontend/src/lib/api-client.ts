@@ -16,6 +16,7 @@ export class ApiError extends Error {
 
 /**
  * Axios instance with default configuration
+ * TODO: fetch, axios 중 하나만 사용하기
  */
 const apiClient = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || '',

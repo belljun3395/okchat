@@ -4,6 +4,7 @@ import com.okestro.okchat.chat.event.ChatEventBus
 import com.okestro.okchat.chat.event.FeedbackSubmittedEvent
 import com.okestro.okchat.chat.service.ChatAnalyticsService
 import com.okestro.okchat.chat.service.dto.DailyUsageStats
+import com.okestro.okchat.chat.service.dto.InteractionTimeSeries
 import com.okestro.okchat.chat.service.dto.PerformanceMetrics
 import com.okestro.okchat.chat.service.dto.QualityTrendStats
 import com.okestro.okchat.chat.service.dto.QueryTypeStat
@@ -247,6 +248,60 @@ class ChatAnalyticsController(
         endDate: LocalDateTime
     ): List<QueryTypeStat> {
         return analyticsService.getQueryTypeStats(startDate, endDate)
+    }
+
+    @GetMapping("/timeseries/interactions")
+    @Operation(
+        summary = "인터랙션 시계열 데이터 조회",
+        description = """
+            일별 인터랙션 건수의 시계열 데이터를 조회합니다.
+
+            차트 시각화를 위한 데이터로, 각 날짜별 인터랙션 건수를 반환합니다.
+
+            반환 데이터:
+            - dataPoints: 날짜별 데이터 포인트 배열
+              - date: 날짜 (ISO-8601 날짜 형식)
+              - value: 해당 날짜의 인터랙션 건수
+            - dateRange: 조회된 날짜 범위
+        """
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "시계열 데이터 조회 성공",
+                content = [
+                    Content(
+                        mediaType = "application/json",
+                        schema = Schema(implementation = InteractionTimeSeries::class)
+                    )
+                ]
+            ),
+            ApiResponse(
+                responseCode = "400",
+                description = "잘못된 날짜 형식"
+            )
+        ]
+    )
+    suspend fun getInteractionTimeSeries(
+        @Parameter(
+            description = "통계 시작 날짜 (ISO-8601 형식)",
+            example = "2025-01-01T00:00:00",
+            required = true
+        )
+        @RequestParam
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+        startDate: LocalDateTime,
+        @Parameter(
+            description = "통계 종료 날짜 (ISO-8601 형식)",
+            example = "2025-01-31T23:59:59",
+            required = true
+        )
+        @RequestParam
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+        endDate: LocalDateTime
+    ): InteractionTimeSeries {
+        return analyticsService.getInteractionTimeSeries(startDate, endDate)
     }
 
     @PostMapping("/feedback")

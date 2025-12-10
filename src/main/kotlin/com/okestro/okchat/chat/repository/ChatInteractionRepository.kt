@@ -82,4 +82,29 @@ interface ChatInteractionRepository : JpaRepository<ChatInteraction, Long> {
         val avgRating: Double?
         val avgResponseTime: Double
     }
+
+    /**
+     * Get daily interaction counts for time series chart
+     */
+    @Query(
+        """
+        SELECT DATE(c.createdAt) as date, COUNT(c) as count
+        FROM ChatInteraction c
+        WHERE c.createdAt BETWEEN :startDate AND :endDate
+        GROUP BY DATE(c.createdAt)
+        ORDER BY DATE(c.createdAt)
+    """
+    )
+    fun getDailyInteractionCounts(
+        @Param("startDate") startDate: LocalDateTime,
+        @Param("endDate") endDate: LocalDateTime
+    ): List<DailyInteractionCount>
+
+    /**
+     * Daily interaction count interface
+     */
+    interface DailyInteractionCount {
+        val date: java.time.LocalDate
+        val count: Long
+    }
 }

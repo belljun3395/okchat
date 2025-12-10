@@ -3,13 +3,16 @@ package com.okestro.okchat.chat.service
 import com.okestro.okchat.chat.repository.ChatInteractionRepository
 import com.okestro.okchat.chat.service.dto.DailyUsageStats
 import com.okestro.okchat.chat.service.dto.DateRange
+import com.okestro.okchat.chat.service.dto.InteractionTimeSeries
 import com.okestro.okchat.chat.service.dto.PerformanceMetrics
 import com.okestro.okchat.chat.service.dto.QualityTrendStats
 import com.okestro.okchat.chat.service.dto.QueryTypeStat
+import com.okestro.okchat.chat.service.dto.TimeSeriesDataPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 /**
  * Chat analytics service
@@ -113,6 +116,35 @@ class ChatAnalyticsService(
                 averageResponseTime = it.avgResponseTime
             )
         }
+    }
+
+    /**
+     * Get interaction time series data for chart visualization
+     *
+     * Returns daily interaction counts for the specified period.
+     *
+     * @param startDate Period start date
+     * @param endDate Period end date
+     * @return Time series data with daily interaction counts
+     */
+    suspend fun getInteractionTimeSeries(
+        startDate: LocalDateTime,
+        endDate: LocalDateTime
+    ): InteractionTimeSeries = withContext(Dispatchers.IO) {
+        val dailyCounts = chatInteractionRepository.getDailyInteractionCounts(startDate, endDate)
+        val formatter = DateTimeFormatter.ISO_LOCAL_DATE
+
+        val dataPoints = dailyCounts.map { dailyCount ->
+            TimeSeriesDataPoint(
+                date = dailyCount.date.format(formatter),
+                value = dailyCount.count
+            )
+        }
+
+        InteractionTimeSeries(
+            dataPoints = dataPoints,
+            dateRange = DateRange(startDate, endDate)
+        )
     }
 
     /**

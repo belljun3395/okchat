@@ -5,6 +5,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import kotlinx.coroutines.runBlocking
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
@@ -37,7 +38,9 @@ private val logger = KotlinLogging.logger {}
 )
 class MetricsUpdateTask(
     private val meterRegistry: MeterRegistry,
-    private val chatInteractionRepository: ChatInteractionRepository
+    private val chatInteractionRepository: ChatInteractionRepository,
+    @Value("\${task.metrics-update.hourly-interval:60000}") private val hourlyInterval: Long,
+    @Value("\${task.metrics-update.daily-interval:300000}") private val dailyInterval: Long
 ) : CommandLineRunner {
 
     /**
@@ -45,8 +48,8 @@ class MetricsUpdateTask(
      */
     override fun run(vararg args: String?) {
         logger.info { "✓ MetricsUpdateTask initialized" }
-        logger.info { "  - Hourly metrics interval: \${task.metrics-update.hourly-interval:60000}ms" }
-        logger.info { "  - Daily metrics interval: \${task.metrics-update.daily-interval:300000}ms" }
+        logger.info { "  - Hourly metrics interval: ${hourlyInterval}ms" }
+        logger.info { "  - Daily metrics interval: ${dailyInterval}ms" }
     }
 
     /**

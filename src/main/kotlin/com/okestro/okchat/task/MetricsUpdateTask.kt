@@ -4,6 +4,7 @@ import com.okestro.okchat.chat.repository.ChatInteractionRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
+import io.micrometer.core.instrument.Timer
 import kotlinx.coroutines.runBlocking
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
@@ -57,6 +58,8 @@ class MetricsUpdateTask(
      */
     @Scheduled(fixedRateString = "\${task.metrics-update.hourly-interval:60000}", initialDelayString = "\${task.metrics-update.initial-delay:10000}")
     fun updateHourlyMetrics() {
+        val sample = Timer.start(meterRegistry)
+        val tags = Tags.of("task", "metrics-update-hourly")
         runBlocking {
             try {
                 val now = LocalDateTime.now()
@@ -104,7 +107,11 @@ class MetricsUpdateTask(
                         "avgResponseTime=${"%.0f".format(avgResponseTime)}ms, " +
                         "helpful=${"%.1f".format(helpfulPercentage)}%, avgRating=${"%.2f".format(avgRating)}"
                 }
+                sample.stop(meterRegistry.timer("task.execution.time", tags.and("status", "success")))
+                meterRegistry.counter("task.execution.count", tags.and("status", "success")).increment()
             } catch (e: Exception) {
+                sample.stop(meterRegistry.timer("task.execution.time", tags.and("status", "failure")))
+                meterRegistry.counter("task.execution.count", tags.and("status", "failure")).increment()
                 logger.error(e) { "Error updating hourly metrics: ${e.message}" }
             }
         }
@@ -115,6 +122,8 @@ class MetricsUpdateTask(
      */
     @Scheduled(fixedRateString = "\${task.metrics-update.daily-interval:300000}", initialDelayString = "\${task.metrics-update.initial-delay:10000}")
     fun updateDailyMetrics() {
+        val sample = Timer.start(meterRegistry)
+        val tags = Tags.of("task", "metrics-update-daily")
         runBlocking {
             try {
                 val now = LocalDateTime.now()
@@ -131,7 +140,11 @@ class MetricsUpdateTask(
                 logger.info {
                     "✓ Daily metrics updated: interactions=$dailyInteractions"
                 }
+                sample.stop(meterRegistry.timer("task.execution.time", tags.and("status", "success")))
+                meterRegistry.counter("task.execution.count", tags.and("status", "success")).increment()
             } catch (e: Exception) {
+                sample.stop(meterRegistry.timer("task.execution.time", tags.and("status", "failure")))
+                meterRegistry.counter("task.execution.count", tags.and("status", "failure")).increment()
                 logger.error(e) { "Error updating daily metrics: ${e.message}" }
             }
         }

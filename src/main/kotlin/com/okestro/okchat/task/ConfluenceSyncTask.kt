@@ -11,6 +11,9 @@ import com.okestro.okchat.confluence.util.ContentHierarchyVisualizer
 import com.okestro.okchat.search.support.MetadataFields
 import com.okestro.okchat.search.support.metadata
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Tags
+import io.micrometer.core.instrument.Timer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -50,13 +53,16 @@ class ConfluenceSyncTask(
     private val documentKeywordExtractionService: DocumentKeywordExtractionService,
     private val chunkingStrategy: ChunkingStrategy,
     private val confluenceProperties: ConfluenceProperties,
-    @Value("\${spring.ai.vectorstore.opensearch.index-name}") private val indexName: String
+    @Value("\${spring.ai.vectorstore.opensearch.index-name}") private val indexName: String,
+    private val meterRegistry: MeterRegistry
 ) : CommandLineRunner {
 
     private val log = KotlinLogging.logger {}
 
     override fun run(vararg args: String?) = runBlocking {
         log.info { "[ConfluenceSync] Starting Confluence sync task" }
+        val sample = Timer.start(meterRegistry)
+        val tags = Tags.of("task", "confluence-sync")
 
         try {
             // Parse command line arguments
@@ -170,7 +176,18 @@ class ConfluenceSyncTask(
 
             // 6. Summary
             log.info { "[ConfluenceSync] Sync completed: space_key=$spaceKey, processed_pages=${documents.size}" }
+            
+            // Record metrics
+            sample.stop(meterRegistry.timer("task.execution.time", tags.and("status", "success")))
+            meterRegistry.counter("task.execution.count", tags.and("status", "success")).increment()
+            meterRegistry.counter("task.confluence.sync.documents.processed", tags).increment(documents.size.toDouble())
+            meterRegistry.counter("task.confluence.sync.documents.added", tags).increment((currentIds.size - existingIds.size).toDouble())
+            meterRegistry.counter("task.confluence.sync.documents.updated", tags).increment((existingIds.intersect(currentIds).size).toDouble())
+            meterRegistry.counter("task.confluence.sync.documents.deleted", tags).increment((existingIds.size - currentIds.size + (currentIds.size - existingIds.intersect(currentIds).size)).toDouble().coerceAtLeast(0.0)) // Approximated for deleted
+
         } catch (e: Exception) {
+            sample.stop(meterRegistry.timer("task.execution.time", tags.and("status", "failure")))
+            meterRegistry.counter("task.execution.count", tags.and("status", "failure")).increment()
             log.error(e) { "Error occurred during Confluence sync: ${e.message}" }
             throw e // Rethrow to mark task as failed
         }

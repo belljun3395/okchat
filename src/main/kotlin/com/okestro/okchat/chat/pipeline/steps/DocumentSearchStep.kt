@@ -13,6 +13,8 @@ import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchScore
 import com.okestro.okchat.search.model.SearchTitles
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Timer
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
 
@@ -28,7 +30,8 @@ private val log = KotlinLogging.logger {}
 @Order(1)
 class DocumentSearchStep(
     private val multiSearchUseCase: MultiSearchUseCase,
-    private val ragProperties: RagProperties
+    private val ragProperties: RagProperties,
+    private val meterRegistry: MeterRegistry
 ) : DocumentChatPipelineStep {
 
     companion object {
@@ -65,6 +68,7 @@ class DocumentSearchStep(
     override suspend fun execute(context: ChatContext): ChatContext {
         log.info { "[${getStepName()}] Starting optimized multi-search with RRF" }
         val searchStartTime = System.currentTimeMillis()
+        val sample = Timer.start(meterRegistry)
 
         val analysis = context.analysis ?: throw IllegalStateException("Analysis not available")
         val searchKeywords = SearchKeywords.fromStrings(analysis.getAllKeywords())
@@ -101,6 +105,11 @@ class DocumentSearchStep(
             .take(MAX_SEARCH_RESULTS)
 
         val searchTimeMs = System.currentTimeMillis() - searchStartTime
+        
+        // Record metrics
+        sample.stop(meterRegistry.timer("chat.search.latency"))
+        meterRegistry.counter("chat.search.results.count", "zero_results", (combinedResults.isEmpty()).toString()).increment(combinedResults.size.toDouble())
+
         log.info { "[${getStepName()}] Found ${combinedResults.size} documents via RRF (after deduplication) in ${searchTimeMs}ms" }
 
         logResults(combinedResults)

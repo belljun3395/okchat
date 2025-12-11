@@ -1,6 +1,8 @@
 package com.okestro.okchat.chat.pipeline
 
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Timer
 import org.springframework.stereotype.Component
 
 private val log = KotlinLogging.logger {}
@@ -15,7 +17,8 @@ private val log = KotlinLogging.logger {}
 class DocumentChatPipeline(
     firstStep: FirstChatPipelineStep,
     lastStep: LastChatPipelineStep,
-    documentChatPipelineSteps: List<DocumentChatPipelineStep> = emptyList()
+    documentChatPipelineSteps: List<DocumentChatPipelineStep> = emptyList(),
+    private val meterRegistry: MeterRegistry
 ) {
     private val pipelineSteps: List<ChatPipelineStep> = buildList {
         add(firstStep)
@@ -44,7 +47,14 @@ class DocumentChatPipeline(
         for (step in pipelineSteps) {
             if (step.shouldExecute(context)) {
                 log.debug { "[Pipeline] Executing: ${step.getStepName()}" }
-                context = step.execute(context)
+                val sample = Timer.start(meterRegistry)
+                try {
+                    context = step.execute(context)
+                    sample.stop(meterRegistry.timer("chat.pipeline.step.latency", "step", step.getStepName(), "status", "success"))
+                } catch (e: Exception) {
+                    sample.stop(meterRegistry.timer("chat.pipeline.step.latency", "step", step.getStepName(), "status", "failure"))
+                    throw e
+                }
                 context.executedStep.add(step.getStepName())
                 executedSteps++
             } else {

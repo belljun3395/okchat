@@ -40,3 +40,7 @@ out/
 .kotlin
 
 ./typesense-data/
+
+/logs
+
+/opensearch-data

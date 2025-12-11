@@ -13,9 +13,94 @@ import { sendChatMessage } from '../services/chat.service';
  * 4. Managing chat state (messages, input, settings)
  */
 const ChatPage: React.FC = () => {
+    // Constants for LocalStorage
+    const STORAGE_KEY_SESSIONS = 'okchat_sessions';
+    const STORAGE_KEY_MESSAGES_PREFIX = 'okchat_messages_';
+
+    // Legacy keys (for migration)
+    const LEGACY_STORAGE_KEY_SESSION = 'okchat_session_id';
+    const LEGACY_STORAGE_KEY_MESSAGES = 'okchat_messages';
+
+    // State for sessions list
+    const [sessions, setSessions] = useState<Array<{ id: string; title: string; timestamp: number }>>([]);
+    const [sessionId, setSessionId] = useState<string>('');
+
     // State for chat messages
-    // We use a simple array of objects. 'isUser' determines if it's a user or bot message.
     const [messages, setMessages] = useState<Array<{ content: string; isUser: boolean; timestamp: string }>>([]);
+
+    // Initialize state on mount (handle migration and load)
+    useEffect(() => {
+        // 1. Load Sessions List
+        const savedSessions = localStorage.getItem(STORAGE_KEY_SESSIONS);
+        let parsedSessions: Array<{ id: string; title: string; timestamp: number }> = [];
+
+        if (savedSessions) {
+            try {
+                parsedSessions = JSON.parse(savedSessions);
+            } catch (e) { console.error('Failed to parse sessions', e); }
+        }
+
+        // 2. Check for legacy data and migrate if needed
+        const legacySessionId = localStorage.getItem(LEGACY_STORAGE_KEY_SESSION);
+        const legacyMessages = localStorage.getItem(LEGACY_STORAGE_KEY_MESSAGES);
+
+        if (legacySessionId && legacyMessages && !parsedSessions.find(s => s.id === legacySessionId)) {
+            // Migrate
+            const newSession = {
+                id: legacySessionId,
+                title: 'Restored Chat',
+                timestamp: Date.now()
+            };
+            parsedSessions.unshift(newSession);
+
+            // Save to new format
+            localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(parsedSessions));
+            localStorage.setItem(STORAGE_KEY_MESSAGES_PREFIX + legacySessionId, legacyMessages);
+
+            // Clear legacy
+            localStorage.removeItem(LEGACY_STORAGE_KEY_SESSION);
+            localStorage.removeItem(LEGACY_STORAGE_KEY_MESSAGES);
+        }
+
+        setSessions(parsedSessions);
+
+        // 3. Determine current Session ID
+        let currentId = sessionId;
+        if (!currentId) {
+            if (parsedSessions.length > 0) {
+                currentId = parsedSessions[0].id;
+            } else {
+                // Create first session
+                currentId = 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                const newSession = { id: currentId, title: 'New Chat', timestamp: Date.now() };
+                parsedSessions = [newSession];
+                setSessions(parsedSessions);
+                localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(parsedSessions));
+            }
+        }
+        setSessionId(currentId);
+
+        // 4. Load messages for this session
+        const savedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES_PREFIX + currentId);
+        if (savedMessages) {
+            try {
+                setMessages(JSON.parse(savedMessages));
+            } catch (e) {
+                console.error('Failed to parse messages', e);
+                setDefaultWelcomeMessage();
+            }
+        } else {
+            setDefaultWelcomeMessage();
+        }
+    }, [sessionId]); // Re-run when sessionId changes (for loading messages) but NOT when sessions list changes
+
+    const setDefaultWelcomeMessage = () => {
+        setMessages([{
+            content: "**Hello! I'm OKChat.**\n\nI can help you search documents, summarize meetings, and answer questions.\n\nTry asking: \"What was discussed in the last marketing meeting?\"",
+            isUser: false,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+    };
 
     // State for input field
     const [inputValue, setInputValue] = useState('');
@@ -28,8 +113,7 @@ const ChatPage: React.FC = () => {
     const [isDeepThink, setIsDeepThink] = useState(false);
     const [keywords, setKeywords] = useState('');
 
-    // Session ID state - generated once on component mount
-    const [sessionId, setSessionId] = useState('');
+
 
     // Ref for auto-scrolling to the bottom of the chat
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -42,23 +126,132 @@ const ChatPage: React.FC = () => {
         });
     }, []);
 
-    // Initialize session ID on mount
+    // Persist messages when they change
     useEffect(() => {
-        const newSessionId = 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-        setSessionId(newSessionId);
+        if (!sessionId) return;
 
-        // Add welcome message
-        setMessages([{
-            content: "**Hello! I'm OKChat.**\n\nI can help you search documents, summarize meetings, and answer questions.\n\nTry asking: \"What was discussed in the last marketing meeting?\"",
-            isUser: false,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }]);
-    }, []);
+        // Save messages
+        localStorage.setItem(STORAGE_KEY_MESSAGES_PREFIX + sessionId, JSON.stringify(messages));
+
+        // Update session list title if it's 'New Chat' and we have user messages
+        const firstUserMsg = messages.find(m => m.isUser);
+        if (firstUserMsg) {
+            setSessions(prev => {
+                const sessionIndex = prev.findIndex(s => s.id === sessionId);
+                if (sessionIndex !== -1 && prev[sessionIndex].title === 'New Chat') {
+                    const newTitle = firstUserMsg.content.slice(0, 30) + (firstUserMsg.content.length > 30 ? '...' : '');
+                    const newSessions = [...prev];
+                    newSessions[sessionIndex] = { ...newSessions[sessionIndex], title: newTitle };
+                    localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(newSessions));
+                    return newSessions;
+                }
+                return prev;
+            });
+        }
+    }, [messages, sessionId]);
 
     // Auto-scroll to bottom when messages change
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isTyping]);
+
+    /**
+     * Handles starting a new chat session
+     */
+
+    const handleNewChat = () => {
+        const newSessionId = 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        const newSession = { id: newSessionId, title: 'New Chat', timestamp: Date.now() };
+
+        // Add to top of list
+        const newSessions = [newSession, ...sessions];
+        setSessions(newSessions);
+        setSessionId(newSessionId);
+
+        // Save
+        localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(newSessions));
+
+        setMessages([{
+            content: "**Hello! I'm OKChat.**\n\nI can help you search documents, summarize meetings, and answer questions.\n\nTry asking: \"What was discussed in the last marketing meeting?\"",
+            isUser: false,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+        setInputValue('');
+        setIsDeepThink(false);
+        setKeywords('');
+    };
+
+    /**
+     * Handles deleting a chat session
+     */
+    const handleDeleteChat = (e: React.MouseEvent, idToDelete: string) => {
+        e.stopPropagation(); // Prevent clicking the session itself
+
+        if (!window.confirm('정말 이 채팅방을 삭제하시겠습니까?')) {
+            return;
+        }
+
+        // Remove from sessions list
+        const newSessions = sessions.filter(s => s.id !== idToDelete);
+        setSessions(newSessions);
+
+        // Update storage
+        localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(newSessions));
+        localStorage.removeItem(STORAGE_KEY_MESSAGES_PREFIX + idToDelete);
+
+        // If we deleted the current session, switch to another one
+        if (idToDelete === sessionId) {
+            if (newSessions.length > 0) {
+                // Switch to the first available session
+                setSessionId(newSessions[0].id);
+            } else {
+                // No sessions left, create a new one (effectively same as New Chat)
+                handleNewChat();
+            }
+        }
+    };
+
+    // State for renaming sessions
+    const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+    const [editTitle, setEditTitle] = useState('');
+
+    /**
+     * Handles starting the edit mode for a session title
+     */
+    const handleStartEdit = (e: React.MouseEvent, session: { id: string; title: string }) => {
+        e.stopPropagation();
+        setEditingSessionId(session.id);
+        setEditTitle(session.title);
+    };
+
+    /**
+     * Handles saving the edited session title
+     */
+    const handleSaveEdit = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+
+        if (editingSessionId && editTitle.trim()) {
+            const newSessions = sessions.map(s =>
+                s.id === editingSessionId ? { ...s, title: editTitle.trim() } : s
+            );
+            setSessions(newSessions);
+            localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(newSessions));
+        }
+
+        setEditingSessionId(null);
+        setEditTitle('');
+    };
+
+    /**
+     * Handles key press in edit input
+     */
+    const handleEditKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleSaveEdit();
+        } else if (e.key === 'Escape') {
+            setEditingSessionId(null); // Cancel
+        }
+    };
 
     /**
      * Handles sending a message
@@ -206,18 +399,167 @@ const ChatPage: React.FC = () => {
 
             <div className="chat-layout flex-1 overflow-hidden">
                 {/* Sidebar */}
-                <aside className="chat-sidebar">
-                    <h3>Settings</h3>
+                {/* Sidebar */}
+                <aside className="chat-sidebar" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-                    <div className="input-group">
-                        <label className="input-label">Session ID</label>
-                        <div className="text-xs font-mono text-muted bg-gray-50 p-2 rounded border border-gray-200 truncate" style={{ 
-                            fontFamily: 'Monaco, Menlo, monospace',
-                            fontSize: '11px',
-                            padding: '8px 12px',
-                            borderRadius: '6px'
-                        }}>
-                            {sessionId || 'Initializing...'}
+                    <div className="mb-4">
+                        <button
+                            onClick={handleNewChat}
+                            style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                fontSize: '13px',
+                                border: '1px solid #e5e7eb',
+                                background: '#1f2937',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                color: 'white',
+                                transition: 'all 0.2s',
+                                fontWeight: 500,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#374151'}
+                            onMouseOut={(e) => e.currentTarget.style.background = '#1f2937'}
+                        >
+                            <span style={{ fontSize: '16px' }}>+</span> New Chat
+                        </button>
+                    </div>
+
+                    <div style={{ flex: 1, overflowY: 'auto', marginBottom: '16px' }}>
+                        <h3 style={{
+                            fontSize: '12px',
+                            textTransform: 'uppercase',
+                            color: '#6b7280',
+                            fontWeight: 600,
+                            marginBottom: '8px',
+                            letterSpacing: '0.05em'
+                        }}>Recent</h3>
+
+                        <div className="space-y-1">
+                            {sessions.map(session => (
+                                <div
+                                    key={session.id}
+                                    onClick={() => setSessionId(session.id)}
+                                    title={session.title}
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        fontSize: '13px',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        color: sessionId === session.id ? '#111827' : '#4b5563',
+                                        background: sessionId === session.id ? '#e5e7eb' : 'transparent',
+                                        transition: 'all 0.2s',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: '8px',
+                                        position: 'relative',
+                                        border: '1px solid transparent'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        if (sessionId !== session.id) {
+                                            e.currentTarget.style.background = '#f3f4f6';
+                                        }
+                                        const delBtn = e.currentTarget.querySelector('.delete-btn') as HTMLElement;
+                                        if (delBtn) delBtn.style.opacity = '1';
+                                        const editBtn = e.currentTarget.querySelector('.edit-btn') as HTMLElement;
+                                        if (editBtn) editBtn.style.opacity = '1';
+                                    }}
+                                    onMouseOut={(e) => {
+                                        if (sessionId !== session.id) {
+                                            e.currentTarget.style.background = 'transparent';
+                                        }
+                                        const delBtn = e.currentTarget.querySelector('.delete-btn') as HTMLElement;
+                                        if (delBtn) delBtn.style.opacity = '0';
+                                        const editBtn = e.currentTarget.querySelector('.edit-btn') as HTMLElement;
+                                        if (editBtn) editBtn.style.opacity = '0';
+                                    }}
+                                >
+                                    {editingSessionId === session.id ? (
+                                        <input
+                                            type="text"
+                                            value={editTitle}
+                                            onChange={(e) => setEditTitle(e.target.value)}
+                                            onKeyDown={handleEditKeyDown}
+                                            onBlur={handleSaveEdit}
+                                            autoFocus
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{
+                                                flex: 1,
+                                                minWidth: 0,
+                                                background: 'white',
+                                                border: '1px solid #3b82f6',
+                                                borderRadius: '4px',
+                                                padding: '2px 4px',
+                                                fontSize: '13px',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                    ) : (
+                                        <>
+                                            <span style={{
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                flex: 1
+                                            }}>
+                                                {session.title}
+                                            </span>
+
+                                            <button
+                                                className="edit-btn"
+                                                onClick={(e) => handleStartEdit(e, session)}
+                                                title="Rename chat"
+                                                style={{
+                                                    opacity: 0,
+                                                    border: 'none',
+                                                    background: 'none',
+                                                    color: '#9ca3af',
+                                                    cursor: 'pointer',
+                                                    padding: '2px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '14px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    transition: 'opacity 0.2s, color 0.2s'
+                                                }}
+                                                onMouseOver={(e) => e.currentTarget.style.color = '#3b82f6'}
+                                                onMouseOut={(e) => e.currentTarget.style.color = '#9ca3af'}
+                                            >
+                                                ✎
+                                            </button>
+
+                                            <button
+                                                className="delete-btn"
+                                                onClick={(e) => handleDeleteChat(e, session.id)}
+                                                title="Delete chat"
+                                                style={{
+                                                    opacity: 0,
+                                                    border: 'none',
+                                                    background: 'none',
+                                                    color: '#9ca3af',
+                                                    cursor: 'pointer',
+                                                    padding: '2px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '14px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    transition: 'opacity 0.2s, color 0.2s'
+                                                }}
+                                                onMouseOver={(e) => e.currentTarget.style.color = '#ef4444'}
+                                                onMouseOut={(e) => e.currentTarget.style.color = '#9ca3af'}
+                                            >
+                                                ×
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            ))}
                         </div>
                     </div>
 
@@ -228,7 +570,7 @@ const ChatPage: React.FC = () => {
                             <button
                                 onClick={() => setIsOptionsOpen(!isOptionsOpen)}
                                 className="w-full px-4 py-2 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between text-sm font-medium text-secondary"
-                                style={{ 
+                                style={{
                                     width: '100%',
                                     padding: '10px 16px',
                                     background: isOptionsOpen ? '#f3f4f6' : '#f9fafb',
@@ -283,7 +625,7 @@ const ChatPage: React.FC = () => {
                                                 fontSize: '14px'
                                             }}
                                         />
-                                        <small className="text-muted mt-1 block text-xs" style={{ 
+                                        <small className="text-muted mt-1 block text-xs" style={{
                                             display: 'block',
                                             marginTop: '6px',
                                             fontSize: '12px',
@@ -384,9 +726,9 @@ const ChatPage: React.FC = () => {
                             <span className="text-xs text-muted">AI can make mistakes. Please verify important information.</span>
                         </div>
                     </div>
-                </main>
-            </div>
-        </div>
+                </main >
+            </div >
+        </div >
     );
 };
 

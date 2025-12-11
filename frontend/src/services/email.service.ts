@@ -82,10 +82,22 @@ export const emailService = {
         apiClient.get<Record<EmailStatus, number>>('/api/email/pending/count'),
 
     /**
-     * Approve and send email
+     * Update email content
+     */
+    updateContent: (id: number, replyContent: string) =>
+        apiClient.put<EmailApiResponse>(`/api/email/pending/${id}/content`, { replyContent }),
+
+    /**
+     * Approve email (move to APPROVED status)
      */
     approve: (id: number, reviewedBy: string) =>
         apiClient.post<EmailApiResponse>(`/api/email/pending/${id}/approve`, { reviewedBy }),
+
+    /**
+     * Send approved email
+     */
+    send: (id: number) =>
+        apiClient.post<EmailApiResponse>(`/api/email/pending/${id}/send`, {}),
 
     /**
      * Reject email

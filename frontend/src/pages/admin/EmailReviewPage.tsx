@@ -17,6 +17,8 @@ const EmailReviewPage: React.FC = () => {
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
     const [emailToReject, setEmailToReject] = useState<number | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editContent, setEditContent] = useState('');
 
     useEffect(() => {
         loadData();
@@ -53,6 +55,8 @@ const EmailReviewPage: React.FC = () => {
         try {
             const response = await emailService.getById(id);
             setSelectedEmail(response.data);
+            setIsEditing(false); // Reset edit mode
+            setEditContent(response.data.replyContent); // Init edit content
             setIsDetailModalOpen(true);
         } catch (error) {
             console.error('Failed to load email detail:', error);
@@ -60,8 +64,23 @@ const EmailReviewPage: React.FC = () => {
         }
     };
 
+    const handleUpdateContent = async () => {
+        if (!selectedEmail) return;
+        try {
+            await emailService.updateContent(selectedEmail.id, editContent);
+            // Refresh detail
+            const response = await emailService.getById(selectedEmail.id);
+            setSelectedEmail(response.data);
+            setIsEditing(false);
+            loadData(); // Refresh list to show updated content preview
+        } catch (error) {
+            console.error('Failed to update content:', error);
+            alert('Failed to update content.');
+        }
+    };
+
     const handleApprove = async (id: number) => {
-        if (!window.confirm('Are you sure you want to approve and send this email?')) return;
+        if (!window.confirm('Are you sure you want to approve this email? It will be moved to the Approved list.')) return;
 
         try {
             const result = await emailService.approve(id, 'admin');
@@ -74,6 +93,23 @@ const EmailReviewPage: React.FC = () => {
         } catch (error) {
             console.error('Failed to approve email:', error);
             alert('Error approving email.');
+        }
+    };
+
+    const handleSend = async (id: number) => {
+        if (!window.confirm('Are you sure you want to SEND this email now?')) return;
+
+        try {
+            const result = await emailService.send(id);
+            if (result.data.success) {
+                loadData();
+                if (isDetailModalOpen) setIsDetailModalOpen(false);
+            } else {
+                alert('Failed: ' + result.data.message);
+            }
+        } catch (error) {
+            console.error('Failed to send email:', error);
+            alert('Error sending email.');
         }
     };
 
@@ -183,12 +219,17 @@ const EmailReviewPage: React.FC = () => {
                                     {email.status === 'PENDING' && (
                                         <>
                                             <button className="btn btn-primary btn-sm" onClick={() => handleApprove(email.id)}>
-                                                Approve & Send
+                                                Approve
                                             </button>
                                             <button className="btn btn-danger btn-sm" onClick={() => openRejectModal(email.id)}>
                                                 Reject
                                             </button>
                                         </>
+                                    )}
+                                    {email.status === 'APPROVED' && (
+                                        <button className="btn btn-primary btn-sm" onClick={() => handleSend(email.id)}>
+                                            Send Now
+                                        </button>
                                     )}
                                     <button className="btn btn-secondary btn-sm" onClick={() => handleViewDetail(email.id)}>
                                         View Details
@@ -232,12 +273,34 @@ const EmailReviewPage: React.FC = () => {
                                 <div className="form-control bg-gray-50 text-secondary whitespace-pre-wrap">{selectedEmail.originalContent}</div>
                             </div>
                             <div className="input-group">
-                                <label className="input-label">Generated Reply</label>
-                                <div className="form-control bg-gray-50 text-secondary review-preview-content"
-                                     dangerouslySetInnerHTML={{ 
-                                         __html: DOMPurify.sanitize(marked.parse(selectedEmail.replyContent) as string) 
-                                     }} 
-                                />
+                                <label className="input-label flex justify-between">
+                                    Generated Reply
+                                    {selectedEmail.status === 'PENDING' && !isEditing && (
+                                        <button className="text-sm text-primary hover:underline" onClick={() => setIsEditing(true)}>
+                                            Edit Content
+                                        </button>
+                                    )}
+                                </label>
+                                {isEditing ? (
+                                    <div className="flex flex-col gap-sm">
+                                        <textarea 
+                                            className="form-control" 
+                                            rows={10} 
+                                            value={editContent}
+                                            onChange={(e) => setEditContent(e.target.value)}
+                                        />
+                                        <div className="flex justify-end gap-sm">
+                                            <button className="btn btn-secondary btn-sm" onClick={() => setIsEditing(false)}>Cancel</button>
+                                            <button className="btn btn-primary btn-sm" onClick={handleUpdateContent}>Save Changes</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="form-control bg-gray-50 text-secondary review-preview-content"
+                                         dangerouslySetInnerHTML={{ 
+                                             __html: DOMPurify.sanitize(marked.parse(selectedEmail.replyContent) as string) 
+                                         }} 
+                                    />
+                                )}
                             </div>
                             {selectedEmail.rejectionReason && (
                                 <div className="input-group">
@@ -250,12 +313,15 @@ const EmailReviewPage: React.FC = () => {
                         <div className="mt-6 flex justify-end gap-sm pt-4 border-t">
                             {selectedEmail.status === 'PENDING' && (
                                 <>
-                                    <button className="btn btn-primary" onClick={() => handleApprove(selectedEmail.id)}>Approve & Send</button>
+                                    <button className="btn btn-primary" onClick={() => handleApprove(selectedEmail.id)}>Approve</button>
                                     <button className="btn btn-danger" onClick={() => {
                                         setIsDetailModalOpen(false);
                                         openRejectModal(selectedEmail.id);
                                     }}>Reject</button>
                                 </>
+                            )}
+                            {selectedEmail.status === 'APPROVED' && (
+                                <button className="btn btn-primary" onClick={() => handleSend(selectedEmail.id)}>Send Now</button>
                             )}
                             <button className="btn btn-secondary" onClick={() => setIsDetailModalOpen(false)}>Close</button>
                         </div>

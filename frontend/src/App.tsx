@@ -8,7 +8,7 @@ import UserDetailPage from './pages/admin/UserDetailPage';
 import PathDetailPage from './pages/admin/PathDetailPage';
 import PermissionManagementPage from './pages/admin/PermissionManagementPage';
 
-import AnalyticsPage from './pages/admin/AnalyticsPage';
+
 import EmailReviewPage from './pages/admin/EmailReviewPage';
 import DashboardPage from './pages/admin/DashboardPage';
 
@@ -47,9 +47,7 @@ const App: React.FC = () => {
           {/* Advanced Permissions */}
           <Route path="permissions/manage" element={<PermissionManagementPage />} />
 
-          {/* Analytics */}
-          <Route path="analytics" element={<AnalyticsPage />} />
-          <Route path="chat/analytics" element={<Navigate to="/admin/analytics" replace />} />
+
 
           {/* Email Review */}
           <Route path="email/review" element={<EmailReviewPage />} />

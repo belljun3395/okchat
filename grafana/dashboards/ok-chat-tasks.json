@@ -436,6 +436,264 @@
             ],
             "title": "Update Failures (24h)",
             "type": "stat"
+        },
+        {
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 20
+            },
+            "id": 12,
+            "title": "Confluence Client Metrics",
+            "type": "row",
+            "panels": []
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 21
+            },
+            "id": 13,
+            "title": "Client Response Time (Max)",
+            "type": "timeseries",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "P1809F7CD0C75ACF3"
+                    },
+                    "expr": "confluence_client_request_seconds_max",
+                    "legendFormat": "{{method}}",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "legend": {
+                    "showLegend": true,
+                    "displayMode": "table",
+                    "placement": "right"
+                }
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s"
+                },
+                "overrides": []
+            }
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 21
+            },
+            "id": 14,
+            "title": "Client Response Volume (1h)",
+            "type": "timeseries",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "P1809F7CD0C75ACF3"
+                    },
+                    "expr": "increase(confluence_client_response_bytes_sum[1h])",
+                    "legendFormat": "{{method}}",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "legend": {
+                    "showLegend": true,
+                    "displayMode": "table",
+                    "placement": "right"
+                },
+                "unit": "bytes"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "bytes"
+                },
+                "overrides": []
+            }
+        },
+        {
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 29
+            },
+            "id": 15,
+            "title": "Vector Store Metrics",
+            "type": "row",
+            "panels": []
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 30
+            },
+            "id": 16,
+            "title": "Vector Store Latency (Max)",
+            "type": "timeseries",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "P1809F7CD0C75ACF3"
+                    },
+                    "expr": "vector_store_operation_seconds_max",
+                    "legendFormat": "{{operation}}",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "legend": {
+                    "showLegend": true,
+                    "displayMode": "table",
+                    "placement": "right"
+                }
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s"
+                },
+                "overrides": []
+            }
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 30
+            },
+            "id": 17,
+            "title": "Vector Store Volume (1h)",
+            "type": "timeseries",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "P1809F7CD0C75ACF3"
+                    },
+                    "expr": "increase(vector_store_request_bytes_sum[1h])",
+                    "legendFormat": "{{operation}}",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "legend": {
+                    "showLegend": true,
+                    "displayMode": "table",
+                    "placement": "right"
+                },
+                "unit": "bytes"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "bytes"
+                },
+                "overrides": []
+            }
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 21
+            },
+            "id": 18,
+            "title": "Client Request Count (1h)",
+            "type": "timeseries",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "P1809F7CD0C75ACF3"
+                    },
+                    "expr": "increase(confluence_client_request_seconds_count[1h])",
+                    "legendFormat": "{{method}}",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "legend": {
+                    "showLegend": true,
+                    "displayMode": "table",
+                    "placement": "right"
+                }
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short"
+                }
+            }
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 30
+            },
+            "id": 19,
+            "title": "Vector Store Request Count (1h)",
+            "type": "timeseries",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "P1809F7CD0C75ACF3"
+                    },
+                    "expr": "increase(vector_store_operation_seconds_count[1h])",
+                    "legendFormat": "{{operation}}",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "legend": {
+                    "showLegend": true,
+                    "displayMode": "table",
+                    "placement": "right"
+                }
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short"
+                }
+            }
         }
     ],
     "refresh": "5s",

@@ -1,5 +1,5 @@
 import apiClient from '../lib/api-client';
-import type { DocumentPathPermission, UserPermissionsResponse, PathDetailResponse, User } from '../types';
+import type { UserPermissionsResponse, PathDetailResponse, User } from '../types';
 
 export interface BulkGrantPathPermissionRequest {
     userEmail: string;

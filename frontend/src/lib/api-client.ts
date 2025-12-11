@@ -14,17 +14,48 @@ export class ApiError extends Error {
     }
 }
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
 /**
  * Axios instance with default configuration
- * TODO: fetch, axios 중 하나만 사용하기
  */
 const apiClient = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || '',
+    baseURL: BASE_URL,
     timeout: 30000,
     headers: {
         'Content-Type': 'application/json'
     }
 });
+
+/**
+ * Stream request wrapper using fetch for SSE
+ * Uses the same base URL and configuration as axios instance
+ */
+export const streamRequest = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`;
+
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+    };
+
+    // TODO: Add auth token if needed, similar to axios interceptor
+    // const token = localStorage.getItem('token');
+    // if (token) {
+    //     headers['Authorization'] = `Bearer ${token}`;
+    // }
+
+    const response = await fetch(fullUrl, {
+        ...options,
+        headers
+    });
+
+    if (!response.ok) {
+        throw new ApiError(response.status, response.statusText);
+    }
+
+    return response;
+};
 
 /**
  * Request interceptor - Add auth headers, logging, etc.

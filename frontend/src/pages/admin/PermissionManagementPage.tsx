@@ -27,7 +27,7 @@ const PermissionManagementPage: React.FC = () => {
     const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
     const [defaultAccess, setDefaultAccess] = useState<'READ' | 'DENY'>('READ');
-    const [inherit, setInherit] = useState(true);
+    // const [inherit, setInherit] = useState(true); // Removed unused state
     const [overrides, setOverrides] = useState<Override[]>([]);
     const [showAddOverride, setShowAddOverride] = useState(false);
     const [newOverride, setNewOverride] = useState({ userEmail: '', permission: 'READ' as const });
@@ -142,8 +142,8 @@ const PermissionManagementPage: React.FC = () => {
         if (!searchTerm) return true;
         const term = searchTerm.toLowerCase();
         return node.fullPath.toLowerCase().includes(term) ||
-               node.name.toLowerCase().includes(term) ||
-               Array.from(node.children.values()).some(child => shouldShowNode(child));
+            node.name.toLowerCase().includes(term) ||
+            Array.from(node.children.values()).some(child => shouldShowNode(child));
     };
 
     // Render tree node as table rows
@@ -450,7 +450,7 @@ const PermissionManagementPage: React.FC = () => {
                                     View Detail
                                 </Link>
                             )}
-                            <button 
+                            <button
                                 className="btn btn-primary btn-sm"
                                 onClick={handleSaveChanges}
                                 disabled={saving || !selectedPath}
@@ -526,7 +526,7 @@ const PermissionManagementPage: React.FC = () => {
                             <div className="mt-8">
                                 <div className="flex justify-between items-center mb-4">
                                     <h4 className="text-base font-semibold m-0">Explicit Overrides</h4>
-                                    <button 
+                                    <button
                                         className="btn btn-secondary btn-sm"
                                         onClick={() => setShowAddOverride(!showAddOverride)}
                                     >
@@ -665,9 +665,8 @@ const PermissionManagementPage: React.FC = () => {
                                     return (
                                         <div
                                             key={user.email}
-                                            className={`p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                                                hasOverride ? 'bg-blue-50' : ''
-                                            }`}
+                                            className={`p-3 hover:bg-gray-50 cursor-pointer transition-colors ${hasOverride ? 'bg-blue-50' : ''
+                                                }`}
                                             onClick={() => handleAddUserFromList(user)}
                                             title={hasOverride ? 'Already has permission' : 'Click to add permission'}
                                         >

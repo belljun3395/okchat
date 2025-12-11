@@ -164,7 +164,7 @@ const EmailReviewPage: React.FC = () => {
                 <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
                     <h3 className="m-0 text-base font-semibold">Email Queue</h3>
                     <div className="flex gap-sm">
-                        {['PENDING', 'APPROVED', 'SENT', 'REJECTED', 'FAILED'].map(status => (
+                        {(['PENDING', 'APPROVED', 'SENT', 'REJECTED', 'FAILED'] as EmailStatus[]).map(status => (
                             <button
                                 key={status}
                                 className={`btn btn-sm ${currentStatus === status ? 'btn-primary' : 'btn-secondary'}`}

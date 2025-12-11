@@ -1,8 +1,10 @@
+import { streamRequest } from '../lib/api-client';
+
 /**
  * Chat Service
  *
  * Note: Chat uses Server-Sent Events (SSE) streaming,
- * so we use fetch API directly instead of axios
+ * managed via streamRequest from api-client
  */
 
 export interface ChatRequest {
@@ -27,18 +29,15 @@ export const sendChatMessage = async (
     handler: ChatStreamHandler
 ): Promise<void> => {
     try {
-        const response = await fetch('/api/chat', {
+        const response = await streamRequest('/api/chat', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'Accept': 'text/event-stream'
             },
             body: JSON.stringify(request)
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+
 
         if (!response.body) {
             throw new Error('ReadableStream not supported');

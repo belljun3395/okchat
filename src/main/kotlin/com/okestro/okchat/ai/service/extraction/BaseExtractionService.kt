@@ -1,10 +1,10 @@
 package com.okestro.okchat.ai.service.extraction
 
-import com.okestro.okchat.ai.support.DefaultExtractionResultParser
-import com.okestro.okchat.ai.support.ExtractionResultParser
+import com.okestro.okchat.ai.model.KeywordResult
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.prompt.Prompt
+import org.springframework.ai.converter.BeanOutputConverter
 import org.springframework.ai.openai.OpenAiChatOptions
 
 /**
@@ -23,10 +23,10 @@ import org.springframework.ai.openai.OpenAiChatOptions
  * - Optionally customize empty result via getEmptyResult()
  */
 abstract class BaseExtractionService(
-    protected val chatModel: ChatModel,
-    private val extractionResultParser: ExtractionResultParser = DefaultExtractionResultParser()
+    protected val chatModel: ChatModel
 ) {
     protected val log = KotlinLogging.logger {}
+    protected val outputConverter = BeanOutputConverter(KeywordResult::class.java)
 
     /**
      * Extract keywords from message using LLM.
@@ -69,27 +69,29 @@ abstract class BaseExtractionService(
 
     /**
      * Parse the LLM result text into a list of keywords.
-     * Delegates to ResultParser for testability and flexibility.
-     * Override to customize parsing logic.
+     * Uses BeanOutputConverter for structured JSON parsing.
+     * Falls back to simple comma-separated splitting.
      */
-    protected open fun parseResult(resultText: String?): List<String> {
-        return extractionResultParser.parse(
-            resultText = resultText,
-            minLength = getMinKeywordLength(),
-            maxKeywords = getMaxKeywords(),
-            emptyResult = getEmptyResult()
-        )
+    /**
+     * Parse the LLM result text into a list of keywords.
+     * Uses BeanOutputConverter for structured JSON parsing.
+     * Falls back to simple comma-separated splitting.
+     * Applies post-processing: distinct, min length, max count.
+     */
+    private fun parseResult(resultText: String?): List<String> {
+        val rawKeywords = try {
+            if (resultText.isNullOrBlank()) return emptyList()
+            outputConverter.convert(resultText)?.keywords ?: emptyList()
+        } catch (e: Exception) {
+            log.warn { "Failed to parse structured output: ${e.message}. Fallback to manual parsing." }
+            resultText?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+        }
+
+        return rawKeywords
+            .filter { it.length >= getMinKeywordLength() }
+            .distinctBy { it.lowercase() }
+            .take(getMaxKeywords())
     }
-
-    /**
-     * Get minimum keyword length (default: 1, can be overridden)
-     */
-    protected open fun getMinKeywordLength(): Int = 1
-
-    /**
-     * Get maximum number of keywords to return (default: unlimited, can be overridden)
-     */
-    protected open fun getMaxKeywords(): Int = Int.MAX_VALUE
 
     /**
      * Get result when extraction fails or returns empty.
@@ -102,4 +104,16 @@ abstract class BaseExtractionService(
      * Override to customize.
      */
     protected open fun getFallbackMessage(): String = "Returning empty list."
+
+    /**
+     * Get minimum length for a keyword to be valid.
+     * Default: 2 characters.
+     */
+    protected open fun getMinKeywordLength(): Int = 2
+
+    /**
+     * Get maximum number of keywords to return.
+     * Default: 20 keywords.
+     */
+    protected open fun getMaxKeywords(): Int = 20
 }

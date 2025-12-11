@@ -21,8 +21,9 @@ class KeywordExtractionServiceTest {
     fun `execute should extract keywords from Korean query`() = runBlocking {
         // Given
         val chatModel = mock<ChatModel>()
+        val jsonResponse = "{\"keywords\": [\"백엔드\", \"backend\", \"개발\", \"development\", \"레포\", \"repository\"]}"
         val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage("백엔드, backend, 개발, development, 레포, repository")))
+            listOf(Generation(AssistantMessage(jsonResponse)))
         )
         whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
             .thenReturn(expectedResponse)
@@ -44,8 +45,9 @@ class KeywordExtractionServiceTest {
     fun `execute should extract keywords from English query`() = runBlocking {
         // Given
         val chatModel = mock<ChatModel>()
+        val jsonResponse = "{\"keywords\": [\"design document\", \"authentication logic\", \"Mobile App\"]}"
         val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage("design document, authentication logic, Mobile App")))
+            listOf(Generation(AssistantMessage(jsonResponse)))
         )
         whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
             .thenReturn(expectedResponse)
@@ -59,48 +61,6 @@ class KeywordExtractionServiceTest {
         assertTrue(result.contains("design document"))
         assertTrue(result.contains("authentication logic"))
         assertTrue(result.contains("Mobile App"))
-    }
-
-    // Note: getMinKeywordLength and getMaxKeywords are protected methods.
-    // Their behavior is tested indirectly through execute() method tests.
-
-    @Test
-    fun `execute should filter out single character keywords`() = runBlocking {
-        // Given
-        val chatModel = mock<ChatModel>()
-        val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage("a, bb, ccc, dddd")))
-        )
-        whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
-            .thenReturn(expectedResponse)
-
-        val service = KeywordExtractionService(chatModel)
-
-        // When
-        val result = service.execute("test message")
-
-        // Then
-        assertEquals(listOf("bb", "ccc", "dddd"), result)
-    }
-
-    @Test
-    fun `execute should limit to 12 keywords`() = runBlocking {
-        // Given
-        val chatModel = mock<ChatModel>()
-        val keywords = (1..15).joinToString(", ") { "keyword$it" }
-        val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage(keywords)))
-        )
-        whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
-            .thenReturn(expectedResponse)
-
-        val service = KeywordExtractionService(chatModel)
-
-        // When
-        val result = service.execute("test message")
-
-        // Then
-        assertEquals(12, result.size)
     }
 
     // Note: getOptions is a protected method.

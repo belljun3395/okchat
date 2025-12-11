@@ -20,8 +20,9 @@ class ContentExtractionServiceTest {
     fun `execute should extract content keywords from query`() = runBlocking {
         // Given
         val chatModel = mock<ChatModel>()
+        val jsonResponse = "{\"keywords\": [\"authentication logic\", \"PPP project\"]}"
         val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage("authentication logic, PPP project")))
+            listOf(Generation(AssistantMessage(jsonResponse)))
         )
         whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
             .thenReturn(expectedResponse)
@@ -40,8 +41,9 @@ class ContentExtractionServiceTest {
     fun `execute should extract Korean content keywords`() = runBlocking {
         // Given
         val chatModel = mock<ChatModel>()
+        val jsonResponse = "{\"keywords\": [\"병목 현상\", \"성능 테스트\"]}"
         val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage("병목 현상, 성능 테스트")))
+            listOf(Generation(AssistantMessage(jsonResponse)))
         )
         whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
             .thenReturn(expectedResponse)
@@ -60,8 +62,9 @@ class ContentExtractionServiceTest {
     fun `execute should focus on topics not actions`() = runBlocking {
         // Given
         val chatModel = mock<ChatModel>()
+        val jsonResponse = "{\"keywords\": [\"memory leak\", \"notification service\"]}"
         val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage("memory leak, notification service")))
+            listOf(Generation(AssistantMessage(jsonResponse)))
         )
         whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
             .thenReturn(expectedResponse)

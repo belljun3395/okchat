@@ -1,7 +1,7 @@
 package com.okestro.okchat.ai.service.extraction
 
-import com.okestro.okchat.ai.model.KeyWordExtractionPrompt
 import com.okestro.okchat.ai.model.Prompt
+import com.okestro.okchat.ai.model.StructuredPrompt
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.stereotype.Service
@@ -23,28 +23,30 @@ class DocumentKeywordExtractionService(
 
     override fun buildPrompt(message: String): Prompt {
         val instruction = """
-Extract 15-20 keywords from the document for comprehensive indexing.
-Order from most to least relevant.
-
-EXTRACT (include both Korean and English):
-- Core concepts, methodologies, and topics
-- Technical terms, tools, and technologies
-- Domain-specific terminology
-- Key processes and workflows
-- Product names and entities
-
-AVOID:
-- Stop words and articles (the, a, an, 이, 그, 저)
-- Navigation text or UI elements
-- Overly generic terms without context
-- Repeated morphological variations (use base form)
-
-TARGET: 15-20 keywords for comprehensive document coverage (max 20)
+            Extract 15-20 keywords from the document for comprehensive indexing.
+            Order from most to least relevant.
+            
+            EXTRACT (include both Korean and English):
+            - Core concepts, methodologies, and topics
+            - Technical terms, tools, and technologies
+            - Domain-specific terminology
+            - Key processes and workflows
+            - Product names and entities
+            
+            AVOID:
+            - Stop words and articles (the, a, an, 이, 그, 저)
+            - Navigation text or UI elements
+            - Overly generic terms without context
+            - Repeated morphological variations (use base form)
+            
+            TARGET: 15-20 keywords for comprehensive document coverage (max 20)
+            
+            ${outputConverter.getFormat()}
         """.trimIndent()
 
-        return KeyWordExtractionPrompt(
-            userInstruction = instruction,
-            examples = emptyList(), // No examples needed for document extraction
+        return StructuredPrompt(
+            instruction = instruction,
+            examples = emptyList(),
             message = message
         )
     }
@@ -55,8 +57,4 @@ TARGET: 15-20 keywords for comprehensive document coverage (max 20)
             .maxTokens(150) // More tokens for document keywords
             .build()
     }
-
-    override fun getMinKeywordLength(): Int = 2
-
-    override fun getMaxKeywords(): Int = 20 // More keywords for documents
 }

@@ -20,9 +20,10 @@ class DocumentKeywordExtractionServiceTest {
     fun `execute should extract comprehensive keywords from document`() = runBlocking {
         // Given
         val chatModel = mock<ChatModel>()
-        val keywords = (1..15).joinToString(", ") { "keyword$it" }
+        val keywordsList = (1..15).map { "keyword$it" }
+        val jsonResponse = "{\"keywords\": [${keywordsList.joinToString(", ") { "\"$it\"" }}]}"
         val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage(keywords)))
+            listOf(Generation(AssistantMessage(jsonResponse)))
         )
         whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
             .thenReturn(expectedResponse)
@@ -34,50 +35,9 @@ class DocumentKeywordExtractionServiceTest {
 
         // Then
         assertEquals(15, result.size)
-    }
-
-    // Note: getMinKeywordLength and getMaxKeywords are protected methods.
-    // Their behavior is tested indirectly through execute() method tests.
-
-    @Test
-    fun `execute should limit to 20 keywords`() = runBlocking {
-        // Given
-        val chatModel = mock<ChatModel>()
-        val keywords = (1..25).joinToString(", ") { "keyword$it" }
-        val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage(keywords)))
-        )
-        whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
-            .thenReturn(expectedResponse)
-
-        val service = DocumentKeywordExtractionService(chatModel)
-
-        // When
-        val result = service.execute("Long document content...")
-
-        // Then
-        assertEquals(20, result.size)
+        assertEquals(keywordsList, result)
     }
 
     // Note: getOptions is a protected method.
     // Its configuration is tested indirectly through execute() method tests.
-
-    @Test
-    fun `execute should filter out single character keywords`() = runBlocking {
-        // Given
-        val chatModel = mock<ChatModel>()
-        val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage("a, bb, ccc, dddd")))
-        )
-        whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
-            .thenReturn(expectedResponse)
-
-        val service = DocumentKeywordExtractionService(chatModel)
-
-        // When
-        val result = service.execute("document content")
-
-        // Then
-        assertEquals(listOf("bb", "ccc", "dddd"), result)
-    }
 }

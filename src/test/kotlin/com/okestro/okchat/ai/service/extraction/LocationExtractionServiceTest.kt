@@ -20,8 +20,9 @@ class LocationExtractionServiceTest {
     fun `execute should extract location from Korean query`() = runBlocking {
         // Given
         val chatModel = mock<ChatModel>()
+        val jsonResponse = "{\"keywords\": [\"개발팀 스페이스\", \"개발팀\"]}"
         val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage("개발팀 스페이스, 개발팀")))
+            listOf(Generation(AssistantMessage(jsonResponse)))
         )
         whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
             .thenReturn(expectedResponse)
@@ -40,8 +41,9 @@ class LocationExtractionServiceTest {
     fun `execute should extract location from English query`() = runBlocking {
         // Given
         val chatModel = mock<ChatModel>()
+        val jsonResponse = "{\"keywords\": [\"Mobile App project\", \"Mobile App\"]}"
         val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage("Mobile App project, Mobile App")))
+            listOf(Generation(AssistantMessage(jsonResponse)))
         )
         whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
             .thenReturn(expectedResponse)
@@ -78,8 +80,9 @@ class LocationExtractionServiceTest {
     fun `execute should extract file path locations`() = runBlocking {
         // Given
         val chatModel = mock<ChatModel>()
+        val jsonResponse = "{\"keywords\": [\"/docs/infra/networking/\"]}"
         val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage("/docs/infra/networking/")))
+            listOf(Generation(AssistantMessage(jsonResponse)))
         )
         whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
             .thenReturn(expectedResponse)

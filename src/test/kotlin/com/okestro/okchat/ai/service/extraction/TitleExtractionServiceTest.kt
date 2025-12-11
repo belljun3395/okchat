@@ -20,8 +20,9 @@ class TitleExtractionServiceTest {
     fun `execute should extract title from English query with quotes`() = runBlocking {
         // Given
         val chatModel = mock<ChatModel>()
+        val jsonResponse = "{\"keywords\": [\"Q3 Performance Review\"]}"
         val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage("Q3 Performance Review")))
+            listOf(Generation(AssistantMessage(jsonResponse)))
         )
         whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
             .thenReturn(expectedResponse)
@@ -39,8 +40,9 @@ class TitleExtractionServiceTest {
     fun `execute should extract title from Korean query`() = runBlocking {
         // Given
         val chatModel = mock<ChatModel>()
+        val jsonResponse = "{\"keywords\": [\"2025년 기술 부채 보고서\", \"기술 부채 보고서\"]}"
         val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage("2025년 기술 부채 보고서, 기술 부채 보고서")))
+            listOf(Generation(AssistantMessage(jsonResponse)))
         )
         whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
             .thenReturn(expectedResponse)
@@ -58,8 +60,9 @@ class TitleExtractionServiceTest {
     fun `execute should extract generic document type when specific title not mentioned`() = runBlocking {
         // Given
         val chatModel = mock<ChatModel>()
+        val jsonResponse = "{\"keywords\": [\"회의록\"]}"
         val expectedResponse = ChatResponse(
-            listOf(Generation(AssistantMessage("회의록")))
+            listOf(Generation(AssistantMessage(jsonResponse)))
         )
         whenever(chatModel.call(any<org.springframework.ai.chat.prompt.Prompt>()))
             .thenReturn(expectedResponse)

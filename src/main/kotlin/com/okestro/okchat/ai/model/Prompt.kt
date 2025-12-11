@@ -36,39 +36,15 @@ data class PromptExample(
 )
 
 /**
- * Standard format instruction to append to all extraction prompts.
- * Ensures LLM outputs in a parseable format.
- *
- * Note: We instruct the LLM to use comma-separated format for consistency,
- * but the parser includes fallback strategies for other formats in case
- * the LLM doesn't follow instructions perfectly.
+ * Prompt for structured output tasks where the format is handled by an external parser (e.g., BeanOutputParser).
+ * Does NOT append legacy format instructions.
  */
-const val FORMAT_INSTRUCTION = """
-
-CRITICAL OUTPUT FORMAT:
-Return ONLY a comma-separated list of keywords.
-DO NOT include explanations, numbering, or bullet points.
-DO NOT use newlines between keywords.
-
-Examples of CORRECT format:
-- "keyword1, keyword2, keyword3"
-- "주간회의록, 회의록, 회의"
-
-Examples of INCORRECT format (DO NOT USE):
-- "1. keyword1\n2. keyword2" (numbered)
-- "- keyword1\n- keyword2" (bulleted)
-- "Here are the keywords: keyword1, keyword2" (explanation)
-"""
-
-/**
- * Prompt specifically designed for keyword extraction tasks.
- * Appends FORMAT_INSTRUCTION to ensure consistent output format.
- */
-data class KeyWordExtractionPrompt(
-    val userInstruction: String,
+data class StructuredPrompt(
+    override val instruction: String,
     override val examples: List<PromptExample>,
     override val message: String,
-    override val outputFormat: String = "Keywords (comma-separated only):"
-) : Prompt("$userInstruction\n\n$FORMAT_INSTRUCTION", examples, message, outputFormat) {
+    // Output format is usually embedded in the instruction by the parser, so we keep this minimal or empty
+    override val outputFormat: String = ""
+) : Prompt(instruction, examples, message, outputFormat) {
     override fun toString(): String = format()
 }

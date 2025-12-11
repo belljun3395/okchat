@@ -14,10 +14,8 @@ class PromptTest {
     companion object {
         @JvmStatic
         fun promptContentTestCases() = listOf(
-            Arguments.of("CRITICAL OUTPUT FORMAT", "format instruction"),
-            Arguments.of("comma-separated", "output format"),
             Arguments.of("User query:", "user query section"),
-            Arguments.of("Keywords (comma-separated only):", "output section")
+            Arguments.of("Examples:", "examples section")
         )
     }
 
@@ -26,8 +24,8 @@ class PromptTest {
     @DisplayName("should include required sections in formatted prompt")
     fun `should include required sections`(expectedContent: String, description: String) {
         // given
-        val prompt = KeyWordExtractionPrompt(
-            userInstruction = "Extract keywords",
+        val prompt = StructuredPrompt(
+            instruction = "Extract keywords",
             examples = emptyList(),
             message = "Test message"
         )
@@ -44,8 +42,8 @@ class PromptTest {
     fun `should include user instruction`() {
         // given
         val instruction = "Extract technical keywords from the message"
-        val prompt = KeyWordExtractionPrompt(
-            userInstruction = instruction,
+        val prompt = StructuredPrompt(
+            instruction = instruction,
             examples = emptyList(),
             message = "Test message"
         )
@@ -65,8 +63,8 @@ class PromptTest {
             PromptExample("input1", "output1"),
             PromptExample("input2", "output2")
         )
-        val prompt = KeyWordExtractionPrompt(
-            userInstruction = "Extract keywords",
+        val prompt = StructuredPrompt(
+            instruction = "Extract keywords",
             examples = examples,
             message = "Test message"
         )
@@ -86,8 +84,8 @@ class PromptTest {
     fun `should include message`() {
         // given
         val message = "Find documents about Spring Boot"
-        val prompt = KeyWordExtractionPrompt(
-            userInstruction = "Extract keywords",
+        val prompt = StructuredPrompt(
+            instruction = "Extract keywords",
             examples = emptyList(),
             message = message
         )
@@ -107,8 +105,8 @@ class PromptTest {
         val examples = listOf(
             PromptExample("Spring Boot tutorials", "spring, boot, tutorial")
         )
-        val prompt = KeyWordExtractionPrompt(
-            userInstruction = "Extract keywords",
+        val prompt = StructuredPrompt(
+            instruction = "Extract keywords",
             examples = examples,
             message = "Test message"
         )
@@ -125,8 +123,8 @@ class PromptTest {
     @DisplayName("should return formatted prompt from toString")
     fun `should return formatted prompt from toString`() {
         // given
-        val prompt = KeyWordExtractionPrompt(
-            userInstruction = "Extract keywords",
+        val prompt = StructuredPrompt(
+            instruction = "Extract keywords",
             examples = emptyList(),
             message = "Test message"
         )
@@ -146,8 +144,8 @@ class PromptTest {
         val examples = listOf(
             PromptExample("백엔드 개발 레포 정보", "백엔드, backend, 개발, development")
         )
-        val prompt = KeyWordExtractionPrompt(
-            userInstruction = "Extract keywords",
+        val prompt = StructuredPrompt(
+            instruction = "Extract keywords",
             examples = examples,
             message = "Test message"
         )
@@ -169,8 +167,8 @@ class PromptTest {
             PromptExample("input2", "output2"),
             PromptExample("input3", "output3")
         )
-        val prompt = KeyWordExtractionPrompt(
-            userInstruction = "Extract keywords",
+        val prompt = StructuredPrompt(
+            instruction = "Extract keywords",
             examples = examples,
             message = "Test message"
         )
@@ -186,31 +184,6 @@ class PromptTest {
     }
 
     @Test
-    @DisplayName("should contain critical instructions in FORMAT_INSTRUCTION")
-    fun `should contain critical instructions in FORMAT_INSTRUCTION`() {
-        // then
-        FORMAT_INSTRUCTION shouldContain "CRITICAL OUTPUT FORMAT"
-        FORMAT_INSTRUCTION shouldContain "comma-separated"
-        FORMAT_INSTRUCTION shouldContain "DO NOT"
-    }
-
-    @Test
-    @DisplayName("should provide correct format examples in FORMAT_INSTRUCTION")
-    fun `should provide correct format examples in FORMAT_INSTRUCTION`() {
-        // then
-        FORMAT_INSTRUCTION shouldContain "Examples of CORRECT format"
-        FORMAT_INSTRUCTION shouldContain "keyword1, keyword2, keyword3"
-    }
-
-    @Test
-    @DisplayName("should provide incorrect format examples in FORMAT_INSTRUCTION")
-    fun `should provide incorrect format examples in FORMAT_INSTRUCTION`() {
-        // then
-        FORMAT_INSTRUCTION shouldContain "Examples of INCORRECT format"
-        FORMAT_INSTRUCTION shouldContain "DO NOT USE"
-    }
-
-    @Test
     @DisplayName("should create well-structured prompt")
     fun `should create well-structured prompt`() {
         // given
@@ -221,7 +194,7 @@ class PromptTest {
         val message = "How to build microservices?"
 
         // when
-        val prompt = KeyWordExtractionPrompt(instruction, examples, message)
+        val prompt = StructuredPrompt(instruction, examples, message)
         val formatted = prompt.format()
 
         // then
@@ -230,8 +203,6 @@ class PromptTest {
         // Should have all major sections
         formatted shouldContain instruction
         formatted shouldContain "Examples:"
-        formatted shouldContain "CRITICAL OUTPUT FORMAT:"
         formatted shouldContain "User query:"
-        formatted shouldContain "Keywords (comma-separated only):"
     }
 }

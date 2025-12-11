@@ -10,12 +10,15 @@ import com.okestro.okchat.chat.repository.ChatInteractionRepository
 import com.okestro.okchat.chat.service.SessionManagementService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
+import jakarta.annotation.PreDestroy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Component
-import reactor.core.scheduler.Schedulers
 
 private val logger = KotlinLogging.logger {}
 
@@ -34,6 +37,9 @@ class ChatEventHandler(
     private val sessionManagementService: SessionManagementService,
     private val objectMapper: ObjectMapper
 ) {
+    // Managed CoroutineScope for event processing
+    // SupervisorJob ensures one event failure doesn't cancel all event processing
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @PostConstruct
     fun initialize() {
@@ -41,11 +47,16 @@ class ChatEventHandler(
         subscribeToEvents()
     }
 
+    @PreDestroy
+    fun cleanup() {
+        scope.cancel()
+        logger.info { "ChatEventHandler scope cancelled and cleaned up" }
+    }
+
     private fun subscribeToEvents() {
         chatEventBus.subscribe()
-            .publishOn(Schedulers.boundedElastic())
             .subscribe { event ->
-                CoroutineScope(Dispatchers.IO).launch {
+                scope.launch {
                     try {
                         when (event) {
                             is ChatInteractionCompletedEvent -> handleChatInteraction(event)
@@ -95,7 +106,9 @@ class ChatEventHandler(
                 userEmail = event.userEmail,
                 createdAt = event.timestamp
             )
-            chatInteractionRepository.save(interaction)
+            scope.launch {
+                chatInteractionRepository.save(interaction)
+            }
             logger.debug { "[Analytics] Saved chat interaction: requestId=${event.requestId}" }
         } catch (e: Exception) {
             logger.error(e) { "[Analytics] Failed to save chat interaction: requestId=${event.requestId}" }
@@ -138,7 +151,9 @@ class ChatEventHandler(
 
         while (retryCount < maxRetries) {
             try {
-                val interaction = chatInteractionRepository.findByRequestId(event.requestId)
+                val interaction = withContext(Dispatchers.IO) {
+                    chatInteractionRepository.findByRequestId(event.requestId)
+                }
 
                 if (interaction != null) {
                     val updated = interaction.copy(
@@ -147,7 +162,9 @@ class ChatEventHandler(
                         userFeedback = event.feedback,
                         feedbackAt = event.timestamp
                     )
-                    chatInteractionRepository.save(updated)
+                    scope.launch {
+                        chatInteractionRepository.save(updated)
+                    }
                     logger.info { "[Feedback] ✅ Updated for requestId=${event.requestId} (attempt ${retryCount + 1})" }
                     return // Success
                 } else {

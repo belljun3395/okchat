@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { sendChatMessage } from '../services/chat.service';
+import { chatService } from '../services';
 
 /**
  * ChatPage Component
@@ -285,8 +285,8 @@ const ChatPage: React.FC = () => {
         let isFirstChunk = true;
 
         // Use the chat service with enhanced error handling
-        await sendChatMessage(requestData, {
-            onData: (chunk) => {
+        await chatService.sendChatMessage(requestData, {
+            onData: (chunk: string) => {
                 // Skip request ID metadata
                 if (chunk && !chunk.startsWith('__REQUEST_ID__:')) {
                     botResponse += chunk;
@@ -311,7 +311,7 @@ const ChatPage: React.FC = () => {
                     }
                 }
             },
-            onError: (error) => {
+            onError: (error: any) => {
                 console.error('Error sending message:', error);
                 setIsTyping(false);
 

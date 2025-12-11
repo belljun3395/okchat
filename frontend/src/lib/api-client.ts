@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios, {AxiosError} from 'axios';
 
 /**
  * Custom API Error class
@@ -14,7 +14,7 @@ export class ApiError extends Error {
     }
 }
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 /**
  * Axios instance with default configuration
@@ -31,30 +31,19 @@ const apiClient = axios.create({
  * Stream request wrapper using fetch for SSE
  * Uses the same base URL and configuration as axios instance
  */
-export const streamRequest = async (url: string, options: RequestInit = {}): Promise<Response> => {
-    const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`;
-
-    const headers = {
-        'Content-Type': 'application/json',
-        ...options.headers,
-    };
-
-    // TODO: Add auth token if needed, similar to axios interceptor
-    // const token = localStorage.getItem('token');
-    // if (token) {
-    //     headers['Authorization'] = `Bearer ${token}`;
-    // }
-
-    const response = await fetch(fullUrl, {
-        ...options,
-        headers
+/**
+ * Stream request wrapper using Axios for SSE
+ * Ensures we use the same interceptors and config as the main client
+ */
+export const streamRequest = async (url: string, data: any, customHeaders: any = {}) => {
+    return await apiClient.post(url, data, {
+        headers: {
+            ...customHeaders,
+            'Accept': 'text/event-stream'
+        },
+        responseType: 'stream',
+        adapter: 'fetch' // Use fetch adapter to get ReadableStream
     });
-
-    if (!response.ok) {
-        throw new ApiError(response.status, response.statusText);
-    }
-
-    return response;
 };
 
 /**

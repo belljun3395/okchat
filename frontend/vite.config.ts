@@ -7,16 +7,22 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://127.0.0.1:8080',
         changeOrigin: true,
       },
-      // Only proxy /admin API requests, not frontend routes
+      // Admin APIs (User management)
       '/admin/users': {
-        target: 'http://localhost:8080',
+        target: 'http://127.0.0.1:8080',
         changeOrigin: true,
       },
+      // Admin APIs (Chat analytics)
       '/admin/chat': {
-        target: 'http://localhost:8080',
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true,
+      },
+      // OAuth2 Endpoints
+      '/oauth2': {
+        target: 'http://127.0.0.1:8080',
         changeOrigin: true,
       }
     }

@@ -77,7 +77,7 @@ class EmailPollingTask(
             log.info { "========== Email Polling Completed ==========" }
             log.info { "Total messages fetched: $totalMessages" }
             log.info { "Total events published: $totalEvents" }
-            
+
             sample.stop(meterRegistry.timer("task.execution.time", tags.and("status", "success")))
             meterRegistry.counter("task.execution.count", tags.and("status", "success")).increment()
             meterRegistry.counter("task.email.polling.messages.fetched", tags).increment(totalMessages.toDouble())

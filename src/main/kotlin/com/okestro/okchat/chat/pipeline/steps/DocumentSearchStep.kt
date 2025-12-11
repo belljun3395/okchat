@@ -105,7 +105,7 @@ class DocumentSearchStep(
             .take(MAX_SEARCH_RESULTS)
 
         val searchTimeMs = System.currentTimeMillis() - searchStartTime
-        
+
         // Record metrics
         sample.stop(meterRegistry.timer("chat.search.latency"))
         meterRegistry.counter("chat.search.results.count", "zero_results", (combinedResults.isEmpty()).toString()).increment(combinedResults.size.toDouble())

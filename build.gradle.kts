@@ -112,6 +112,9 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter:1.20.4")
     testImplementation("org.testcontainers:mysql:1.20.4")
     testImplementation("com.redis:testcontainers-redis:2.2.2")
+
+    /** monitoring */
+    implementation("io.micrometer:micrometer-registry-prometheus")
 }
 
 dependencyManagement {

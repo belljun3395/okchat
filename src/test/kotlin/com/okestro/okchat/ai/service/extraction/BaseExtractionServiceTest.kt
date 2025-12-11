@@ -2,8 +2,8 @@ package com.okestro.okchat.ai.service.extraction
 
 import com.okestro.okchat.ai.model.KeyWordExtractionPrompt
 import com.okestro.okchat.ai.model.Prompt
-import com.okestro.okchat.ai.support.DefaultResultParser
-import com.okestro.okchat.ai.support.ResultParser
+import com.okestro.okchat.ai.support.DefaultExtractionResultParser
+import com.okestro.okchat.ai.support.ExtractionResultParser
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -20,8 +20,8 @@ class BaseExtractionServiceTest {
 
     private class TestExtractionService(
         chatModel: ChatModel,
-        resultParser: ResultParser = DefaultResultParser()
-    ) : BaseExtractionService(chatModel, resultParser) {
+        extractionResultParser: ExtractionResultParser = DefaultExtractionResultParser()
+    ) : BaseExtractionService(chatModel, extractionResultParser) {
 
         var customMinLength: Int = 1
         var customMaxKeywords: Int = Int.MAX_VALUE

@@ -1,7 +1,7 @@
 package com.okestro.okchat.ai.service.extraction
 
-import com.okestro.okchat.ai.support.DefaultResultParser
-import com.okestro.okchat.ai.support.ResultParser
+import com.okestro.okchat.ai.support.DefaultExtractionResultParser
+import com.okestro.okchat.ai.support.ExtractionResultParser
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.prompt.Prompt
@@ -24,7 +24,7 @@ import org.springframework.ai.openai.OpenAiChatOptions
  */
 abstract class BaseExtractionService(
     protected val chatModel: ChatModel,
-    protected val resultParser: ResultParser = DefaultResultParser()
+    private val extractionResultParser: ExtractionResultParser = DefaultExtractionResultParser()
 ) {
     protected val log = KotlinLogging.logger {}
 
@@ -73,7 +73,7 @@ abstract class BaseExtractionService(
      * Override to customize parsing logic.
      */
     protected open fun parseResult(resultText: String?): List<String> {
-        return resultParser.parse(
+        return extractionResultParser.parse(
             resultText = resultText,
             minLength = getMinKeywordLength(),
             maxKeywords = getMaxKeywords(),

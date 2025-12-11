@@ -4,7 +4,7 @@ package com.okestro.okchat.ai.support
  * Interface for parsing LLM extraction results.
  * Allows for dependency injection and easier testing.
  */
-interface ResultParser {
+interface ExtractionResultParser {
     fun parse(
         resultText: String?,
         minLength: Int,
@@ -17,7 +17,7 @@ interface ResultParser {
  * Default implementation of ResultParser.
  * Supports multiple format strategies for robustness.
  */
-class DefaultResultParser : ResultParser {
+class DefaultExtractionResultParser : ExtractionResultParser {
     /**
      * Parse the LLM result text into a list of keywords.
      *

@@ -4,9 +4,9 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class ResultParserTest {
+class ExtractionResultParserTest {
 
-    private val parser = DefaultResultParser()
+    private val parser = DefaultExtractionResultParser()
 
     @Test
     fun `parse should handle null input`() {

@@ -11,7 +11,7 @@ import io.kotest.matchers.shouldBe
  */
 class ResultParserImprovedTest : FunSpec({
 
-    val parser = DefaultResultParser()
+    val parser = DefaultExtractionResultParser()
 
     context("ResultParser - basic parsing") {
 

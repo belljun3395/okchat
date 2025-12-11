@@ -100,13 +100,14 @@ class DocumentBaseChatService(
             .toolCallbacks(toolCallbacks)
             .stream()
             .content() // Returns Flux<String> - streaming response!
+            .normalizeMarkdownLines() // Post-process markdown syntax before sending to frontend
             .doOnNext { chunk ->
-                responseBuffer.append(chunk)
                 // Log chunks with visible newline indicators for debugging
                 val debugChunk = chunk.replace("\n", "\\n").replace("\r", "\\r")
                 if (debugChunk.contains("\\n")) {
                     log.debug { "[Chunk with newline] $debugChunk" }
                 }
+                responseBuffer.append(chunk)
             }
             .doOnComplete {
                 // Log final response to check if newlines are preserved
@@ -193,5 +194,108 @@ class DocumentBaseChatService(
         return Prompt(
             conversationHistoryPrompt + basePrompt + toolPrompt
         )
+    }
+
+    /**
+     * Extension function to normalize markdown syntax in streaming response
+     * Buffers chunks by line and applies markdown normalization to complete lines
+     * Tracks previous line to remove blank lines that cause <p> tags in lists
+     */
+    private fun Flux<String>.normalizeMarkdownLines(): Flux<String> = Flux.create { sink ->
+        val buffer = StringBuilder()
+        var previousLine = ""
+
+        this.subscribe(
+            { chunk ->
+                buffer.append(chunk)
+
+                // Process and emit complete lines (ending with \n)
+                var newlineIndex = buffer.indexOf('\n')
+                while (newlineIndex != -1) {
+                    val line = buffer.substring(0, newlineIndex + 1)
+                    val normalized = normalizeMarkdown(line)
+
+                    // Skip blank lines that appear after list items (prevents <p> tags in <li>)
+                    val isBlankLine = normalized.trim().isEmpty()
+                    val prevIsNumberedItem = previousLine.trim().matches(Regex("^\\d+\\.\\s+.*"))
+                    val prevIsBulletItem = previousLine.trim().matches(Regex("^\\s*-\\s+.*"))
+
+                    if (!(isBlankLine && (prevIsNumberedItem || prevIsBulletItem))) {
+                        sink.next(normalized)
+                    } else {
+                        log.debug { "[Skipped blank line after list item] Previous: ${previousLine.trim()}" }
+                    }
+
+                    // Always update previousLine (even if we skip the current line)
+                    if (!isBlankLine) {
+                        previousLine = normalized
+                    }
+
+                    buffer.delete(0, newlineIndex + 1)
+                    newlineIndex = buffer.indexOf('\n')
+                }
+            },
+            { error -> sink.error(error) },
+            {
+                // Flush remaining buffer content (lines without final newline)
+                if (buffer.isNotEmpty()) {
+                    sink.next(normalizeMarkdown(buffer.toString()))
+                }
+                sink.complete()
+            }
+        )
+    }
+
+    /**
+     * Normalize markdown syntax by adding missing spaces
+     * Fixes common AI-generated markdown issues:
+     * 1. Headings: ###Title -> ### Title
+     * 2. Numbered lists: 1.**item** -> 1. **item**
+     * 3. Bullet lists: -item -> - item (preserves indentation for nested lists)
+     * 4. Unicode bullets: • item -> - item (converts unicode bullets to markdown)
+     * 5. Nested list indentation: Ensures 4+ spaces for proper nesting
+     * 6. Remove excessive blank lines to prevent <p> tags in lists
+     */
+    private fun normalizeMarkdown(text: String): String {
+        var normalized = text
+
+        // 0. Convert unicode bullet characters to markdown dashes
+        // Common unicode bullets: • ● ○ ■ □ ▪ ▫ ‣ ⁃
+        normalized = normalized.replace(Regex("^(\\s*)([•●○■□▪▫‣⁃])(\\s+)", setOf(RegexOption.MULTILINE)), "$1- ")
+        normalized = normalized.replace(Regex("^(\\s*)([•●○■□▪▫‣⁃])(?!\\s)", setOf(RegexOption.MULTILINE)), "$1- ")
+
+        // 1. Add space after heading symbols if missing (###Title -> ### Title)
+        normalized = normalized.replace(Regex("^(#{1,6})([^\\s#])", setOf(RegexOption.MULTILINE)), "$1 $2")
+
+        // 2. Add space after numbered list markers if missing (1.**item** -> 1. **item**)
+        normalized = normalized.replace(Regex("^(\\d+\\.)(\\S)", setOf(RegexOption.MULTILINE)), "$1 $2")
+
+        // 3. Fix nested list indentation: ensure at least 4 spaces for bullets under numbered lists
+        // "  - item" (2-3 spaces) -> "    - item" (4 spaces) for proper markdown nesting
+        normalized = normalized.replace(Regex("^(\\s{1,3})(-\\s)", setOf(RegexOption.MULTILINE)), "    $2")
+
+        // 4. Fix indented bullet lists with 4+ spaces: just add space after dash if missing
+        normalized = normalized.replace(Regex("^(\\s{4,})-(\\S)", setOf(RegexOption.MULTILINE)), "$1- $2")
+
+        // 5. Add space after list markers at line start if missing (-item -> - item)
+        normalized = normalized.replace(Regex("^-(\\S)", setOf(RegexOption.MULTILINE)), "- $1")
+
+        // 6. Remove excessive blank lines to prevent excessive spacing
+        // Limit consecutive newlines to maximum 2 (= 1 blank line)
+        normalized = normalized.replace(Regex("\n{3,}"), "\n\n")
+
+        // Remove blank lines between numbered list items to prevent <p> tags
+        normalized = normalized.replace(Regex("\n\n+(\\d+\\.)"), "\n$1")
+        // Remove blank lines between bullet items to prevent <p> tags (including indented bullets)
+        normalized = normalized.replace(Regex("\n\n+(\\s*-)"), "\n$1")
+        // Remove blank lines after bullet items when followed by indented content (prevents <p> in <li>)
+        normalized = normalized.replace(Regex("\n\n+(\\s{2,}-)"), "\n$1")
+        // Remove blank lines after indented bullets (critical for nested list items)
+        normalized = normalized.replace(Regex("(\\s+-.+)\\n\\n+(\\s+-)"), "$1\n$2")
+
+        // Clean up trailing spaces/tabs at end of lines (but preserve newlines!)
+        normalized = normalized.replace(Regex("[ \\t]+$", setOf(RegexOption.MULTILINE)), "")
+
+        return normalized
     }
 }

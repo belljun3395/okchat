@@ -1,6 +1,6 @@
 package com.okestro.okchat.chat.pipeline
 
-import com.okestro.okchat.ai.support.QueryClassifier
+import com.okestro.okchat.ai.service.classifier.QueryClassifier
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.junit.jupiter.api.DisplayName

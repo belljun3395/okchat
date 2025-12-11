@@ -1,6 +1,6 @@
 package com.okestro.okchat.prompt.support
 
-import com.okestro.okchat.ai.support.QueryClassifier
+import com.okestro.okchat.ai.service.classifier.QueryClassifier
 import com.okestro.okchat.prompt.application.GetPromptUseCase
 import com.okestro.okchat.prompt.application.dto.GetPromptUseCaseIn
 import com.okestro.okchat.prompt.application.dto.GetPromptUseCaseOut

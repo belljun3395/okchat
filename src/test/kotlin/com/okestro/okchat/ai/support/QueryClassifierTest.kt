@@ -1,5 +1,6 @@
 package com.okestro.okchat.ai.support
 
+import com.okestro.okchat.ai.service.classifier.QueryClassifier
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.clearAllMocks

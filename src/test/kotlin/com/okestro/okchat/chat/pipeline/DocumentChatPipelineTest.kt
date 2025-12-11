@@ -1,6 +1,6 @@
 package com.okestro.okchat.chat.pipeline
 
-import com.okestro.okchat.ai.support.QueryClassifier
+import com.okestro.okchat.ai.service.classifier.QueryClassifier
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe

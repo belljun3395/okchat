@@ -1,6 +1,6 @@
 package com.okestro.okchat.prompt.config.initializer
 
-import com.okestro.okchat.ai.support.QueryClassifier
+import com.okestro.okchat.ai.service.classifier.QueryClassifier
 import com.okestro.okchat.prompt.application.CheckPromptExistsUseCase
 import com.okestro.okchat.prompt.application.CreatePromptUseCase
 import com.okestro.okchat.prompt.application.dto.CheckPromptExistsUseCaseIn

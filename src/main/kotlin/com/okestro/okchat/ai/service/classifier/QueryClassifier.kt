@@ -1,11 +1,9 @@
-package com.okestro.okchat.ai.support
+package com.okestro.okchat.ai.service.classifier
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.stereotype.Service
-
-private val log = KotlinLogging.logger {}
 
 /**
  * Classify user queries using AI to determine the best response strategy
@@ -15,6 +13,7 @@ private val log = KotlinLogging.logger {}
 class QueryClassifier(
     private val chatModel: ChatModel
 ) {
+    private val log = KotlinLogging.logger {}
 
     enum class QueryType(val isSystem: Boolean, val description: String, val examples: List<String>) {
         BASE(true, "기본 프롬프트", emptyList()), // 기본 프롬프트
@@ -22,7 +21,11 @@ class QueryClassifier(
         MEETING_RECORDS(false, "회의록 관련 질문", listOf("주간회의록", "9월 회의 요약", "회의 내용", "meeting minutes")), // 회의록 관련 질문
         PROJECT_STATUS(false, "프로젝트 현황/진행상황", listOf("프로젝트 현황", "작업 진행 상태", "완료 현황")), // 프로젝트 현황/진행상황
         HOW_TO(false, "방법/절차/가이드", listOf("어떻게 하나요", "방법", "설치 절차", "가이드")), // 방법/절차/가이드
-        INFORMATION(false, "정보 조회 (누가, 언제, 무엇, 어디, 왜)", listOf("누가 담당", "언제 완료", "무엇을 해야", "어디에 있나요")), // 정보 조회 (누가, 언제, 무엇, 어디, 왜)
+        INFORMATION(
+            false,
+            "정보 조회 (누가, 언제, 무엇, 어디, 왜)",
+            listOf("누가 담당", "언제 완료", "무엇을 해야", "어디에 있나요")
+        ), // 정보 조회 (누가, 언제, 무엇, 어디, 왜)
         DOCUMENT_SEARCH(false, "문서 찾기", listOf("문서 찾아줘", "자료 검색", "페이지 찾기")), // 문서 찾기
         GENERAL(false, "일반 질문 (위 카테고리에 해당하지 않음)", emptyList()); // 일반 질문 (위 카테고리에 해당하지 않음)
     }
@@ -111,17 +114,26 @@ class QueryClassifier(
         val queryLower = query.lowercase()
 
         // Meeting records - 더 포괄적인 패턴
-        if (queryLower.contains("회의") || queryLower.contains("meeting") || queryLower.contains("미팅") || queryLower.contains("minutes")) {
+        if (queryLower.contains("회의") || queryLower.contains("meeting") || queryLower.contains("미팅") || queryLower.contains(
+                "minutes"
+            )
+        ) {
             return QueryAnalysis(QueryType.MEETING_RECORDS, 0.8, emptyList())
         }
 
         // Project status
-        if (queryLower.contains("현황") || queryLower.contains("상태") || queryLower.contains("status") || queryLower.contains("진행")) {
+        if (queryLower.contains("현황") || queryLower.contains("상태") || queryLower.contains("status") || queryLower.contains(
+                "진행"
+            )
+        ) {
             return QueryAnalysis(QueryType.PROJECT_STATUS, 0.7, emptyList())
         }
 
         // How-to
-        if (queryLower.contains("어떻게") || queryLower.contains("방법") || queryLower.contains("how") || queryLower.contains("가이드")) {
+        if (queryLower.contains("어떻게") || queryLower.contains("방법") || queryLower.contains("how") || queryLower.contains(
+                "가이드"
+            )
+        ) {
             return QueryAnalysis(QueryType.HOW_TO, 0.7, emptyList())
         }
 

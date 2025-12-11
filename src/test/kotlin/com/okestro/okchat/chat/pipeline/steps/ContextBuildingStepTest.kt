@@ -1,6 +1,6 @@
 package com.okestro.okchat.chat.pipeline.steps
 
-import com.okestro.okchat.ai.support.QueryClassifier
+import com.okestro.okchat.ai.service.classifier.QueryClassifier
 import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.fixture.TestFixtures.searchResult
 import io.kotest.matchers.nulls.shouldBeNull

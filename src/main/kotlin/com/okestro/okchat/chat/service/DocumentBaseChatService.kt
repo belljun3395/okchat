@@ -8,6 +8,9 @@ import com.okestro.okchat.chat.pipeline.CompleteChatContext
 import com.okestro.okchat.chat.pipeline.DocumentChatPipeline
 import com.okestro.okchat.chat.service.dto.ChatServiceRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Tag
+import io.micrometer.core.instrument.Timer
 import org.slf4j.MDC
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.prompt.Prompt
@@ -40,7 +43,8 @@ class DocumentBaseChatService(
     private val chatEventBus: ChatEventBus,
     private val toolCallbacks: List<ToolCallback>,
     @Autowired(required = false) private val mcpToolCallbackProvider: SyncMcpToolCallbackProvider?,
-    @Value("\${spring.ai.openai.chat.options.model:gpt-4o-mini}") private val modelName: String
+    @Value("\${spring.ai.openai.chat.options.model:gpt-4o-mini}") private val modelName: String,
+    private val meterRegistry: MeterRegistry
 ) : ChatService {
 
     private val allToolCallbacks: List<ToolCallback> by lazy {
@@ -61,6 +65,7 @@ class DocumentBaseChatService(
         log.info { "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
         val requestId = MDC.get("requestId") ?: UUID.randomUUID().toString()
         val startTime = System.currentTimeMillis()
+        val sample = Timer.start(meterRegistry) // Start timer
         val actualSessionId = generateSessionIdIfNotProvided(chatServiceRequest)
 
         val message = chatServiceRequest.message.trim()
@@ -82,6 +87,7 @@ class DocumentBaseChatService(
             documentChatPipeline.execute(context)
         } catch (e: Exception) {
             log.error(e) { "[Pipeline Error] Failed to execute pipeline" }
+            meterRegistry.counter("chat.requests.total", "status", "failure", "model", modelName).increment() // Record failure
             throw e
         }
 
@@ -99,7 +105,20 @@ class DocumentBaseChatService(
             .prompt(prompt)
             .toolCallbacks(toolCallbacks)
             .stream()
-            .content() // Returns Flux<String> - streaming response!
+            .chatResponse() // Change to chatResponse() to access metadata
+            .doOnNext { chatResponse ->
+                // Extract metadata (token usage)
+                val usage = chatResponse.metadata.usage
+                if (usage != null && (usage.totalTokens > 0 || usage.promptTokens > 0 || usage.completionTokens > 0)) {
+                    if (usage.totalTokens > 0L) {
+                        log.debug { "[Token Usage] Prompt: ${usage.promptTokens}, Generation: ${usage.completionTokens}, Total: ${usage.totalTokens}" }
+                        meterRegistry.counter("ai.tokens.prompt", "model", modelName).increment(usage.promptTokens.toDouble())
+                        meterRegistry.counter("ai.tokens.completion", "model", modelName).increment(usage.completionTokens.toDouble())
+                        meterRegistry.counter("ai.tokens.total", "model", modelName).increment(usage.totalTokens.toDouble())
+                    }
+                }
+            }
+            .map { it.results.firstOrNull()?.output?.text ?: "" } // Map back to content string, safe access
             .normalizeMarkdownLines() // Post-process markdown syntax before sending to frontend
             .doOnNext { chunk ->
                 // Log chunks with visible newline indicators for debugging
@@ -118,6 +137,15 @@ class DocumentBaseChatService(
                 if (newlineCount < 5) {
                     log.warn { "⚠️ WARNING: Response has few newlines ($newlineCount). Post-processing was applied." }
                 }
+
+                // Record metrics on completion
+                meterRegistry.counter("chat.requests.total", "status", "success", "model", modelName).increment()
+                sample.stop(
+                    Timer.builder("chat.response.time")
+                        .description("Time taken to generate chat response")
+                        .tags(listOf(Tag.of("model", modelName)))
+                        .register(meterRegistry)
+                )
 
                 chatEventBus.publish(
                     ConversationHistorySaveEvent(
@@ -144,6 +172,7 @@ class DocumentBaseChatService(
             }
             .doOnError { error ->
                 log.error(error) { "[Chat Error] Error during streaming" }
+                meterRegistry.counter("chat.requests.total", "status", "failure", "model", modelName).increment() // Record streaming failure
             }
             .doFinally {
                 log.info { "[Chat Completed] Response stream finished" }

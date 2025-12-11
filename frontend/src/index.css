@@ -1279,6 +1279,9 @@ a:hover {
 .markdown-body p {
   margin-bottom: 12px;
   line-height: 1.7;
+  white-space: pre-wrap; /* 줄바꿈 문자를 보존하고 자동 줄바꿈도 허용 */
+  word-wrap: break-word; /* 긴 단어도 줄바꿈 */
+  overflow-wrap: break-word; /* 최신 브라우저 지원 */
 }
 
 .markdown-body p:last-child {
@@ -1303,11 +1306,14 @@ a:hover {
 
 .markdown-body li {
   margin-bottom: 6px;
+  white-space: pre-wrap; /* 리스트 항목에서도 줄바꿈 보존 */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .markdown-body li > p {
-  margin-top: 8px;
-  margin-bottom: 8px;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .markdown-body li > p:first-child {
@@ -1366,6 +1372,9 @@ a:hover {
   font-style: italic;
   background: #f9fafb;
   border-radius: 0 4px 4px 0;
+  white-space: pre-wrap; /* blockquote에서도 줄바꿈 보존 */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .markdown-body blockquote > p {

@@ -46,6 +46,7 @@ export const sendChatMessage = async (
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let buffer = ''; // Buffer to accumulate incomplete SSE events
 
         try {
             while (true) {
@@ -56,18 +57,39 @@ export const sendChatMessage = async (
                     break;
                 }
 
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n');
+                // Decode the chunk and append to buffer
+                buffer += decoder.decode(value, { stream: true });
 
-                for (const line of lines) {
-                    if (line.startsWith('data:')) {
-                        let data = line.substring(5);
-                        if (data.startsWith(' ')) {
-                            data = data.substring(1);
+                // Process complete SSE events (separated by \n\n)
+                const events = buffer.split('\n\n');
+
+                // Keep the last incomplete event in the buffer
+                buffer = events.pop() || '';
+
+                // Process each complete event
+                for (const event of events) {
+                    if (!event.trim()) continue;
+
+                    // Extract all data lines from the event
+                    const lines = event.split('\n');
+                    const dataLines: string[] = [];
+
+                    for (const line of lines) {
+                        if (line.startsWith('data:')) {
+                            let data = line.substring(5);
+                            if (data.startsWith(' ')) {
+                                data = data.substring(1);
+                            }
+                            dataLines.push(data);
                         }
+                    }
 
-                        if (data.trim()) {
-                            handler.onData(data);
+                    // Join data lines with newlines and pass to handler
+                    if (dataLines.length > 0) {
+                        const eventData = dataLines.join('\n');
+                        // Pass all data including whitespace/newlines to preserve formatting
+                        if (eventData.length > 0) {
+                            handler.onData(eventData);
                         }
                     }
                 }

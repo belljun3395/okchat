@@ -138,15 +138,23 @@ const ChatPage: React.FC = () => {
 
     /**
      * Renders markdown content safely
+     * Note: Markdown syntax normalization is now handled by the backend
      */
     const renderMarkdown = (content: string) => {
         try {
             // Ensure content is a string
             if (typeof content !== 'string') return { __html: '' };
 
+            // DEBUG: Log markdown content
+            console.log('=== MARKDOWN DEBUG ===');
+            console.log('Input markdown (first 500 chars):', content.substring(0, 500));
+
             // Parse markdown (marked.parse is synchronous, options set on mount)
+            // Backend already normalizes markdown syntax before streaming
             const rawHtml = marked.parse(content) as string;
-            
+
+            console.log('Parsed HTML (first 500 chars):', rawHtml.substring(0, 500));
+
             // Sanitize HTML while allowing markdown-generated tags
             const cleanHtml = DOMPurify.sanitize(rawHtml, {
                 ALLOWED_TAGS: [
@@ -160,7 +168,10 @@ const ChatPage: React.FC = () => {
                 ALLOW_DATA_ATTR: false,
                 KEEP_CONTENT: true
             });
-            
+
+            console.log('Sanitized HTML (first 500 chars):', cleanHtml.substring(0, 500));
+            console.log('=== END DEBUG ===');
+
             return { __html: cleanHtml };
         } catch (e) {
             console.error('Markdown parsing error:', e);

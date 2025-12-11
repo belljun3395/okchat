@@ -12,6 +12,6 @@ class CorsConfig : WebFluxConfigurer {
             .allowedOrigins("http://localhost:5173", "http://localhost:3000") // Frontend and Grafana
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
             .allowedHeaders("*")
-            .allowCredentials(true)
+            .allowCredentials(false)
     }
 }

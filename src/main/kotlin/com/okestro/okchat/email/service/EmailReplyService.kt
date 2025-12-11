@@ -4,9 +4,6 @@ import com.okestro.okchat.email.config.EmailProperties
 import com.okestro.okchat.email.oauth2.OAuth2TokenService
 import com.okestro.okchat.email.provider.EmailMessage
 import com.okestro.okchat.email.util.EmailContentCleaner
-import org.commonmark.ext.gfm.tables.TablesExtension
-import org.commonmark.parser.Parser
-import org.commonmark.renderer.html.HtmlRenderer
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.mail.Message
 import jakarta.mail.Session
@@ -15,6 +12,9 @@ import jakarta.mail.internet.MimeMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.withContext
+import org.commonmark.ext.gfm.tables.TablesExtension
+import org.commonmark.parser.Parser
+import org.commonmark.renderer.html.HtmlRenderer
 import org.springframework.stereotype.Service
 import java.util.*
 

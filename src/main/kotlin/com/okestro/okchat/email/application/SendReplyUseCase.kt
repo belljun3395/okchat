@@ -1,7 +1,7 @@
 package com.okestro.okchat.email.application
 
-import com.okestro.okchat.email.application.dto.ApproveAndSendUseCaseIn
-import com.okestro.okchat.email.application.dto.ApproveAndSendUseCaseOut
+import com.okestro.okchat.email.application.dto.SendReplyUseCaseIn
+import com.okestro.okchat.email.application.dto.SendReplyUseCaseOut
 import com.okestro.okchat.email.model.entity.PendingEmailReply
 import com.okestro.okchat.email.model.entity.ReviewStatus
 import com.okestro.okchat.email.provider.EmailMessage
@@ -20,38 +20,29 @@ import java.util.Date
 private val logger = KotlinLogging.logger {}
 
 @Service
-class ApproveAndSendUseCase(
+class SendReplyUseCase(
     private val pendingEmailReplyRepository: PendingEmailReplyRepository,
     private val emailReplyService: EmailReplyService
 ) {
     @Transactional("transactionManager")
-    suspend fun execute(useCaseIn: ApproveAndSendUseCaseIn): ApproveAndSendUseCaseOut =
+    suspend fun execute(useCaseIn: SendReplyUseCaseIn): SendReplyUseCaseOut =
         withContext(Dispatchers.IO) {
-            ApproveAndSendUseCaseOut(
-                approveAndSendInternal(useCaseIn.id, useCaseIn.reviewedBy)
+            SendReplyUseCaseOut(
+                sendInternal(useCaseIn.id)
             )
         }
 
-    private suspend fun approveAndSendInternal(
-        id: Long,
-        reviewedBy: String
-    ): Result<PendingEmailReply> {
+    private suspend fun sendInternal(id: Long): Result<PendingEmailReply> {
         val pendingReply: PendingEmailReply = pendingEmailReplyRepository.findById(id).orElse(null)
-            ?: return Result.failure(IllegalArgumentException("Pending reply not found: $id"))
+            ?: return Result.failure(IllegalArgumentException("Reply not found: $id"))
 
-        if (pendingReply.status != ReviewStatus.PENDING) {
+        if (pendingReply.status != ReviewStatus.APPROVED) {
             return Result.failure(
-                IllegalStateException("Reply is not in PENDING status: ${pendingReply.status}")
+                IllegalStateException("Reply is not in APPROVED status (current: ${pendingReply.status})")
             )
         }
 
-        val approved = pendingReply.copy(
-            status = ReviewStatus.APPROVED,
-            reviewedAt = Instant.now(),
-            reviewedBy = reviewedBy
-        )
-        pendingEmailReplyRepository.save(approved)
-        logger.info { "Approved email reply: id=$id, from=${pendingReply.fromEmail}" }
+        logger.info { "Sending approved email reply: id=$id, to=${pendingReply.toEmail}" }
 
         return try {
             val emailMessage = reconstructEmailMessage(pendingReply)
@@ -61,7 +52,7 @@ class ApproveAndSendUseCase(
                 providerType = pendingReply.providerType
             )
 
-            val sent = approved.copy(
+            val sent = pendingReply.copy(
                 status = ReviewStatus.SENT,
                 sentAt = Instant.now()
             )
@@ -70,7 +61,7 @@ class ApproveAndSendUseCase(
             Result.success(saved)
         } catch (e: Exception) {
             logger.error(e) { "Failed to send approved email: id=$id" }
-            val failed = approved.copy(status = ReviewStatus.FAILED)
+            val failed = pendingReply.copy(status = ReviewStatus.FAILED)
             pendingEmailReplyRepository.save(failed)
             Result.failure(e)
         }

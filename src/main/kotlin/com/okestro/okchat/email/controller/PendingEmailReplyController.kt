@@ -1,21 +1,26 @@
 package com.okestro.okchat.email.controller
 
-import com.okestro.okchat.email.application.ApproveAndSendUseCase
+import com.okestro.okchat.email.application.ApproveReplyUseCase
 import com.okestro.okchat.email.application.CountByStatusUseCase
 import com.okestro.okchat.email.application.DeletePendingReplyUseCase
 import com.okestro.okchat.email.application.GetPendingRepliesByStatusUseCase
 import com.okestro.okchat.email.application.GetPendingRepliesUseCase
 import com.okestro.okchat.email.application.GetPendingReplyByIdUseCase
 import com.okestro.okchat.email.application.RejectReplyUseCase
-import com.okestro.okchat.email.application.dto.ApproveAndSendUseCaseIn
+import com.okestro.okchat.email.application.SendReplyUseCase
+import com.okestro.okchat.email.application.UpdateReplyUseCase
+import com.okestro.okchat.email.application.dto.ApproveReplyUseCaseIn
 import com.okestro.okchat.email.application.dto.CountByStatusUseCaseIn
 import com.okestro.okchat.email.application.dto.DeletePendingReplyUseCaseIn
 import com.okestro.okchat.email.application.dto.GetPendingRepliesByStatusUseCaseIn
 import com.okestro.okchat.email.application.dto.GetPendingRepliesUseCaseIn
 import com.okestro.okchat.email.application.dto.GetPendingReplyByIdUseCaseIn
 import com.okestro.okchat.email.application.dto.RejectReplyUseCaseIn
+import com.okestro.okchat.email.application.dto.SendReplyUseCaseIn
+import com.okestro.okchat.email.application.dto.UpdateReplyUseCaseIn
 import com.okestro.okchat.email.controller.dto.EmailApiResponse
 import com.okestro.okchat.email.controller.dto.ReviewRequest
+import com.okestro.okchat.email.controller.dto.UpdateRequest
 import com.okestro.okchat.email.model.entity.PendingEmailReply
 import com.okestro.okchat.email.model.entity.ReviewStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -30,6 +35,7 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -51,9 +57,11 @@ class PendingEmailReplyController(
     private val getPendingRepliesByStatusUseCase: GetPendingRepliesByStatusUseCase,
     private val getPendingReplyByIdUseCase: GetPendingReplyByIdUseCase,
     private val countByStatusUseCase: CountByStatusUseCase,
-    private val approveAndSendUseCase: ApproveAndSendUseCase,
+    private val approveReplyUseCase: ApproveReplyUseCase,
     private val rejectReplyUseCase: RejectReplyUseCase,
-    private val deletePendingReplyUseCase: DeletePendingReplyUseCase
+    private val deletePendingReplyUseCase: DeletePendingReplyUseCase,
+    private val updateReplyUseCase: UpdateReplyUseCase,
+    private val sendReplyUseCase: SendReplyUseCase
 ) {
 
     /**
@@ -120,20 +128,37 @@ class PendingEmailReplyController(
     }
 
     /**
-     * Approve and send an email reply
+     * Update email reply content
+     */
+    @PutMapping("/{id}/content")
+    @Operation(
+        summary = "이메일 답변 내용 수정",
+        description = "대기 중인 이메일 답변의 내용을 수정합니다."
+    )
+    suspend fun updateReplyContent(
+        @PathVariable id: Long,
+        @RequestBody request: UpdateRequest
+    ): ResponseEntity<EmailApiResponse> {
+        logger.info { "Updating email reply content: id=$id" }
+        updateReplyUseCase.execute(UpdateReplyUseCaseIn(id, request.replyContent))
+        return ResponseEntity.ok(
+            EmailApiResponse(
+                success = true,
+                message = "Email content updated successfully",
+                data = null
+            )
+        )
+    }
+
+    /**
+     * Approve an email reply (move to APPROVED status)
      */
     @PostMapping("/{id}/approve")
     @Operation(
-        summary = "이메일 답변 승인 및 발송",
-        description = "대기 중인 이메일 답변을 승인하고 실제로 발송합니다."
+        summary = "이메일 답변 승인",
+        description = "대기 중인 이메일 답변을 승인합니다 (발송하지 않음)."
     )
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "200", description = "승인 및 발송 성공"),
-            ApiResponse(responseCode = "400", description = "발송 실패")
-        ]
-    )
-    suspend fun approveAndSend(
+    suspend fun approve(
         @Parameter(description = "이메일 답변 ID", example = "1", required = true)
         @PathVariable
         id: Long,
@@ -142,24 +167,61 @@ class PendingEmailReplyController(
         request: ReviewRequest
     ): ResponseEntity<EmailApiResponse> {
         logger.info { "Approving email reply: id=$id, reviewedBy=${request.reviewedBy}" }
-        val output = approveAndSendUseCase.execute(ApproveAndSendUseCaseIn(id, request.reviewedBy))
+        val output = approveReplyUseCase.execute(ApproveReplyUseCaseIn(id, request.reviewedBy))
 
         return output.result.fold(
             onSuccess = { reply ->
                 ResponseEntity.ok(
                     EmailApiResponse(
                         success = true,
-                        message = "Email approved and sent successfully",
+                        message = "Email approved successfully",
                         data = reply
                     )
                 )
             },
             onFailure = { error ->
-                logger.error(error) { "Failed to approve and send email: id=$id" }
+                logger.error(error) { "Failed to approve email: id=$id" }
                 ResponseEntity.badRequest().body(
                     EmailApiResponse(
                         success = false,
-                        message = error.message ?: "Failed to approve and send email",
+                        message = error.message ?: "Failed to approve email",
+                        data = null
+                    )
+                )
+            }
+        )
+    }
+
+    /**
+     * Send an approved email reply
+     */
+    @PostMapping("/{id}/send")
+    @Operation(
+        summary = "이메일 답변 발송",
+        description = "승인된 이메일 답변을 발송합니다."
+    )
+    suspend fun send(
+        @PathVariable id: Long
+    ): ResponseEntity<EmailApiResponse> {
+        logger.info { "Sending approved email reply: id=$id" }
+        val output = sendReplyUseCase.execute(SendReplyUseCaseIn(id))
+
+        return output.result.fold(
+            onSuccess = { reply ->
+                ResponseEntity.ok(
+                    EmailApiResponse(
+                        success = true,
+                        message = "Email sent successfully",
+                        data = reply
+                    )
+                )
+            },
+            onFailure = { error ->
+                logger.error(error) { "Failed to send email: id=$id" }
+                ResponseEntity.badRequest().body(
+                    EmailApiResponse(
+                        success = false,
+                        message = error.message ?: "Failed to send email",
                         data = null
                     )
                 )

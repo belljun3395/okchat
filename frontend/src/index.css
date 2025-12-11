@@ -2036,4 +2036,77 @@ a:hover {
 .chat-empty-state p {
   font-size: 14px;
   max-width: 400px;
+}.email-content-preview,
+.review-preview-content {
+  line-height: 1.6;
+  color: #333;
+}
+
+.email-content-preview p,
+.review-preview-content p {
+  margin-bottom: 1em;
+}
+
+.email-content-preview h1,
+.review-preview-content h1,
+.email-content-preview h2,
+.review-preview-content h2,
+.email-content-preview h3,
+.review-preview-content h3 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.email-content-preview ul,
+.review-preview-content ul,
+.email-content-preview ol,
+.review-preview-content ol {
+  margin-bottom: 1em;
+  padding-left: 2em;
+}
+
+.email-content-preview li,
+.review-preview-content li {
+  margin-bottom: 0.25em;
+}
+
+.email-content-preview blockquote,
+.review-preview-content blockquote {
+  padding-left: 1em;
+  border-left: 4px solid #ddd;
+  color: #666;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.email-content-preview code,
+.review-preview-content code {
+  background-color: #f1f1f1;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.email-content-preview pre,
+.review-preview-content pre {
+  background-color: #f6f8fa;
+  padding: 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin-bottom: 1em;
+}
+
+.email-content-preview pre code,
+.review-preview-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.email-content-preview a,
+.review-preview-content a {
+  color: #2563eb;
+  text-decoration: underline;
 }

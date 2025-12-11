@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { emailService, type PendingEmailReply, type EmailStatus } from '../../services';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
-interface EmailCounts {
-    PENDING: number;
-    APPROVED: number;
-    SENT: number;
-    REJECTED: number;
-    FAILED: number;
-}
 
 const EmailReviewPage: React.FC = () => {
     const [emails, setEmails] = useState<PendingEmailReply[]>([]);
-    const [counts, setCounts] = useState<EmailCounts>({ PENDING: 0, APPROVED: 0, SENT: 0, REJECTED: 0, FAILED: 0 });
+
     const [currentStatus, setCurrentStatus] = useState<EmailStatus>('PENDING');
     const [loading, setLoading] = useState(true);
     const [expandedPreviews, setExpandedPreviews] = useState<number[]>([]);
@@ -30,18 +25,10 @@ const EmailReviewPage: React.FC = () => {
     }, [currentStatus]);
 
     const loadData = () => {
-        loadCounts();
         loadEmails(currentStatus);
     };
 
-    const loadCounts = async () => {
-        try {
-            const response = await emailService.getCounts();
-            setCounts(response.data);
-        } catch (error) {
-            console.error('Failed to load counts:', error);
-        }
-    };
+
 
     const loadEmails = async (status: EmailStatus) => {
         setLoading(true);
@@ -139,25 +126,7 @@ const EmailReviewPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-4 gap-md mb-8">
-                <div className="card text-center p-4">
-                    <div className="text-3xl font-bold text-warning mb-1">{counts.PENDING}</div>
-                    <div className="text-xs font-medium text-secondary uppercase tracking-wide">Pending</div>
-                </div>
-                <div className="card text-center p-4">
-                    <div className="text-3xl font-bold text-success mb-1">{counts.APPROVED}</div>
-                    <div className="text-xs font-medium text-secondary uppercase tracking-wide">Approved</div>
-                </div>
-                <div className="card text-center p-4">
-                    <div className="text-3xl font-bold text-info mb-1">{counts.SENT}</div>
-                    <div className="text-xs font-medium text-secondary uppercase tracking-wide">Sent</div>
-                </div>
-                <div className="card text-center p-4">
-                    <div className="text-3xl font-bold text-danger mb-1">{counts.REJECTED}</div>
-                    <div className="text-xs font-medium text-secondary uppercase tracking-wide">Rejected</div>
-                </div>
-            </div>
+
 
             {/* Main Content */}
             <div className="card p-0 overflow-hidden">
@@ -202,7 +171,12 @@ const EmailReviewPage: React.FC = () => {
                                 <div
                                     className={`bg-gray-100 p-4 rounded border border-gray-200 my-4 text-sm text-secondary overflow-hidden relative ${expandedPreviews.includes(email.id) ? '' : 'max-h-20'}`}
                                 >
-                                    {email.replyContent}
+                                    <div 
+                                        className="email-content-preview"
+                                        dangerouslySetInnerHTML={{ 
+                                            __html: DOMPurify.sanitize(marked.parse(email.replyContent) as string) 
+                                        }}
+                                    />
                                 </div>
 
                                 <div className="flex gap-sm mt-4">
@@ -259,7 +233,11 @@ const EmailReviewPage: React.FC = () => {
                             </div>
                             <div className="input-group">
                                 <label className="input-label">Generated Reply</label>
-                                <div className="form-control bg-gray-50 text-secondary whitespace-pre-wrap">{selectedEmail.replyContent}</div>
+                                <div className="form-control bg-gray-50 text-secondary review-preview-content"
+                                     dangerouslySetInnerHTML={{ 
+                                         __html: DOMPurify.sanitize(marked.parse(selectedEmail.replyContent) as string) 
+                                     }} 
+                                />
                             </div>
                             {selectedEmail.rejectionReason && (
                                 <div className="input-group">

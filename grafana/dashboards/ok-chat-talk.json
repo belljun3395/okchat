@@ -23,17 +23,30 @@
     "liveNow": false,
     "panels": [
         {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+            },
+            "id": 200,
+            "panels": [],
+            "title": "Chat Performance",
+            "type": "row"
+        },
+        {
             "datasource": {
                 "type": "prometheus",
                 "uid": "P1809F7CD0C75ACF3"
             },
             "gridPos": {
                 "h": 8,
-                "w": 8,
+                "w": 6,
                 "x": 0,
-                "y": 0
+                "y": 1
             },
-            "id": 1,
+            "id": 201,
             "options": {
                 "colorMode": "value",
                 "graphMode": "area",
@@ -49,7 +62,6 @@
                 "textMode": "auto",
                 "wideLayout": true
             },
-            "pluginVersion": "10.4.0",
             "targets": [
                 {
                     "datasource": {
@@ -73,11 +85,11 @@
             },
             "gridPos": {
                 "h": 8,
-                "w": 8,
-                "x": 8,
-                "y": 0
+                "w": 6,
+                "x": 6,
+                "y": 1
             },
-            "id": 2,
+            "id": 202,
             "options": {
                 "colorMode": "background",
                 "graphMode": "area",
@@ -93,7 +105,6 @@
                 "textMode": "auto",
                 "wideLayout": true
             },
-            "pluginVersion": "10.4.0",
             "targets": [
                 {
                     "datasource": {
@@ -117,55 +128,11 @@
             },
             "gridPos": {
                 "h": 8,
-                "w": 8,
-                "x": 16,
-                "y": 0
+                "w": 12,
+                "x": 12,
+                "y": 1
             },
-            "id": 4,
-            "options": {
-                "colorMode": "value",
-                "graphMode": "area",
-                "justifyMode": "auto",
-                "orientation": "auto",
-                "reduceOptions": {
-                    "calcs": [
-                        "sum"
-                    ],
-                    "fields": "",
-                    "values": false
-                },
-                "textMode": "auto",
-                "wideLayout": true
-            },
-            "pluginVersion": "10.4.0",
-            "targets": [
-                {
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
-                    },
-                    "editorMode": "code",
-                    "expr": "sum(increase(ai_tokens_total[1h]))",
-                    "legendFormat": "__auto",
-                    "range": true,
-                    "refId": "A"
-                }
-            ],
-            "title": "Total Tokens Used (1h)",
-            "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 24,
-                "x": 0,
-                "y": 8
-            },
-            "id": 3,
+            "id": 203,
             "options": {
                 "legend": {
                     "calcs": [],
@@ -185,13 +152,66 @@
                         "uid": "P1809F7CD0C75ACF3"
                     },
                     "editorMode": "code",
-                    "expr": "rate(chat_requests_total[1m])",
-                    "legendFormat": "{{status}} - {{model}}",
+                    "expr": "rate(chat_pipeline_step_latency_seconds_sum[5m]) / rate(chat_pipeline_step_latency_seconds_count[5m])",
+                    "legendFormat": "{{step}}",
                     "range": true,
                     "refId": "A"
                 }
             ],
-            "title": "Chat Requests Rate",
+            "title": "Pipeline Step Latency (Avg)",
+            "type": "timeseries"
+        },
+        {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 9
+            },
+            "id": 300,
+            "panels": [],
+            "title": "Search Performance",
+            "type": "row"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "P1809F7CD0C75ACF3"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 10
+            },
+            "id": 301,
+            "options": {
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "P1809F7CD0C75ACF3"
+                    },
+                    "editorMode": "code",
+                    "expr": "rate(chat_search_latency_seconds_sum[5m]) / rate(chat_search_latency_seconds_count[5m])",
+                    "legendFormat": "Avg Search Latency",
+                    "range": true,
+                    "refId": "A"
+                }
+            ],
+            "title": "Search Latency",
             "type": "timeseries"
         },
         {
@@ -201,11 +221,11 @@
             },
             "gridPos": {
                 "h": 8,
-                "w": 24,
-                "x": 0,
-                "y": 16
+                "w": 12,
+                "x": 12,
+                "y": 10
             },
-            "id": 5,
+            "id": 302,
             "options": {
                 "legend": {
                     "calcs": [],
@@ -225,19 +245,22 @@
                         "uid": "P1809F7CD0C75ACF3"
                     },
                     "editorMode": "code",
-                    "expr": "increase(ai_tokens_total[5m])",
-                    "legendFormat": "{{model}}",
+                    "expr": "increase(chat_search_results_count_total{zero_results=\"true\"}[1h])",
+                    "legendFormat": "Zero Results",
                     "range": true,
                     "refId": "A"
                 }
             ],
-            "title": "Token Usage (5m Increase)",
+            "title": "Zero Result Searches (1h)",
             "type": "timeseries"
         }
     ],
     "refresh": "5s",
     "schemaVersion": 39,
-    "tags": [],
+    "tags": [
+        "service",
+        "chat"
+    ],
     "templating": {
         "list": []
     },
@@ -247,8 +270,8 @@
     },
     "timepicker": {},
     "timezone": "",
-    "title": "OK Chat  Dashboard",
-    "uid": "ok-chat-dashboard",
-    "version": 2,
+    "title": "OK Chat Talk Dashboard",
+    "uid": "ok-chat-talk",
+    "version": 4,
     "weekStart": ""
 }

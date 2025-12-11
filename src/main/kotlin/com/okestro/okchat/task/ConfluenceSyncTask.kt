@@ -176,7 +176,7 @@ class ConfluenceSyncTask(
 
             // 6. Summary
             log.info { "[ConfluenceSync] Sync completed: space_key=$spaceKey, processed_pages=${documents.size}" }
-            
+
             // Record metrics
             sample.stop(meterRegistry.timer("task.execution.time", tags.and("status", "success")))
             meterRegistry.counter("task.execution.count", tags.and("status", "success")).increment()
@@ -184,7 +184,6 @@ class ConfluenceSyncTask(
             meterRegistry.counter("task.confluence.sync.documents.added", tags).increment((currentIds.size - existingIds.size).toDouble())
             meterRegistry.counter("task.confluence.sync.documents.updated", tags).increment((existingIds.intersect(currentIds).size).toDouble())
             meterRegistry.counter("task.confluence.sync.documents.deleted", tags).increment((existingIds.size - currentIds.size + (currentIds.size - existingIds.intersect(currentIds).size)).toDouble().coerceAtLeast(0.0)) // Approximated for deleted
-
         } catch (e: Exception) {
             sample.stop(meterRegistry.timer("task.execution.time", tags.and("status", "failure")))
             meterRegistry.counter("task.execution.count", tags.and("status", "failure")).increment()

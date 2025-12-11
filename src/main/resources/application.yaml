@@ -68,6 +68,7 @@ spring:
             chat:
                 options:
                     model: ${SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL:gpt-4.1-mini}
+                    stream-usage: true # Enable token usage in streaming responses
         # MCP client disabled for Kubernetes deployment (requires Node.js/npx)
         # mcp:
         #     client:

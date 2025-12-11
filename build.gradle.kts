@@ -80,6 +80,8 @@ dependencies {
 
     /** jakarta mail */
     implementation("org.eclipse.angus:angus-mail:2.0.3")
+    implementation("org.commonmark:commonmark:0.24.0")
+    implementation("org.commonmark:commonmark-ext-gfm-tables:0.24.0")
 
     /** microsoft oauth2 */
     implementation("com.microsoft.azure:msal4j:1.16.2")

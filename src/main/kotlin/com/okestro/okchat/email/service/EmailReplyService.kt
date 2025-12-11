@@ -4,6 +4,9 @@ import com.okestro.okchat.email.config.EmailProperties
 import com.okestro.okchat.email.oauth2.OAuth2TokenService
 import com.okestro.okchat.email.provider.EmailMessage
 import com.okestro.okchat.email.util.EmailContentCleaner
+import org.commonmark.ext.gfm.tables.TablesExtension
+import org.commonmark.parser.Parser
+import org.commonmark.renderer.html.HtmlRenderer
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.mail.Message
 import jakarta.mail.Session
@@ -25,6 +28,14 @@ class EmailReplyService(
     private val emailProperties: EmailProperties,
     private val oauth2TokenService: OAuth2TokenService
 ) {
+
+    private val parser = Parser.builder()
+        .extensions(listOf(TablesExtension.create()))
+        .build()
+
+    private val renderer = HtmlRenderer.builder()
+        .extensions(listOf(TablesExtension.create()))
+        .build()
 
     /**
      * Send a reply email
@@ -75,8 +86,11 @@ class EmailReplyService(
                 replyMessage.setHeader("References", messageId)
             }
 
+            // Convert markdown to HTML
+            val htmlContent = renderer.render(parser.parse(replyContent))
+
             // Set content
-            replyMessage.setText(replyContent, "UTF-8", "plain")
+            replyMessage.setContent(htmlContent, "text/html; charset=utf-8")
             replyMessage.saveChanges()
 
             // Send the message

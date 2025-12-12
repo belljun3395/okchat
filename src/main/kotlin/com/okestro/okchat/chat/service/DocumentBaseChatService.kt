@@ -8,6 +8,10 @@ import com.okestro.okchat.chat.pipeline.CompleteChatContext
 import com.okestro.okchat.chat.pipeline.DocumentChatPipeline
 import com.okestro.okchat.chat.service.dto.ChatServiceRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
+import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator
+import io.github.resilience4j.reactor.timelimiter.TimeLimiterOperator
+import io.github.resilience4j.timelimiter.TimeLimiterRegistry
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tag
 import io.micrometer.core.instrument.Timer
@@ -16,10 +20,6 @@ import io.opentelemetry.api.trace.Tracer
 import org.slf4j.MDC
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.prompt.Prompt
-import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
-import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator
-import io.github.resilience4j.reactor.timelimiter.TimeLimiterOperator
-import io.github.resilience4j.timelimiter.TimeLimiterRegistry
 import org.springframework.ai.mcp.SyncMcpToolCallbackProvider
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.beans.factory.annotation.Autowired

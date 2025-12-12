@@ -20,6 +20,8 @@
     <!-- JSON appender for production environments -->
     <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- Mask sensitive data in all string fields -->
+            <jsonGeneratorDecorator class="com.okestro.okchat.config.SensitiveDataMaskingJsonGeneratorDecorator"/>
             <includeMdcKeyName>requestId</includeMdcKeyName>
             <includeMdcKeyName>userId</includeMdcKeyName>
             <includeMdcKeyName>traceId</includeMdcKeyName>

@@ -121,6 +121,10 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-exporter-otlp")
     implementation("io.micrometer:context-propagation")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j")
+
+    /** sentry - error tracking */
+    implementation("io.sentry:sentry-spring-boot-starter-jakarta:7.18.1")
+    implementation("io.sentry:sentry-logback:7.18.1")
 }
 
 dependencyManagement {

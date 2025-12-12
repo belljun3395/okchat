@@ -228,3 +228,19 @@ rag:
         content-weight: 1.0
         date-boost-factor: 3.0  # Multiply RRF score when document title matches date keywords (e.g., "250804" in query date range)
         path-boost-factor: 2.0  # Multiply RRF score when document path hierarchy matches query intent (e.g., "팀회의" path for meeting queries)
+# Sentry configuration (Error Tracking)
+sentry:
+  dsn: ${SENTRY_DSN:}  # Set via environment variable
+  environment: ${SENTRY_ENVIRONMENT:${spring.profiles.active:local}}
+  traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE:1.0}
+  enable-tracing: true
+  send-default-pii: false  # GDPR compliance
+  max-breadcrumbs: 50
+  attach-stacktrace: true
+  attach-threads: true
+  ignored-exceptions-for-type:
+    - com.okestro.okchat.exception.NotFoundException
+    - com.okestro.okchat.exception.ValidationException
+  logging:
+    minimum-event-level: warn
+    minimum-breadcrumb-level: info

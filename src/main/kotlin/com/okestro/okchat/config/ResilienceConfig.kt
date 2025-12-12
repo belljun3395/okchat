@@ -1,11 +1,12 @@
 package com.okestro.okchat.config
-
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.resilience4j.circuitbreaker.CircuitBreaker
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
-import io.github.resilience4j.micrometer.tagged.TaggedCircuitBreakerMetrics
-import io.micrometer.core.instrument.MeterRegistry
+import io.github.resilience4j.core.registry.EntryAddedEvent
+import io.github.resilience4j.core.registry.EntryRemovedEvent
+import io.github.resilience4j.core.registry.EntryReplacedEvent
+import io.github.resilience4j.core.registry.RegistryEventConsumer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import java.time.Duration
@@ -24,6 +25,8 @@ private val log = KotlinLogging.logger {}
  */
 @Configuration
 class ResilienceConfig {
+
+    private val log = KotlinLogging.logger {}
 
     /**
      * 기본 Circuit Breaker 설정
@@ -53,7 +56,6 @@ class ResilienceConfig {
                 java.io.IOException::class.java,
                 org.springframework.web.reactive.function.client.WebClientResponseException.ServiceUnavailable::class.java
             )
-
             .build()
     }
 
@@ -92,68 +94,40 @@ class ResilienceConfig {
     }
 
     /**
-     * Circuit Breaker Registry
+     * Circuit Breaker 이벤트 리스너 등록
      *
-     * 모든 Circuit Breaker 인스턴스를 관리합니다.
+     * Spring Boot Auto-Configuration에 의해 생성된 CircuitBreakerRegistry에
+     * 이벤트 컨슈머를 등록하여 상태 변경 및 에러를 로깅합니다.
      */
     @Bean
-    fun circuitBreakerRegistry(
-        defaultCircuitBreakerConfig: CircuitBreakerConfig,
-        confluenceCircuitBreakerConfig: CircuitBreakerConfig,
-        openaiCircuitBreakerConfig: CircuitBreakerConfig,
-        meterRegistry: MeterRegistry
-    ): CircuitBreakerRegistry {
-        val registry = CircuitBreakerRegistry.of(defaultCircuitBreakerConfig)
-
-        // 서비스별 커스텀 설정 등록
-        registry.addConfiguration("confluence", confluenceCircuitBreakerConfig)
-        registry.addConfiguration("openai", openaiCircuitBreakerConfig)
-
-        // Micrometer 메트릭 바인딩
-        TaggedCircuitBreakerMetrics
-            .ofCircuitBreakerRegistry(registry)
-            .bindTo(meterRegistry)
-
-        // Circuit Breaker 이벤트 로깅
-        registry.allCircuitBreakers.forEach { circuitBreaker ->
-            circuitBreaker.eventPublisher
-                .onStateTransition { event ->
-                    log.info {
-                        "[Circuit Breaker] ${event.circuitBreakerName}: " +
-                            "${event.stateTransition.fromState} → ${event.stateTransition.toState}"
+    fun circuitBreakerEventConsumer(): RegistryEventConsumer<CircuitBreaker> {
+        return object : RegistryEventConsumer<CircuitBreaker> {
+            override fun onEntryAddedEvent(entryAddedEvent: EntryAddedEvent<CircuitBreaker>) {
+                val circuitBreaker = entryAddedEvent.addedEntry
+                circuitBreaker.eventPublisher
+                    .onStateTransition { event ->
+                        log.info {
+                            "[Circuit Breaker] ${event.circuitBreakerName}: " +
+                                "${event.stateTransition.fromState} → ${event.stateTransition.toState}"
+                        }
                     }
-                }
-                .onError { event ->
-                    log.warn {
-                        "[Circuit Breaker] ${event.circuitBreakerName}: " +
-                            "Error recorded - ${event.throwable.message}"
+                    .onError { event ->
+                        log.warn {
+                            "[Circuit Breaker] ${event.circuitBreakerName}: " +
+                                "Error recorded - ${event.throwable.message}"
+                        }
                     }
-                }
-                .onCallNotPermitted { event ->
-                    log.warn {
-                        "[Circuit Breaker] ${event.circuitBreakerName}: " +
-                            "Call not permitted (Circuit is ${circuitBreaker.state})"
+                    .onCallNotPermitted { event ->
+                        log.warn {
+                            "[Circuit Breaker] ${event.circuitBreakerName}: " +
+                                "Call not permitted (Circuit is ${circuitBreaker.state})"
+                        }
                     }
-                }
+            }
+
+            override fun onEntryRemovedEvent(entryRemovedEvent: EntryRemovedEvent<CircuitBreaker>) {}
+            override fun onEntryReplacedEvent(entryReplacedEvent: EntryReplacedEvent<CircuitBreaker>) {}
         }
-
-        return registry
-    }
-
-    /**
-     * Confluence Circuit Breaker 인스턴스
-     */
-    @Bean
-    fun confluenceCircuitBreaker(registry: CircuitBreakerRegistry): CircuitBreaker {
-        return registry.circuitBreaker("confluence", "confluence")
-    }
-
-    /**
-     * OpenAI Circuit Breaker 인스턴스
-     */
-    @Bean
-    fun openaiCircuitBreaker(registry: CircuitBreakerRegistry): CircuitBreaker {
-        return registry.circuitBreaker("openai", "openai")
     }
 
     /**

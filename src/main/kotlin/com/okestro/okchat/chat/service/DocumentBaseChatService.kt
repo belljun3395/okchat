@@ -16,6 +16,10 @@ import io.opentelemetry.api.trace.Tracer
 import org.slf4j.MDC
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.prompt.Prompt
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
+import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator
+import io.github.resilience4j.reactor.timelimiter.TimeLimiterOperator
+import io.github.resilience4j.timelimiter.TimeLimiterRegistry
 import org.springframework.ai.mcp.SyncMcpToolCallbackProvider
 import org.springframework.ai.tool.ToolCallback
 import org.springframework.beans.factory.annotation.Autowired
@@ -48,7 +52,9 @@ class DocumentBaseChatService(
     @Autowired(required = false) private val mcpToolCallbackProvider: SyncMcpToolCallbackProvider?,
     @Value("\${spring.ai.openai.chat.options.model:gpt-4o-mini}") private val modelName: String,
     private val meterRegistry: MeterRegistry,
-    private val tracer: Tracer
+    private val tracer: Tracer,
+    private val circuitBreakerRegistry: CircuitBreakerRegistry,
+    private val timeLimiterRegistry: TimeLimiterRegistry
 ) : ChatService {
 
     private val allToolCallbacks: List<ToolCallback> by lazy {
@@ -146,6 +152,8 @@ class DocumentBaseChatService(
                 .toolCallbacks(toolCallbacks)
                 .stream()
                 .chatResponse() // Change to chatResponse() to access metadata
+                .transformDeferred(CircuitBreakerOperator.of(circuitBreakerRegistry.circuitBreaker("chat")))
+                .transformDeferred(TimeLimiterOperator.of(timeLimiterRegistry.timeLimiter("chat")))
                 .doOnNext { chatResponse ->
                     // Extract metadata (token usage)
                     val usage = chatResponse.metadata.usage

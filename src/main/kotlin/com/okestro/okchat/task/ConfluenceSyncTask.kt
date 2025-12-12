@@ -14,11 +14,14 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.micrometer.core.instrument.Timer
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.opensearch.client.opensearch.OpenSearchClient
@@ -54,12 +57,22 @@ class ConfluenceSyncTask(
     private val chunkingStrategy: ChunkingStrategy,
     private val confluenceProperties: ConfluenceProperties,
     @Value("\${spring.ai.vectorstore.opensearch.index-name}") private val indexName: String,
-    private val meterRegistry: MeterRegistry
+    private val meterRegistry: MeterRegistry,
+    private val observationRegistry: ObservationRegistry
 ) : CommandLineRunner {
 
     private val log = KotlinLogging.logger {}
 
-    override fun run(vararg args: String?) = runBlocking {
+    override fun run(vararg args: String?) {
+        val observation = Observation.createNotStarted("task.confluence-sync", observationRegistry)
+        observation.observe {
+            runBlocking(MDCContext()) {
+                executeTask(args)
+            }
+        }
+    }
+
+    private suspend fun executeTask(args: Array<out String?>) {
         log.info { "[ConfluenceSync] Starting Confluence sync task" }
         val sample = Timer.start(meterRegistry)
         val tags = Tags.of("task", "confluence-sync")

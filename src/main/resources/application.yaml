@@ -109,6 +109,12 @@ management:
         metrics:
             export:
                 enabled: true
+    metrics:
+        distribution:
+            percentiles-histogram:
+                chat.response.time: true
+            percentiles:
+                chat.response.time: 0.95
     tracing:
         sampling:
             probability: 1.0

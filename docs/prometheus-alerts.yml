@@ -1,0 +1,35 @@
+groups:
+  - name: slo_alerts
+    rules:
+      - alert: AvailabilitySLOBreach
+        expr: slo_availability_percentage < 99.9
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "가용성 SLO(99.9%) 위반"
+
+      - alert: ErrorBudgetLow
+        expr: slo_availability_error_budget_remaining < 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "가용성 에러 예산 10% 미만"
+
+      - alert: LatencySLOBreach
+        expr: slo_latency_p95_ms > 500
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Chat P95 지연시간 500ms 초과"
+
+      - alert: QualitySLOBreach
+        expr: slo_quality_helpful_percentage < 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "사용자 만족도(Helpful) 80% 미만"
+

@@ -1,5 +1,6 @@
 package com.okestro.okchat.permission.controller
 
+import com.okestro.okchat.config.SecurityAuditLogger
 import com.okestro.okchat.permission.application.GetUserPermissionsUseCase
 import com.okestro.okchat.permission.application.GrantDenyPathPermissionUseCase
 import com.okestro.okchat.permission.application.GrantPathPermissionUseCase
@@ -47,7 +48,8 @@ class PermissionController(
     private val revokePathPermissionUseCase: RevokePathPermissionUseCase,
     private val documentPermissionService: com.okestro.okchat.permission.service.DocumentPermissionService,
     private val getAllActiveUsersUseCase: com.okestro.okchat.user.application.GetAllActiveUsersUseCase,
-    private val getPathPermissionsUseCase: com.okestro.okchat.permission.application.GetPathPermissionsUseCase
+    private val getPathPermissionsUseCase: com.okestro.okchat.permission.application.GetPathPermissionsUseCase,
+    private val auditLogger: SecurityAuditLogger
 ) {
 
     @GetMapping("/paths")
@@ -138,6 +140,13 @@ class PermissionController(
 
         revokeAllUserPermissionsUseCase.execute(RevokeAllUserPermissionsUseCaseIn(user.id!!))
 
+        auditLogger.logPermissionChange(
+            adminId = null,
+            targetUserId = user.id.toString(),
+            action = "REVOKE_ALL",
+            details = mapOf("targetEmail" to email)
+        )
+
         return ResponseEntity.ok(
             PermissionResponse(success = true, message = "All permissions revoked for user")
         )
@@ -164,6 +173,18 @@ class PermissionController(
             }
         }
 
+        auditLogger.logPermissionChange(
+            adminId = null,
+            targetUserId = user.id.toString(),
+            action = "GRANT_BULK",
+            details = mapOf(
+                "targetEmail" to request.userEmail,
+                "spaceKey" to request.spaceKey,
+                "paths" to request.documentPaths,
+                "grantedCount" to grantedCount
+            )
+        )
+
         return ResponseEntity.ok(
             BulkPermissionResponse(
                 success = true,
@@ -184,6 +205,16 @@ class PermissionController(
                 .body(PermissionResponse(success = false, message = "User not found: ${request.userEmail}"))
 
         revokePathPermissionUseCase.execute(RevokePathPermissionUseCaseIn(user.id!!, request.documentPaths))
+
+        auditLogger.logPermissionChange(
+            adminId = null,
+            targetUserId = user.id.toString(),
+            action = "REVOKE_BULK",
+            details = mapOf(
+                "targetEmail" to request.userEmail,
+                "paths" to request.documentPaths
+            )
+        )
 
         return ResponseEntity.ok(
             PermissionResponse(success = true, message = "Bulk path permissions revoked")
@@ -210,6 +241,18 @@ class PermissionController(
                 log.warn { "Failed to grant DENY path permission: user_id=${user.id}, path=$it, error=${e.message}" }
             }
         }
+
+        auditLogger.logPermissionChange(
+            adminId = null,
+            targetUserId = user.id.toString(),
+            action = "DENY_BULK",
+            details = mapOf(
+                "targetEmail" to request.userEmail,
+                "spaceKey" to request.spaceKey,
+                "paths" to request.documentPaths,
+                "grantedCount" to grantedCount
+            )
+        )
 
         return ResponseEntity.ok(
             BulkPermissionResponse(

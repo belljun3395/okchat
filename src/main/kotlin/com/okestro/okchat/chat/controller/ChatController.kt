@@ -3,6 +3,7 @@ package com.okestro.okchat.chat.controller
 
 import com.okestro.okchat.chat.service.DocumentBaseChatService
 import com.okestro.okchat.chat.service.dto.ChatServiceRequest
+import com.okestro.okchat.config.SecurityAuditLogger
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -29,7 +30,8 @@ import java.util.UUID
     description = "AI 기반 채팅 및 문서 검색 API. RAG(Retrieval-Augmented Generation)를 활용하여 문서 기반 답변을 제공합니다."
 )
 class ChatController(
-    private val documentBaseChatService: DocumentBaseChatService
+    private val documentBaseChatService: DocumentBaseChatService,
+    private val auditLogger: SecurityAuditLogger
 ) {
 
     @PostMapping(produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
@@ -99,6 +101,17 @@ class ChatController(
     ): Flow<String> {
         // Get requestId from MDC
         val requestId = MDC.get("requestId") ?: UUID.randomUUID().toString()
+
+        auditLogger.logDataAccess(
+            userId = chatRequest.userEmail,
+            resource = "chat_api",
+            action = "READ",
+            details = mapOf(
+                "requestId" to requestId,
+                "sessionId" to (chatRequest.sessionId ?: "new"),
+                "deepThink" to chatRequest.isDeepThink
+            )
+        )
 
         return flow {
             emit("__REQUEST_ID__:$requestId\n")

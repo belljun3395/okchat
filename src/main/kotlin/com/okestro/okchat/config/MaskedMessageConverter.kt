@@ -13,4 +13,3 @@ class MaskedMessageConverter : ClassicConverter() {
         return SensitiveDataMasker.mask(event.formattedMessage).orEmpty()
     }
 }
-

@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: okchat-app
+  namespace: okchat
+spec:
+  template:
+    spec:
+      containers:
+        - name: okchat
+          # Use specific image tag if needed, e.g., okchat:native-v1
+          image: okchat:native
+          
+          # Native Image Optimization
+          # 1. Faster Startup -> Reduced initial delays
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+            
+          # 2. Lower Memory Usage -> Reduced requests/limits
+          # Native image typically uses significantly less memory than JVM
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+
+          # 3. Remove JVM Options that are not applicable or need adjustment
+          # Spring Boot Native Image typically handles memory internally, but we can hint Xmx if needed via environment
+          # Note: GRAALVM native images respect CGAroups v2 memory limits automatically.
+          env:
+            - name: JAVA_OPTS
+              value: "" # Clear JVM options as they are baked in or handled differently
+            - name: SPRING_PROFILES_ACTIVE
+              value: "native"

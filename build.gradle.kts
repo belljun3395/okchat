@@ -7,6 +7,7 @@ plugins {
     id("org.springframework.boot") version "3.5.6"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jlleitschuh.gradle.ktlint") version "11.6.1"
+    id("org.graalvm.buildtools.native") version "0.10.3"
     jacoco
 }
 
@@ -66,6 +67,8 @@ dependencies {
     implementation("org.opensearch.client:spring-data-opensearch:1.5.1")
     implementation("org.opensearch.client:opensearch-rest-high-level-client:2.18.0")
     implementation("org.opensearch.client:opensearch-java:2.18.0")
+    // Fix for AOT: Spring Data Elasticsearch 5.x requires this for hints even if using OpenSearch
+    implementation("co.elastic.clients:elasticsearch-java")
     implementation("jakarta.json:jakarta.json-api:2.1.1")
     implementation("org.glassfish:jakarta.json:2.0.1")
 

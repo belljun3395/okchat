@@ -110,6 +110,19 @@ services:
         command:
             - '--config.file=/etc/prometheus/prometheus.yml'
 
+    okchat-tempo:
+        image: grafana/tempo:latest
+        container_name: okchat-tempo
+        command: [ "-config.file=/etc/tempo.yaml" ]
+        volumes:
+            - ./grafana/tempo-config.yaml:/etc/tempo.yaml
+        ports:
+            - "3200:3200"   # Jaeger compact
+            - "4317:4317"   # OTLP gRPC
+            - "4318:4318"   # OTLP HTTP
+        networks:
+            - okchat-network
+
     okchat-grafana:
         image: grafana/grafana:latest
         container_name: okchat-grafana
@@ -124,6 +137,7 @@ services:
             - GF_SECURITY_ADMIN_PASSWORD=admin
         depends_on:
             - okchat-prometheus
+            - okchat-tempo
 
 networks:
     okchat-network:

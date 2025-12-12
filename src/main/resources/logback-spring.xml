@@ -61,13 +61,16 @@
     <logger name="org.opensearch" level="INFO"/>
     <logger name="io.netty" level="WARN"/>
     
-    <!-- Root logger - 기본적으로 색상 있는 CONSOLE 사용 -->
-    <root level="INFO">
-        <appender-ref ref="CONSOLE" />
-        <appender-ref ref="FILE" />
-    </root>
-    
     <!-- Profile-specific configurations -->
+    <!-- Non-production: human-readable console + local file -->
+    <springProfile name="!production">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="FILE" />
+        </root>
+    </springProfile>
+
+    <!-- Production: JSON only (with sensitive masking) -->
     <springProfile name="production">
         <root level="INFO">
             <appender-ref ref="JSON" />

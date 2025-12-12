@@ -72,8 +72,8 @@ class MetricsWebFilter(
     }
 
     private fun resolvePathTag(exchange: ServerWebExchange, rawPath: String): String {
-        val pattern = exchange.getAttribute<String>(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE)
-        return pattern ?: normalizePath(rawPath)
+        val pattern = exchange.getAttribute<Any>(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE)
+        return pattern?.toString() ?: normalizePath(rawPath)
     }
 
     private val uuidRegex =

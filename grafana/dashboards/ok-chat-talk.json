@@ -38,7 +38,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -66,7 +66,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "sum(chat_requests_total)",
@@ -81,7 +81,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -109,7 +109,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "rate(chat_response_time_seconds_sum[5m]) / rate(chat_response_time_seconds_count[5m])",
@@ -124,7 +124,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -149,7 +149,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "rate(chat_pipeline_step_latency_seconds_sum[5m]) / rate(chat_pipeline_step_latency_seconds_count[5m])",
@@ -177,7 +177,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -202,7 +202,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "rate(chat_search_latency_seconds_sum[5m]) / rate(chat_search_latency_seconds_count[5m])",
@@ -217,7 +217,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -242,7 +242,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "increase(chat_search_results_count_total{zero_results=\"true\"}[1h])",

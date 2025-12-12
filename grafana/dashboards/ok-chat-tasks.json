@@ -38,7 +38,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -63,7 +63,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "task_execution_time_seconds_max{task=\"confluence-sync\", status=\"success\"}",
@@ -74,7 +74,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "task_execution_time_seconds_max{task=\"confluence-sync\", status=\"failure\"}",
@@ -89,7 +89,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -114,7 +114,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "increase(task_confluence_sync_documents_processed_total[1h])",
@@ -125,7 +125,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "increase(task_confluence_sync_documents_added_total[1h])",
@@ -136,7 +136,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "increase(task_confluence_sync_documents_updated_total[1h])",
@@ -147,7 +147,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "increase(task_confluence_sync_documents_deleted_total[1h])",
@@ -162,7 +162,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -190,7 +190,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "increase(task_execution_count_total{task=\"confluence-sync\", status=\"failure\"}[24h])",
@@ -218,7 +218,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -243,7 +243,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "rate(task_execution_time_seconds_sum{task=\"email-polling\"}[1h])",
@@ -258,7 +258,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -286,7 +286,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "increase(task_email_polling_messages_fetched_total[24h])",
@@ -301,7 +301,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -329,7 +329,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "increase(task_email_polling_events_published_total[24h])",
@@ -357,7 +357,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -382,7 +382,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "rate(task_execution_time_seconds_sum{task=~\"metrics-update.*\"}[1h])",
@@ -397,7 +397,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -425,7 +425,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "editorMode": "code",
                     "expr": "increase(task_execution_count_total{task=~\"metrics-update.*\", status=\"failure\"}[24h])",
@@ -452,7 +452,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -467,7 +467,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "expr": "confluence_client_request_seconds_max",
                     "legendFormat": "{{method}}",
@@ -491,7 +491,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -506,7 +506,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "expr": "increase(confluence_client_response_bytes_sum[1h])",
                     "legendFormat": "{{method}}",
@@ -543,7 +543,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -558,7 +558,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "expr": "vector_store_operation_seconds_max",
                     "legendFormat": "{{operation}}",
@@ -582,7 +582,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -597,7 +597,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "expr": "increase(vector_store_request_bytes_sum[1h])",
                     "legendFormat": "{{operation}}",
@@ -622,7 +622,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -637,7 +637,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "expr": "increase(confluence_client_request_seconds_count[1h])",
                     "legendFormat": "{{method}}",
@@ -660,7 +660,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "P1809F7CD0C75ACF3"
+                "uid": "prometheus"
             },
             "gridPos": {
                 "h": 8,
@@ -675,7 +675,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "P1809F7CD0C75ACF3"
+                        "uid": "prometheus"
                     },
                     "expr": "increase(vector_store_operation_seconds_count[1h])",
                     "legendFormat": "{{operation}}",

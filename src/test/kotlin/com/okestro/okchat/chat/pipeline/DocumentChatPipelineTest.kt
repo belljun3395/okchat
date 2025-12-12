@@ -4,6 +4,7 @@ import com.okestro.okchat.ai.service.classifier.QueryClassifier
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test
 
 @DisplayName("DocumentChatPipeline Tests")
 class DocumentChatPipelineTest {
+    private val meterRegistry = SimpleMeterRegistry()
 
     @Nested
     @DisplayName("Pipeline Initialization")
@@ -33,7 +35,8 @@ class DocumentChatPipelineTest {
             val pipeline = DocumentChatPipeline(
                 firstStep = firstStep,
                 lastStep = lastStep,
-                documentChatPipelineSteps = listOf(middleStep1, middleStep2)
+                documentChatPipelineSteps = listOf(middleStep1, middleStep2),
+                meterRegistry = meterRegistry
             )
 
             // then
@@ -51,7 +54,8 @@ class DocumentChatPipelineTest {
             val pipeline = DocumentChatPipeline(
                 firstStep = firstStep,
                 lastStep = lastStep,
-                documentChatPipelineSteps = emptyList()
+                documentChatPipelineSteps = emptyList(),
+                meterRegistry = meterRegistry
             )
 
             // then
@@ -70,7 +74,7 @@ class DocumentChatPipelineTest {
             val firstStep = createMockFirstStep("First")
             val middleStep = createMockDocumentStep("Middle")
             val lastStep = createMockLastStep("Last")
-            val pipeline = DocumentChatPipeline(firstStep, lastStep, listOf(middleStep))
+            val pipeline = DocumentChatPipeline(firstStep, lastStep, listOf(middleStep), meterRegistry)
 
             val initialContext = createInitialContext()
 
@@ -90,7 +94,7 @@ class DocumentChatPipelineTest {
             val firstStep = createMockFirstStep("First Step")
             val middleStep = createMockDocumentStep("Middle Step")
             val lastStep = createMockLastStep("Last Step")
-            val pipeline = DocumentChatPipeline(firstStep, lastStep, listOf(middleStep))
+            val pipeline = DocumentChatPipeline(firstStep, lastStep, listOf(middleStep), meterRegistry)
 
             val initialContext = createInitialContext()
 
@@ -115,7 +119,8 @@ class DocumentChatPipelineTest {
             val pipeline = DocumentChatPipeline(
                 firstStep,
                 lastStep,
-                listOf(skippableStep, executedStep)
+                listOf(skippableStep, executedStep),
+                meterRegistry
             )
 
             val initialContext = createInitialContext()
@@ -136,7 +141,7 @@ class DocumentChatPipelineTest {
             // given
             val firstStep = createMockFirstStep("First")
             val lastStep = createMockLastStep("Last")
-            val pipeline = DocumentChatPipeline(firstStep, lastStep, emptyList())
+            val pipeline = DocumentChatPipeline(firstStep, lastStep, emptyList(), meterRegistry)
 
             val initialContext = createInitialContext()
 
@@ -192,7 +197,7 @@ class DocumentChatPipelineTest {
             )
 
             val lastStep = createMockLastStep("Last")
-            val pipeline = DocumentChatPipeline(firstStep, lastStep, listOf(middleStep))
+            val pipeline = DocumentChatPipeline(firstStep, lastStep, listOf(middleStep), meterRegistry)
 
             // when
             val result = pipeline.execute(createInitialContext())
@@ -209,7 +214,7 @@ class DocumentChatPipelineTest {
             val step2 = createMockDocumentStep("Step2")
             val step3 = createMockDocumentStep("Step3")
             val lastStep = createMockLastStep("Step4")
-            val pipeline = DocumentChatPipeline(firstStep, lastStep, listOf(step2, step3))
+            val pipeline = DocumentChatPipeline(firstStep, lastStep, listOf(step2, step3), meterRegistry)
 
             // when
             val result = pipeline.execute(createInitialContext())
@@ -235,7 +240,8 @@ class DocumentChatPipelineTest {
             val pipeline = DocumentChatPipeline(
                 createMockFirstStep("First"),
                 createMockLastStep("Last"),
-                listOf(conditionalStep)
+                listOf(conditionalStep),
+                meterRegistry
             )
 
             // when
@@ -254,7 +260,8 @@ class DocumentChatPipelineTest {
             val pipeline = DocumentChatPipeline(
                 createMockFirstStep("First"),
                 createMockLastStep("Last"),
-                listOf(conditionalStep)
+                listOf(conditionalStep),
+                meterRegistry
             )
 
             // when
@@ -275,7 +282,8 @@ class DocumentChatPipelineTest {
             val pipeline = DocumentChatPipeline(
                 createMockFirstStep("First"),
                 createMockLastStep("Last"),
-                listOf(step1, step2, step3)
+                listOf(step1, step2, step3),
+                meterRegistry
             )
 
             // when

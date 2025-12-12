@@ -11,6 +11,8 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tag
 import io.micrometer.core.instrument.Timer
+import io.opentelemetry.api.trace.StatusCode
+import io.opentelemetry.api.trace.Tracer
 import org.slf4j.MDC
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.prompt.Prompt
@@ -21,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 
 private val log = KotlinLogging.logger {}
 
@@ -44,7 +47,8 @@ class DocumentBaseChatService(
     private val toolCallbacks: List<ToolCallback>,
     @Autowired(required = false) private val mcpToolCallbackProvider: SyncMcpToolCallbackProvider?,
     @Value("\${spring.ai.openai.chat.options.model:gpt-4o-mini}") private val modelName: String,
-    private val meterRegistry: MeterRegistry
+    private val meterRegistry: MeterRegistry,
+    private val tracer: Tracer
 ) : ChatService {
 
     private val allToolCallbacks: List<ToolCallback> by lazy {
@@ -72,6 +76,18 @@ class DocumentBaseChatService(
         val keywords = chatServiceRequest.keywords
         val isDeepThink = chatServiceRequest.isDeepThink
         val conversationHistory = loadConversationHistory(actualSessionId)
+
+        val parentSpan = tracer.spanBuilder("chat.process")
+            .startSpan()
+            .apply {
+                setAttribute("chat.session_id", actualSessionId)
+                setAttribute("chat.request_id", requestId)
+                setAttribute("chat.model", modelName)
+                setAttribute("chat.deep_think", isDeepThink)
+                chatServiceRequest.userEmail?.let { setAttribute("chat.user_email", it) }
+            }
+        val parentScope = parentSpan.makeCurrent()
+
         val context = ChatContext(
             input = ChatContext.UserInput(
                 message = message,
@@ -84,10 +100,30 @@ class DocumentBaseChatService(
         )
 
         val processedContext = try {
-            documentChatPipeline.execute(context)
+            val pipelineSpan = tracer.spanBuilder("chat.pipeline").startSpan()
+            try {
+                documentChatPipeline.execute(context).also { pc ->
+                    val queryType = pc.analysis?.queryAnalysis?.type?.name ?: "UNKNOWN"
+                    val resultsCount = pc.search?.results?.size ?: 0
+                    pipelineSpan.setAttribute("query.type", queryType)
+                    pipelineSpan.setAttribute("search.results_count", resultsCount.toLong())
+                    pipelineSpan.setAttribute("pipeline.steps", pc.executedStep.joinToString(" -> "))
+                    meterRegistry.counter("chat.query.type.total", "type", queryType).increment()
+                }
+            } catch (e: Exception) {
+                pipelineSpan.recordException(e)
+                pipelineSpan.setStatus(StatusCode.ERROR, e.message ?: "pipeline failed")
+                log.error(e) { "[Pipeline Error] Failed to execute pipeline" }
+                meterRegistry.counter("chat.requests.total", "status", "failure", "model", modelName).increment()
+                throw e
+            } finally {
+                pipelineSpan.end()
+            }
         } catch (e: Exception) {
-            log.error(e) { "[Pipeline Error] Failed to execute pipeline" }
-            meterRegistry.counter("chat.requests.total", "status", "failure", "model", modelName).increment() // Record failure
+            parentSpan.recordException(e)
+            parentSpan.setStatus(StatusCode.ERROR, e.message ?: "chat failed")
+            parentScope.close()
+            parentSpan.end()
             throw e
         }
 
@@ -101,83 +137,116 @@ class DocumentBaseChatService(
             allToolCallbacks
         }
 
-        return chatClient
-            .prompt(prompt)
-            .toolCallbacks(toolCallbacks)
-            .stream()
-            .chatResponse() // Change to chatResponse() to access metadata
-            .doOnNext { chatResponse ->
-                // Extract metadata (token usage)
-                val usage = chatResponse.metadata.usage
-                if (usage != null && (usage.totalTokens > 0 || usage.promptTokens > 0 || usage.completionTokens > 0)) {
-                    if (usage.totalTokens > 0L) {
-                        log.debug { "[Token Usage] Prompt: ${usage.promptTokens}, Generation: ${usage.completionTokens}, Total: ${usage.totalTokens}" }
-                        meterRegistry.counter("ai.tokens.prompt", "model", modelName).increment(usage.promptTokens.toDouble())
-                        meterRegistry.counter("ai.tokens.completion", "model", modelName).increment(usage.completionTokens.toDouble())
-                        meterRegistry.counter("ai.tokens.total", "model", modelName).increment(usage.totalTokens.toDouble())
+        val aiSpan = tracer.spanBuilder("chat.ai_call").startSpan()
+        val aiSpanEnded = AtomicBoolean(false)
+
+        return try {
+            chatClient
+                .prompt(prompt)
+                .toolCallbacks(toolCallbacks)
+                .stream()
+                .chatResponse() // Change to chatResponse() to access metadata
+                .doOnNext { chatResponse ->
+                    // Extract metadata (token usage)
+                    val usage = chatResponse.metadata.usage
+                    if (usage != null && (usage.totalTokens > 0 || usage.promptTokens > 0 || usage.completionTokens > 0)) {
+                        if (usage.totalTokens > 0L) {
+                            log.debug { "[Token Usage] Prompt: ${usage.promptTokens}, Generation: ${usage.completionTokens}, Total: ${usage.totalTokens}" }
+                            meterRegistry.counter("ai.tokens.prompt", "model", modelName).increment(usage.promptTokens.toDouble())
+                            meterRegistry.counter("ai.tokens.completion", "model", modelName).increment(usage.completionTokens.toDouble())
+                            meterRegistry.counter("ai.tokens.total", "model", modelName).increment(usage.totalTokens.toDouble())
+                            aiSpan.setAttribute("ai.prompt_tokens", usage.promptTokens.toLong())
+                            aiSpan.setAttribute("ai.completion_tokens", usage.completionTokens.toLong())
+                            aiSpan.setAttribute("ai.total_tokens", usage.totalTokens.toLong())
+                        }
                     }
                 }
-            }
-            .map { it.results.firstOrNull()?.output?.text ?: "" } // Map back to content string, safe access
-            .normalizeMarkdownLines() // Post-process markdown syntax before sending to frontend
-            .doOnNext { chunk ->
-                // Log chunks with visible newline indicators for debugging
-                val debugChunk = chunk.replace("\n", "\\n").replace("\r", "\\r")
-                if (debugChunk.contains("\\n")) {
-                    log.debug { "[Chunk with newline] $debugChunk" }
+                .map { it.results.firstOrNull()?.output?.text ?: "" } // Map back to content string, safe access
+                .normalizeMarkdownLines() // Post-process markdown syntax before sending to frontend
+                .doOnNext { chunk ->
+                    // Log chunks with visible newline indicators for debugging
+                    val debugChunk = chunk.replace("\n", "\\n").replace("\r", "\\r")
+                    if (debugChunk.contains("\\n")) {
+                        log.debug { "[Chunk with newline] $debugChunk" }
+                    }
+                    responseBuffer.append(chunk)
                 }
-                responseBuffer.append(chunk)
-            }
-            .doOnComplete {
-                // Log final response to check if newlines are preserved
-                val finalResponse = responseBuffer.toString()
-                val newlineCount = finalResponse.count { it == '\n' }
-                val responseTime = System.currentTimeMillis() - startTime
-                log.info { "[Chat Completed] Total response length: ${finalResponse.length}, newlines: $newlineCount, time: ${responseTime}ms" }
-                if (newlineCount < 5) {
-                    log.warn { "⚠️ WARNING: Response has few newlines ($newlineCount). Post-processing was applied." }
+                .doOnComplete {
+                    // Log final response to check if newlines are preserved
+                    val finalResponse = responseBuffer.toString()
+                    val newlineCount = finalResponse.count { it == '\n' }
+                    val responseTime = System.currentTimeMillis() - startTime
+                    log.info { "[Chat Completed] Total response length: ${finalResponse.length}, newlines: $newlineCount, time: ${responseTime}ms" }
+                    if (newlineCount < 5) {
+                        log.warn { "⚠️ WARNING: Response has few newlines ($newlineCount). Post-processing was applied." }
+                    }
+
+                    aiSpan.setAttribute("ai.response_length", finalResponse.length.toLong())
+                    aiSpan.addEvent("ai.response.generated")
+
+                    // Record metrics on completion
+                    meterRegistry.counter("chat.requests.total", "status", "success", "model", modelName).increment()
+                    sample.stop(
+                        Timer.builder("chat.response.time")
+                            .description("Time taken to generate chat response")
+                            .tags(listOf(Tag.of("model", modelName)))
+                            .register(meterRegistry)
+                    )
+
+                    parentSpan.setAttribute("chat.success", true)
+                    parentSpan.setAttribute("chat.response_time_ms", responseTime)
+                    parentSpan.addEvent("chat.completed")
+
+                    chatEventBus.publish(
+                        ConversationHistorySaveEvent(
+                            sessionId = actualSessionId,
+                            userMessage = message,
+                            assistantResponse = finalResponse,
+                            existingHistory = conversationHistory
+                        )
+                    )
+
+                    chatEventBus.publish(
+                        ChatInteractionCompletedEvent(
+                            requestId = requestId,
+                            sessionId = actualSessionId,
+                            userMessage = message,
+                            aiResponse = finalResponse,
+                            responseTimeMs = responseTime,
+                            processedContext = processedContext,
+                            isDeepThink = isDeepThink,
+                            userEmail = chatServiceRequest.userEmail,
+                            modelUsed = modelName
+                        )
+                    )
                 }
-
-                // Record metrics on completion
-                meterRegistry.counter("chat.requests.total", "status", "success", "model", modelName).increment()
-                sample.stop(
-                    Timer.builder("chat.response.time")
-                        .description("Time taken to generate chat response")
-                        .tags(listOf(Tag.of("model", modelName)))
-                        .register(meterRegistry)
-                )
-
-                chatEventBus.publish(
-                    ConversationHistorySaveEvent(
-                        sessionId = actualSessionId,
-                        userMessage = message,
-                        assistantResponse = finalResponse,
-                        existingHistory = conversationHistory
-                    )
-                )
-
-                chatEventBus.publish(
-                    ChatInteractionCompletedEvent(
-                        requestId = requestId,
-                        sessionId = actualSessionId,
-                        userMessage = message,
-                        aiResponse = finalResponse,
-                        responseTimeMs = responseTime,
-                        processedContext = processedContext,
-                        isDeepThink = isDeepThink,
-                        userEmail = chatServiceRequest.userEmail,
-                        modelUsed = modelName
-                    )
-                )
+                .doOnError { error ->
+                    log.error(error) { "[Chat Error] Error during streaming" }
+                    aiSpan.recordException(error)
+                    aiSpan.setStatus(StatusCode.ERROR, error.message ?: "ai failed")
+                    parentSpan.recordException(error)
+                    parentSpan.setStatus(StatusCode.ERROR, error.message ?: "chat failed")
+                    meterRegistry.counter("chat.requests.total", "status", "failure", "model", modelName).increment()
+                }
+                .doFinally {
+                    if (aiSpanEnded.compareAndSet(false, true)) {
+                        aiSpan.end()
+                    }
+                    parentScope.close()
+                    parentSpan.end()
+                    log.info { "[Chat Completed] Response stream finished" }
+                    log.info { "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
+                }
+        } catch (e: Exception) {
+            aiSpan.recordException(e)
+            aiSpan.setStatus(StatusCode.ERROR, e.message ?: "ai failed")
+            if (aiSpanEnded.compareAndSet(false, true)) {
+                aiSpan.end()
             }
-            .doOnError { error ->
-                log.error(error) { "[Chat Error] Error during streaming" }
-                meterRegistry.counter("chat.requests.total", "status", "failure", "model", modelName).increment() // Record streaming failure
-            }
-            .doFinally {
-                log.info { "[Chat Completed] Response stream finished" }
-                log.info { "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" }
-            }
+            parentScope.close()
+            parentSpan.end()
+            throw e
+        }
     }
 
     /**

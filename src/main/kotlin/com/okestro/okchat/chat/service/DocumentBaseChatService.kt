@@ -8,6 +8,7 @@ import com.okestro.okchat.chat.pipeline.CompleteChatContext
 import com.okestro.okchat.chat.pipeline.DocumentChatPipeline
 import com.okestro.okchat.chat.service.dto.ChatServiceRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
 import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator
 import io.github.resilience4j.reactor.timelimiter.TimeLimiterOperator
@@ -27,6 +28,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import java.util.UUID
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 
 private val log = KotlinLogging.logger {}
@@ -170,6 +172,8 @@ class DocumentBaseChatService(
                     }
                 }
                 .map { it.results.firstOrNull()?.output?.text ?: "" } // Map back to content string, safe access
+                .onErrorResume(CallNotPermittedException::class.java) { fallbackChat(it) }
+                .onErrorResume(TimeoutException::class.java) { fallbackChat(it) }
                 .normalizeMarkdownLines() // Post-process markdown syntax before sending to frontend
                 .doOnNext { chunk ->
                     // Log chunks with visible newline indicators for debugging
@@ -255,6 +259,14 @@ class DocumentBaseChatService(
             parentSpan.end()
             throw e
         }
+    }
+
+    /**
+     * Fallback for AI chat stream failures
+     */
+    private fun fallbackChat(throwable: Throwable): Flux<String> {
+        log.warn(throwable) { "[Fallback] Circuit breaker or timeout occurred" }
+        return Flux.just("⚠️ 현재 사용량이 많아 답변을 생성할 수 없습니다. 잠시 후 다시 시도해주세요.")
     }
 
     /**

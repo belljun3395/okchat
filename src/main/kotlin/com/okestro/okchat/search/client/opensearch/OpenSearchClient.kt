@@ -3,6 +3,7 @@ package com.okestro.okchat.search.client.opensearch
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.opensearch.client.opensearch._types.FieldValue
@@ -40,7 +41,7 @@ class OpenSearchSearchClient(
     suspend fun search(request: OpenSearchSearchRequest): OpenSearchSearchResponse {
         log.debug { "[OpenSearch] Request: q='${request.textQuery}', fields=${request.fields}" }
 
-        return withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO + MDCContext()) {
             try {
                 retryTemplate.execute<OpenSearchSearchResponse, Exception> { context ->
                     if (context.retryCount > 0) {
@@ -76,7 +77,7 @@ class OpenSearchSearchClient(
 
         log.debug { "[OpenSearch] Multi-search with ${requests.size} queries (sequential)" }
 
-        return withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO + MDCContext()) {
             requests.map { request ->
                 try {
                     retryTemplate.execute<OpenSearchSearchResponse, Exception> { context ->

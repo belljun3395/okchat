@@ -17,6 +17,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Component
 
@@ -151,7 +152,7 @@ class ChatEventHandler(
 
         while (retryCount < maxRetries) {
             try {
-                val interaction = withContext(Dispatchers.IO) {
+                val interaction = withContext(Dispatchers.IO + MDCContext()) {
                     chatInteractionRepository.findByRequestId(event.requestId)
                 }
 

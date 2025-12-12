@@ -4,6 +4,7 @@ import com.okestro.okchat.email.application.dto.GetPendingRepliesUseCaseIn
 import com.okestro.okchat.email.application.dto.GetPendingRepliesUseCaseOut
 import com.okestro.okchat.email.repository.PendingEmailReplyRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
@@ -13,7 +14,7 @@ class GetPendingRepliesUseCase(
     private val pendingEmailReplyRepository: PendingEmailReplyRepository
 ) {
     suspend fun execute(useCaseIn: GetPendingRepliesUseCaseIn): GetPendingRepliesUseCaseOut =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO + MDCContext()) {
             val pageRequest = PageRequest.of(useCaseIn.page, useCaseIn.size)
             val replies = pendingEmailReplyRepository.findAllByOrderByCreatedAtDesc(pageRequest)
             GetPendingRepliesUseCaseOut(replies)

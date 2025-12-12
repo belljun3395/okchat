@@ -5,6 +5,7 @@ import com.okestro.okchat.prompt.application.dto.GetPromptUseCaseOut
 import com.okestro.okchat.prompt.repository.PromptRepository
 import com.okestro.okchat.prompt.service.PromptCacheService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 
@@ -14,7 +15,7 @@ class GetPromptUseCase(
     private val promptCacheService: PromptCacheService
 ) {
     suspend fun execute(useCaseIn: GetPromptUseCaseIn): GetPromptUseCaseOut =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO + MDCContext()) {
             val (type, version) = useCaseIn
 
             val prompt = if (version != null) {

@@ -5,6 +5,7 @@ import com.okestro.okchat.prompt.application.dto.DeactivatePromptUseCaseOut
 import com.okestro.okchat.prompt.repository.PromptRepository
 import com.okestro.okchat.prompt.service.PromptCacheService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -16,7 +17,7 @@ class DeactivatePromptUseCase(
 ) {
     @Transactional("transactionManager")
     suspend fun execute(useCaseIn: DeactivatePromptUseCaseIn): DeactivatePromptUseCaseOut =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO + MDCContext()) {
             val (type, version) = useCaseIn
 
             val prompt = promptRepository.findByTypeAndVersionAndActive(type, version)

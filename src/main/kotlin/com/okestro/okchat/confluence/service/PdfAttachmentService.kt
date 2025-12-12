@@ -8,6 +8,7 @@ import com.okestro.okchat.search.support.metadata
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.ai.document.Document
 import org.springframework.ai.reader.pdf.PagePdfDocumentReader
@@ -47,7 +48,7 @@ class PdfAttachmentService(
         spaceKey: String,
         path: String
     ): List<Document> {
-        return withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO + MDCContext()) {
             try {
                 // Get all attachments for the page
                 val attachments = getPdfAttachments(pageId)
@@ -78,7 +79,7 @@ class PdfAttachmentService(
      * Get PDF attachments for a page (with pagination support)
      */
     private suspend fun getPdfAttachments(pageId: String): List<Attachment> {
-        return withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO + MDCContext()) {
             val pdfAttachments = mutableListOf<Attachment>()
             var cursor: String? = null
 
@@ -102,7 +103,7 @@ class PdfAttachmentService(
      * Download attachment file using downloadLink from API response
      */
     private suspend fun downloadAttachmentFile(attachment: Attachment): ByteArray {
-        return withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO + MDCContext()) {
             // Use downloadLink from API response
             val downloadLink = attachment.downloadLink ?: attachment._links?.download
                 ?: throw IllegalStateException("No download link available for attachment: ${attachment.id}")
@@ -172,7 +173,7 @@ class PdfAttachmentService(
         spaceKey: String,
         path: String
     ): List<Document> {
-        return withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO + MDCContext()) {
             try {
                 log.info { "[PdfAttachment] Downloading PDF: ${attachment.title} (size=${attachment.fileSize} bytes)" }
 

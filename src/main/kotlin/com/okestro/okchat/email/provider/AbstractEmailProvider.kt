@@ -13,6 +13,7 @@ import jakarta.mail.Store
 import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MimeMultipart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import java.util.Properties
 
@@ -29,7 +30,7 @@ abstract class AbstractEmailProvider(
     private val seenMessageIds = LinkedHashSet<String>()
     private val maxSeenMessageIds = 10000 // Prevent unlimited memory growth
 
-    override suspend fun connect(): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun connect(): Boolean = withContext(Dispatchers.IO + MDCContext()) {
         try {
             logger.info { "Attempting to connect to ${config.type} email provider..." }
             logger.info { "Host: ${config.host}, Port: ${config.port}, Username: ${config.username}" }
@@ -72,7 +73,7 @@ abstract class AbstractEmailProvider(
         }
     }
 
-    override suspend fun disconnect() = withContext(Dispatchers.IO) {
+    override suspend fun disconnect() = withContext(Dispatchers.IO + MDCContext()) {
         try {
             inbox?.close(false)
             store?.close()
@@ -82,7 +83,7 @@ abstract class AbstractEmailProvider(
         }
     }
 
-    override suspend fun fetchNewMessages(): List<EmailMessage> = withContext(Dispatchers.IO) {
+    override suspend fun fetchNewMessages(): List<EmailMessage> = withContext(Dispatchers.IO + MDCContext()) {
         if (!isConnectedInternal()) {
             logger.warn { "Not connected to ${config.type} email provider" }
             return@withContext emptyList()
@@ -141,7 +142,7 @@ abstract class AbstractEmailProvider(
         }
     }
 
-    override suspend fun isConnected(): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun isConnected(): Boolean = withContext(Dispatchers.IO + MDCContext()) {
         isConnectedInternal()
     }
 

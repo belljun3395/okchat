@@ -5,6 +5,7 @@ import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseOut
 import com.okestro.okchat.user.repository.UserRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 
@@ -19,7 +20,7 @@ class FindUserByEmailUseCase(
     private val userRepository: UserRepository
 ) {
     suspend fun execute(useCaseIn: FindUserByEmailUseCaseIn): FindUserByEmailUseCaseOut =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO + MDCContext()) {
             val user = userRepository.findByEmailAndActive(useCaseIn.email, true)
             log.debug { "Find user by email: ${useCaseIn.email}, found=${user != null}" }
             FindUserByEmailUseCaseOut(user = user)

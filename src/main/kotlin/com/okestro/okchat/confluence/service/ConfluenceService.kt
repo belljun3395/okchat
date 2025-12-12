@@ -4,6 +4,7 @@ import com.okestro.okchat.confluence.client.ConfluenceClient
 import com.okestro.okchat.confluence.model.ContentHierarchy
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 
@@ -26,7 +27,7 @@ class ConfluenceService(
     suspend fun getSpaceIdByKey(spaceKey: String): String {
         log.info { "Getting space ID for key: $spaceKey" }
 
-        val response = withContext(Dispatchers.IO) {
+        val response = withContext(Dispatchers.IO + MDCContext()) {
             confluenceClient.getSpaceByKey(spaceKey)
         }
 
@@ -47,12 +48,12 @@ class ConfluenceService(
         log.info { "Fetching content hierarchy for space: $spaceId" }
 
         // Step 1: Collect all content (pages and folders)
-        val allContent = withContext(Dispatchers.IO) {
+        val allContent = withContext(Dispatchers.IO + MDCContext()) {
             contentCollectorService.collectAllContent(spaceId)
         }
 
         // Step 2: Build hierarchical structure
-        val hierarchy = withContext(Dispatchers.IO) {
+        val hierarchy = withContext(Dispatchers.IO + MDCContext()) {
             hierarchyBuilderService.buildHierarchy(allContent, spaceId)
         }
 

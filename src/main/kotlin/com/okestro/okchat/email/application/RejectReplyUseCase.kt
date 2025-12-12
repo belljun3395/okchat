@@ -7,6 +7,7 @@ import com.okestro.okchat.email.model.entity.ReviewStatus
 import com.okestro.okchat.email.repository.PendingEmailReplyRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -19,7 +20,7 @@ class RejectReplyUseCase(
     private val pendingEmailReplyRepository: PendingEmailReplyRepository
 ) {
     @Transactional("transactionManager")
-    suspend fun execute(useCaseIn: RejectReplyUseCaseIn): RejectReplyUseCaseOut = withContext(Dispatchers.IO) {
+    suspend fun execute(useCaseIn: RejectReplyUseCaseIn): RejectReplyUseCaseOut = withContext(Dispatchers.IO + MDCContext()) {
         val result = rejectInternal(
             id = useCaseIn.id,
             reviewedBy = useCaseIn.reviewedBy,

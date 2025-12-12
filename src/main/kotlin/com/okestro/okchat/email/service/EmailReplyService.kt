@@ -11,6 +11,7 @@ import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MimeMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.parser.Parser
@@ -48,7 +49,7 @@ class EmailReplyService(
         originalMessage: EmailMessage,
         replyContent: String,
         providerType: EmailProperties.EmailProviderType
-    ) = withContext(Dispatchers.IO) {
+    ) = withContext(Dispatchers.IO + MDCContext()) {
         try {
             logger.info { "Sending reply via $providerType to email: ${originalMessage.subject}" }
 

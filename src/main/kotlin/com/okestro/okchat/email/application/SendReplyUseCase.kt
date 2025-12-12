@@ -11,6 +11,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.mail.Session
 import jakarta.mail.internet.MimeMessage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -26,7 +27,7 @@ class SendReplyUseCase(
 ) {
     @Transactional("transactionManager")
     suspend fun execute(useCaseIn: SendReplyUseCaseIn): SendReplyUseCaseOut =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO + MDCContext()) {
             SendReplyUseCaseOut(
                 sendInternal(useCaseIn.id)
             )

@@ -8,6 +8,7 @@ import com.okestro.okchat.email.oauth2.support.OAuth2AuthorizationUrlBuilder
 import com.okestro.okchat.email.oauth2.support.OAuth2Constants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import java.net.URI
 
@@ -23,7 +24,7 @@ class MicrosoftOAuth2Strategy : OAuth2ProviderStrategy {
         )
 
     override suspend fun exchangeToken(authorizationCode: String, config: EmailProperties.OAuth2Config): String =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO + MDCContext()) {
             val app =
                 ConfidentialClientApplication
                     .builder(config.clientId, ClientCredentialFactory.createFromSecret(config.clientSecret))

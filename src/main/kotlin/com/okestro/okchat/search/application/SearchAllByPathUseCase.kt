@@ -7,6 +7,7 @@ import com.okestro.okchat.search.support.MetadataFields
 import com.okestro.okchat.search.util.extractChunk
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.opensearch.client.opensearch._types.FieldValue
@@ -20,7 +21,7 @@ class SearchAllByPathUseCase(
     private val openSearchClient: OpenSearchClient,
     @Value("\${spring.ai.vectorstore.opensearch.index-name}") private val indexName: String
 ) {
-    suspend fun execute(useCaseIn: SearchAllByPathUseCaseIn): SearchAllByPathUseCaseOut = withContext(Dispatchers.IO) {
+    suspend fun execute(useCaseIn: SearchAllByPathUseCaseIn): SearchAllByPathUseCaseOut = withContext(Dispatchers.IO + MDCContext()) {
         val documents = mutableMapOf<String, Document>() // Use map to handle chunks and keep unique docs
         val documentPath = useCaseIn.documentPath
 

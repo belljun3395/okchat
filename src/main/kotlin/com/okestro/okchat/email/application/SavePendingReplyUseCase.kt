@@ -7,6 +7,7 @@ import com.okestro.okchat.email.model.entity.ReviewStatus
 import com.okestro.okchat.email.repository.PendingEmailReplyRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -20,7 +21,7 @@ class SavePendingReplyUseCase(
 ) {
     @Transactional("transactionManager")
     suspend fun execute(useCaseIn: SavePendingReplyUseCaseIn): SavePendingReplyUseCaseOut =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO + MDCContext()) {
             val messageId = useCaseIn.originalMessage.rawMessage.getHeader("Message-ID")?.firstOrNull()
 
             val pendingReply = PendingEmailReply(

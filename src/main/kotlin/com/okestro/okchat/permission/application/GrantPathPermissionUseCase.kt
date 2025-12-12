@@ -7,6 +7,7 @@ import com.okestro.okchat.permission.model.entity.DocumentPathPermission
 import com.okestro.okchat.permission.repository.DocumentPathPermissionRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 
@@ -17,7 +18,7 @@ class GrantPathPermissionUseCase(
     private val documentPathPermissionRepository: DocumentPathPermissionRepository
 ) {
     suspend fun execute(useCaseIn: GrantPathPermissionUseCaseIn): GrantPathPermissionUseCaseOut =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO + MDCContext()) {
             val (userId, documentPath, spaceKey, grantedBy) = useCaseIn
 
             val existing = documentPathPermissionRepository.findByUserIdAndDocumentPath(userId, documentPath)

@@ -5,6 +5,7 @@ import com.okestro.okchat.permission.application.dto.RevokePathPermissionUseCase
 import com.okestro.okchat.permission.repository.DocumentPathPermissionRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 
@@ -15,7 +16,7 @@ class RevokePathPermissionUseCase(
     private val documentPathPermissionRepository: DocumentPathPermissionRepository
 ) {
     suspend fun execute(useCaseIn: RevokePathPermissionUseCaseIn): RevokePathPermissionUseCaseOut =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO + MDCContext()) {
             val (userId, documentPaths) = useCaseIn
 
             if (documentPaths.isEmpty()) {

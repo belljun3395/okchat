@@ -7,6 +7,7 @@ import com.okestro.okchat.confluence.model.ContentNode
 import com.okestro.okchat.confluence.model.ContentType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Component
 
@@ -134,7 +135,7 @@ class HierarchyBuilderService(
     ): Page? {
         // Try folder first
         return try {
-            val folderResponse = withContext(Dispatchers.IO) {
+            val folderResponse = withContext(Dispatchers.IO + MDCContext()) {
                 confluenceClient.getFolderById(parentId)
             }
             knownFolderIds.add(folderResponse.id)
@@ -152,7 +153,7 @@ class HierarchyBuilderService(
         } catch (_: Exception) {
             // Try page as fallback
             try {
-                val pageResponse = withContext(Dispatchers.IO) {
+                val pageResponse = withContext(Dispatchers.IO + MDCContext()) {
                     confluenceClient.getPageById(parentId)
                 }
                 log.info { "└─ Fetched page: ${pageResponse.title} (ID: $parentId)" }

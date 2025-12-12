@@ -7,6 +7,7 @@ import com.okestro.okchat.prompt.repository.PromptRepository
 import com.okestro.okchat.prompt.service.PromptCacheService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -21,7 +22,7 @@ class CreatePromptUseCase(
 ) {
     @Transactional("transactionManager")
     suspend fun execute(useCaseIn: CreatePromptUseCaseIn): CreatePromptUseCaseOut =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO + MDCContext()) {
             val (type, content) = useCaseIn
 
             val latestPrompt = promptRepository.findLatestByTypeAndActive(type)

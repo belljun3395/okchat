@@ -4,6 +4,7 @@ import com.okestro.okchat.confluence.client.ConfluenceClient
 import com.okestro.okchat.confluence.client.dto.Page
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Component
 
@@ -52,7 +53,7 @@ class ContentCollectorService(
         var cursor: String? = null
 
         do {
-            val response = withContext(Dispatchers.IO) {
+            val response = withContext(Dispatchers.IO + MDCContext()) {
                 confluenceClient.getPagesBySpaceId(spaceId, cursor)
             }
             items.addAll(response.results)
@@ -112,7 +113,7 @@ class ContentCollectorService(
         try {
             var cursor: String? = null
             do {
-                val response = withContext(Dispatchers.IO) {
+                val response = withContext(Dispatchers.IO + MDCContext()) {
                     confluenceClient.getPageChildren(pageId, cursor)
                 }
                 // Ensure parentId is set (API sometimes doesn't include it)
@@ -151,7 +152,7 @@ class ContentCollectorService(
         try {
             var cursor: String? = null
             do {
-                val response = withContext(Dispatchers.IO) {
+                val response = withContext(Dispatchers.IO + MDCContext()) {
                     confluenceClient.getFolderChildren(folderId, cursor)
                 }
                 // Ensure parentId is set (API sometimes doesn't include it)

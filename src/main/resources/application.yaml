@@ -241,6 +241,10 @@ resilience4j:
                 permittedNumberOfCallsInHalfOpenState: 5
                 automaticTransitionFromOpenToHalfOpenEnabled: true
                 registerHealthIndicator: true
+                recordExceptions:
+                    - java.util.concurrent.TimeoutException
+                    - java.io.IOException
+                    - org.springframework.web.reactive.function.client.WebClientRequestException
     timelimiter:
         instances:
             chat:

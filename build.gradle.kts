@@ -121,6 +121,12 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-exporter-otlp")
     implementation("io.micrometer:context-propagation")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j")
+
+    /** resilience4j - circuit breaker */
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
+    implementation("io.github.resilience4j:resilience4j-reactor:2.2.0")
+    implementation("io.github.resilience4j:resilience4j-micrometer:2.2.0")
+    implementation("io.github.resilience4j:resilience4j-kotlin:2.2.0")
 }
 
 dependencyManagement {

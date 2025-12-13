@@ -42,8 +42,21 @@ export const knowledgeBaseService = {
         apiClient.post<void>(`/api/admin/knowledge-bases/${kbId}/members?callerEmail=admin@okchat.com`, { email, role }),
 
     /**
+     * Create a new Knowledge Base
+     */
+    create: (data: CreateKnowledgeBasePayload) => 
+        apiClient.post<KnowledgeBase>('/api/admin/knowledge-bases?callerEmail=admin@okchat.com', data),
+
+    /**
      * Remove member from Knowledge Base
      */
     removeMember: (kbId: number, userId: number) => 
         apiClient.delete<void>(`/api/admin/knowledge-bases/${kbId}/members/${userId}?callerEmail=admin@okchat.com`)
 };
+
+export interface CreateKnowledgeBasePayload {
+    name: string;
+    description?: string;
+    type: string;
+    config?: Record<string, unknown>;
+}

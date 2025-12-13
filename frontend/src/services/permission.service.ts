@@ -46,7 +46,7 @@ export const permissionService = {
     /**
      * Get all document paths
      */
-    getAllPaths: () => apiClient.get<string[]>('/api/admin/permissions/paths'),
+    getAllPaths: (knowledgeBaseId?: number) => apiClient.get<string[]>('/api/admin/permissions/paths', { params: { knowledgeBaseId } }),
 
     /**
      * Get user permissions

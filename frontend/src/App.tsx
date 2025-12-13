@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import ChatPage from './pages/ChatPage';
 import AdminLayout from './layouts/AdminLayout';
+import KnowledgeBaseLayout from './layouts/KnowledgeBaseLayout';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import PathManagementPage from './pages/admin/PathManagementPage';
 import UserDetailPage from './pages/admin/UserDetailPage';
@@ -9,7 +10,6 @@ import PathDetailPage from './pages/admin/PathDetailPage';
 import PermissionManagementPage from './pages/admin/PermissionManagementPage';
 import EmailReviewPage from './pages/admin/EmailReviewPage';
 import DashboardPage from './pages/admin/DashboardPage';
-import KnowledgeBaseListPage from './pages/admin/KnowledgeBaseListPage';
 import KnowledgeBaseMembersPage from './pages/admin/KnowledgeBaseMembersPage';
 
 /**
@@ -27,33 +27,31 @@ const App: React.FC = () => {
         <Route path="/chat" element={<Navigate to="/" replace />} />
 
         {/* Admin Routes */}
+        {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>
-          {/* Redirect /admin to /admin/permissions (Dashboard) */}
-          <Route index element={<Navigate to="/admin/permissions" replace />} />
-
-          {/* Dashboard / Permissions Home */}
-          <Route path="permissions" element={<DashboardPage />} />
+          {/* Dashboard (KB List) */}
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="permissions" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardPage />} />
 
           {/* User Management */}
           <Route path="users" element={<UserManagementPage />} />
-          <Route path="permissions/users" element={<Navigate to="/admin/users" replace />} />
           <Route path="permissions/user/:email" element={<UserDetailPage />} />
+          
+          {/* Legacy Redirects */}
+          <Route path="knowledge-bases" element={<Navigate to="/admin/dashboard" replace />} />
+        </Route>
 
-          {/* Path Management */}
-          <Route path="paths" element={<PathManagementPage />} />
-          <Route path="permissions/paths" element={<Navigate to="/admin/paths" replace />} />
-          <Route path="permissions/path/detail" element={<PathDetailPage />} />
-
-          {/* Knowledge Base Management */}
-          <Route path="knowledge-bases" element={<KnowledgeBaseListPage />} />
-          <Route path="knowledge-bases/:id/members" element={<KnowledgeBaseMembersPage />} />
-          <Route path="permissions/knowledge-bases" element={<Navigate to="/admin/knowledge-bases" replace />} />
-
-          {/* Advanced Permissions */}
-          <Route path="permissions/manage" element={<PermissionManagementPage />} />
-
-          {/* Email Review */}
-          <Route path="email/review" element={<EmailReviewPage />} />
+        {/* Knowledge Base Context Routes */}
+        <Route path="/admin/knowledge-bases/:id" element={<KnowledgeBaseLayout />}>
+           <Route index element={<Navigate to="members" replace />} />
+           <Route path="members" element={<KnowledgeBaseMembersPage />} />
+           <Route path="paths" element={<PathManagementPage />} />
+           <Route path="permissions" element={<PermissionManagementPage />} />
+           <Route path="email" element={<EmailReviewPage />} />
+           
+           {/* Detailed pages might need adjustment or nested routes */}
+           <Route path="path/detail" element={<PathDetailPage />} />
         </Route>
       </Routes>
     </Router>

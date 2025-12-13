@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { emailService, type PendingEmailReply, type EmailStatus } from '../../services';
+import { knowledgeBaseService } from '../../services/knowledgeBase.service';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
 
 const EmailReviewPage: React.FC = () => {
+    const { id } = useParams<{ id: string }>();
+    const kbId = id ? parseInt(id, 10) : undefined;
+    const [kbName, setKbName] = useState<string>('');
+
     const [emails, setEmails] = useState<PendingEmailReply[]>([]);
 
     const [currentStatus, setCurrentStatus] = useState<EmailStatus>('PENDING');
@@ -23,6 +29,8 @@ const EmailReviewPage: React.FC = () => {
     const loadEmails = useCallback(async (status: EmailStatus) => {
         setLoading(true);
         try {
+            // TODO: Update emailService to filter by kbId if backend supports it
+            // For now, we assume the API returns emails relevant to the context or all emails
             const response = await emailService.getByStatus(status);
             setEmails(response.data);
         } catch (error) {
@@ -32,6 +40,23 @@ const EmailReviewPage: React.FC = () => {
             setLoading(false);
         }
     }, []);
+
+    const fetchKbDetails = useCallback(async () => {
+        if (!kbId) return;
+        try {
+            const response = await knowledgeBaseService.getAll();
+            const kb = response.data.find(k => k.id === kbId);
+            if (kb) {
+                setKbName(kb.name);
+            }
+        } catch (err) {
+            console.error('Failed to fetch KB details:', err);
+        }
+    }, [kbId]);
+
+    useEffect(() => {
+        fetchKbDetails();
+    }, [fetchKbDetails]);
 
     const loadData = useCallback(() => {
         loadEmails(currentStatus);
@@ -161,7 +186,7 @@ const EmailReviewPage: React.FC = () => {
         <div className="animate-fade-in">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="mb-2">Email Review</h1>
+                    <h1 className="mb-2">Email Review {kbName ? `(${kbName})` : ''}</h1>
                     <p className="text-secondary">Review, approve, or reject pending email responses</p>
                 </div>
             </div>

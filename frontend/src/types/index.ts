@@ -47,8 +47,10 @@ export interface UserPermissionsResponse {
 export interface KnowledgeBase {
     id: number;
     name: string;
+    description: string;
     type: string;
     enabled: boolean;
+    createdBy: number;
 }
 
 export type KnowledgeBaseUserRole = 'MEMBER' | 'ADMIN';

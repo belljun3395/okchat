@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { permissionService } from '../../services';
+import { knowledgeBaseService } from '../../services/knowledgeBase.service';
 
 interface TreeNode {
     name: string;
@@ -17,22 +18,35 @@ interface TreeNode {
  * API: GET /api/admin/permissions/paths (via PermissionController)
  */
 const PathManagementPage: React.FC = () => {
+    const { id } = useParams<{ id: string }>();
+    const kbId = id ? parseInt(id, 10) : undefined;
+
     const [paths, setPaths] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
-    useEffect(() => {
-        fetchPaths();
-    }, []);
+    const [kbName, setKbName] = useState<string>('');
+
+    const fetchKbDetails = useCallback(async () => {
+        try {
+            const response = await knowledgeBaseService.getAll();
+            const kb = response.data.find(k => k.id === kbId);
+            if (kb) {
+                setKbName(kb.name);
+            }
+        } catch (err) {
+            console.error('Failed to fetch KB details:', err);
+        }
+    }, [kbId]);
 
     // No auto-expand - user controls expansion manually
 
-    const fetchPaths = async () => {
+    const fetchPaths = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await permissionService.getAllPaths();
+            const response = await permissionService.getAllPaths(kbId);
             setPaths(response.data);
             setError('');
         } catch (err) {
@@ -41,7 +55,14 @@ const PathManagementPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [kbId]);
+
+    useEffect(() => {
+        fetchPaths();
+        if (kbId) {
+            fetchKbDetails();
+        }
+    }, [fetchPaths, fetchKbDetails, kbId]);
 
     // Build tree structure from paths
     const treeRoot = useMemo(() => {
@@ -196,7 +217,7 @@ const PathManagementPage: React.FC = () => {
         <div className="animate-fade-in">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="mb-2">Manage Paths</h1>
+                    <h1 className="mb-2">Manage Paths {kbName ? `(${kbName})` : (kbId ? `(KB #${kbId})` : '')}</h1>
                     <p className="text-secondary">View and manage document path permissions</p>
                 </div>
             </div>

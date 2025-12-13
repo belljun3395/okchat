@@ -1,5 +1,6 @@
 package com.okestro.okchat.task
 
+import com.github.f4b6a3.tsid.TsidCreator
 import com.okestro.okchat.ai.service.chunking.ChunkingStrategy
 import com.okestro.okchat.ai.service.extraction.DocumentKeywordExtractionService
 import com.okestro.okchat.confluence.config.ConfluenceProperties
@@ -8,6 +9,10 @@ import com.okestro.okchat.confluence.model.ContentNode
 import com.okestro.okchat.confluence.service.ConfluenceService
 import com.okestro.okchat.confluence.service.PdfAttachmentService
 import com.okestro.okchat.confluence.util.ContentHierarchyVisualizer
+import com.okestro.okchat.knowledge.model.entity.KnowledgeBase
+import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseType
+import com.okestro.okchat.knowledge.repository.DocumentRepository
+import com.okestro.okchat.knowledge.repository.KnowledgeBaseRepository
 import com.okestro.okchat.search.support.MetadataFields
 import com.okestro.okchat.search.support.metadata
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -24,16 +29,16 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import org.opensearch.client.opensearch.OpenSearchClient
+import kotlinx.coroutines.withContext
 import org.springframework.ai.document.Document
 import org.springframework.ai.vectorstore.VectorStore
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
+import java.time.Instant
 
 /**
- * Spring Cloud Task for syncing Confluence content to OpenSearch vector store
+ * Spring Cloud Task for syncing Confluence content to OpenSearch vector store and RDB
  *
  * This task can be run as:
  * 1. Standalone application
@@ -52,13 +57,13 @@ class ConfluenceSyncTask(
     private val confluenceService: ConfluenceService,
     private val pdfAttachmentService: PdfAttachmentService,
     private val vectorStore: VectorStore,
-    private val openSearchClient: OpenSearchClient,
     private val documentKeywordExtractionService: DocumentKeywordExtractionService,
     private val chunkingStrategy: ChunkingStrategy,
     private val confluenceProperties: ConfluenceProperties,
-    @Value("\${spring.ai.vectorstore.opensearch.index-name}") private val indexName: String,
     private val meterRegistry: MeterRegistry,
-    private val observationRegistry: ObservationRegistry
+    private val observationRegistry: ObservationRegistry,
+    private val knowledgeBaseRepository: KnowledgeBaseRepository,
+    private val documentRepository: DocumentRepository
 ) : CommandLineRunner {
 
     private val log = KotlinLogging.logger {}
@@ -67,27 +72,43 @@ class ConfluenceSyncTask(
         val observation = Observation.createNotStarted("task.confluence-sync", observationRegistry)
         observation.observe {
             runBlocking(MDCContext()) {
-                executeTask(args)
+                executeTask()
             }
         }
     }
 
-    private suspend fun executeTask(args: Array<out String?>) {
+    private suspend fun executeTask() {
         log.info { "[ConfluenceSync] Starting Confluence sync task" }
+        // Find enabled Confluence KBs
+        val knowledgeBases: List<KnowledgeBase> = withContext(Dispatchers.IO + MDCContext()) {
+            knowledgeBaseRepository.findAllByEnabledTrueAndType(KnowledgeBaseType.CONFLUENCE)
+        }
+
+        if (knowledgeBases.isEmpty()) {
+            log.warn { "No enabled Confluence Knowledge Bases found." }
+            return
+        }
+
+        log.info { "Found ${knowledgeBases.size} knowledge bases to sync" }
+
+        knowledgeBases.forEach { kb ->
+            syncKnowledgeBase(kb)
+        }
+    }
+
+    private suspend fun syncKnowledgeBase(kb: KnowledgeBase) {
+        val spaceKey = kb.config["spaceKey"] as? String ?: run {
+            log.error { "Knowledge Base ${kb.name} (ID: ${kb.id}) has no spaceKey in config" }
+            return
+        }
+
+        log.info { "Starting sync for KB: ${kb.name} (Space: $spaceKey)" }
         val sample = Timer.start(meterRegistry)
-        val tags = Tags.of("task", "confluence-sync")
+        val tags = Tags.of("task", "confluence-sync", "kb", kb.name)
 
         try {
-            // Parse command line arguments
-            val spaceKey = parseSpaceKey(args) ?: run {
-                log.error { "spaceKey parameter is required. Usage: spaceKey=XXXX" }
-                throw IllegalArgumentException("spaceKey parameter is required")
-            }
-
-            log.info { "Target space: $spaceKey" }
-
             // 1. Fetch Confluence content hierarchy
-            log.info { "1. Fetching Confluence content..." }
+            log.info { "1. Fetching Confluence content for space $spaceKey..." }
             val spaceId = confluenceService.getSpaceIdByKey(spaceKey)
 
             val hierarchy = confluenceService.getSpaceContentHierarchy(spaceId).apply {
@@ -96,29 +117,33 @@ class ConfluenceSyncTask(
 
             log.info { "[ConfluenceSync] Retrieved contents: total=${hierarchy.getTotalCount()}, folders=${hierarchy.getAllFolders().size}, pages=${hierarchy.getAllPages().size}" }
 
-            // 2. Get existing document IDs for this space
-            log.info { "2. Fetching existing documents for space: $spaceKey..." }
-            val existingIds = try {
-                getExistingDocumentIds(spaceKey)
-            } catch (e: Exception) {
-                log.warn { "Failed to fetch existing documents (might be first sync): ${e.message}" }
-                emptySet()
+            // 2. Get existing document IDs for this space (from RDB for reliability)
+            log.info { "2. Fetching existing documents for KB ${kb.name}..." }
+            val existingDocs: List<com.okestro.okchat.knowledge.model.entity.Document> = withContext(Dispatchers.IO + MDCContext()) {
+                documentRepository.findAllByKnowledgeBaseId(kb.id!!)
             }
-            log.info { "[ConfluenceSync] Found existing documents: count=${existingIds.size}" }
+            val existingExternalIds = existingDocs.map { it.externalId }.toSet()
+            val existingDocMap = existingDocs.associateBy { it.externalId }
 
-            // 3. Convert to vector store documents (parallel processing)
-            log.info { "3. Converting to vector store documents (parallel processing)..." }
-            val documents = convertToDocuments(hierarchy, spaceKey)
-            val currentIds = documents.map { it.id }.toSet()
-            log.info { "[ConfluenceSync] Converted documents: count=${documents.size}" }
+            log.info { "[ConfluenceSync] Found existing documents in RDB: count=${existingDocs.size}" }
+
+            // 3. Convert to vector store documents & Prepare RDB entities (parallel processing)
+            log.info { "3. Converting to documents (parallel processing)..." }
+            val (vectorDocuments, rdbDocuments) = convertToDocuments(hierarchy, spaceKey, kb, existingDocMap)
+
+            val currentExternalIds = rdbDocuments.map { it.externalId }.toSet()
+            log.info { "[ConfluenceSync] Converted documents: count=${vectorDocuments.size} (chunks), pages/pdfs=${rdbDocuments.size}" }
 
             // 4. Delete removed documents
-            val deletedIds = existingIds - currentIds
-            if (deletedIds.isNotEmpty()) {
-                log.info { "4. Deleting ${deletedIds.size} removed documents..." }
+            val deletedExternalIds = existingExternalIds - currentExternalIds
+            if (deletedExternalIds.isNotEmpty()) {
+                log.info { "4. Deleting ${deletedExternalIds.size} removed documents..." }
                 try {
-                    vectorStore.delete(deletedIds.toList())
-                    log.info { "[ConfluenceSync] Deleted removed documents: count=${deletedIds.size}" }
+                    // Delete from RDB
+                    withContext(Dispatchers.IO + MDCContext()) {
+                        documentRepository.deleteByKnowledgeBaseIdAndExternalIdIn(kb.id!!, deletedExternalIds.toList())
+                    }
+                    log.info { "[ConfluenceSync] Deleted removed documents from RDB: count=${deletedExternalIds.size}" }
                 } catch (e: Exception) {
                     log.warn { "Failed to delete some documents: ${e.message}" }
                 }
@@ -126,124 +151,68 @@ class ConfluenceSyncTask(
                 log.info { "4. No documents to delete" }
             }
 
-            // 5. Store/Update in OpenSearch (batch processing to avoid timeout)
-            log.info { "5. Storing/Updating in OpenSearch (batch processing)..." }
+            // 5. Store/Update in OpenSearch & RDB (batch processing)
+            log.info { "5. Storing/Updating in OpenSearch & RDB..." }
 
-            // Get initial document count
-            val initialDocCount = getOpenSearchDocumentCount()
-            log.info { "  Initial OpenSearch document count: $initialDocCount" }
+            // Save to RDB
+            withContext(Dispatchers.IO + MDCContext()) {
+                documentRepository.saveAll(rdbDocuments)
+            }
+            log.info { "Saved ${rdbDocuments.size} documents to RDB" }
 
-            val batchSize = 10 // Process 10 documents at a time
-            val batches = documents.chunked(batchSize)
+            // Save to Vector Store
+            val batchSize = 10
+            val batches = vectorDocuments.chunked(batchSize)
             var successCount = 0
-            val failedBatches = mutableListOf<Int>()
 
             batches.forEachIndexed { batchIndex, batch ->
-                val batchNum = batchIndex + 1
                 try {
-                    log.info { "  [Batch $batchNum/${batches.size}] Adding ${batch.size} documents..." }
-
-                    // Get count before add
-                    val countBefore = getOpenSearchDocumentCount()
-
-                    // Add documents via VectorStore (now handles errors gracefully)
-                    vectorStore.add(batch)
-
-                    // Verify count increased
-                    val countAfter = getOpenSearchDocumentCount()
-                    val actualAdded = countAfter - countBefore
-
-                    if (actualAdded.toInt() == batch.size) {
-                        successCount += batch.size
-                        log.info { "  [ConfluenceSync][Batch $batchNum/${batches.size}] Successfully added documents: batch_size=${batch.size}, count_before=$countBefore, count_after=$countAfter" }
-                    } else {
-                        log.warn { "  [ConfluenceSync][Batch $batchNum/${batches.size}] Document count mismatch: expected=${batch.size}, actual=$actualAdded, count_before=$countBefore, count_after=$countAfter" }
-                        successCount += actualAdded.toInt()
+                    withContext(Dispatchers.IO + MDCContext()) {
+                        vectorStore.add(batch)
                     }
-
-                    log.info { "  [Batch $batchNum/${batches.size}] Progress: $successCount/${documents.size}" }
+                    successCount += batch.size
                 } catch (e: Exception) {
-                    log.error(e) { "  [Batch $batchNum/${batches.size}] ✗ Failed to add batch: ${e.message}" }
-                    log.error { "  [Batch $batchNum/${batches.size}] Batch IDs: ${batch.map { it.id }.take(5)}..." }
-                    log.error { "  [Batch $batchNum/${batches.size}] Stack trace: ${e.stackTraceToString()}" }
-                    failedBatches.add(batchNum)
-                    // Continue processing remaining batches instead of failing entire task
-                    log.warn { "  [Batch $batchNum/${batches.size}] Continuing with next batch..." }
+                    log.error(e) { "Failed to add batch ${batchIndex + 1}" }
                 }
             }
 
-            // Log failed batches summary
-            if (failedBatches.isNotEmpty()) {
-                log.error { "  [ConfluenceSync] Failed batches: ${failedBatches.joinToString(", ")} (total: ${failedBatches.size}/${batches.size})" }
-            }
-
-            // Verify final count
-            val finalDocCount = getOpenSearchDocumentCount()
-            log.info { "  Final OpenSearch document count: $finalDocCount (increased by ${finalDocCount - initialDocCount})" }
-
-            if ((finalDocCount - initialDocCount).toInt() != successCount) {
-                log.error { "  [ConfluenceSync] Document count mismatch: expected_added=$successCount, actual_increase=${finalDocCount - initialDocCount}" }
-            }
-
-            log.info { "[ConfluenceSync] Stored/updated documents: total=$successCount, new=${currentIds.size - existingIds.size}, updated=${existingIds.intersect(currentIds).size}" }
-
-            // 6. Summary
-            log.info { "[ConfluenceSync] Sync completed: space_key=$spaceKey, processed_pages=${documents.size}" }
+            log.info { "[ConfluenceSync] Stored/updated documents: total_chunks=$successCount" }
 
             // Record metrics
             sample.stop(meterRegistry.timer("task.execution.time", tags.and("status", "success")))
-            meterRegistry.counter("task.execution.count", tags.and("status", "success")).increment()
-            meterRegistry.counter("task.confluence.sync.documents.processed", tags).increment(documents.size.toDouble())
-            meterRegistry.counter("task.confluence.sync.documents.added", tags).increment((currentIds.size - existingIds.size).toDouble())
-            meterRegistry.counter("task.confluence.sync.documents.updated", tags).increment((existingIds.intersect(currentIds).size).toDouble())
-            meterRegistry.counter("task.confluence.sync.documents.deleted", tags).increment((existingIds.size - currentIds.size + (currentIds.size - existingIds.intersect(currentIds).size)).toDouble().coerceAtLeast(0.0)) // Approximated for deleted
         } catch (e: Exception) {
             sample.stop(meterRegistry.timer("task.execution.time", tags.and("status", "failure")))
-            meterRegistry.counter("task.execution.count", tags.and("status", "failure")).increment()
-            log.error(e) { "Error occurred during Confluence sync: ${e.message}" }
-            throw e // Rethrow to mark task as failed
+            log.error(e) { "Error occurred during Confluence sync for KB ${kb.name}: ${e.message}" }
         }
     }
 
     /**
-     * Convert Confluence hierarchy to vector store documents
-     * Splits large pages into chunks to fit embedding model token limits
-     * Extracts keywords for each document for better searchability
+     * Convert Confluence hierarchy to vector store documents AND RDB entities
      */
-    private suspend fun convertToDocuments(hierarchy: ContentHierarchy, spaceKey: String): List<Document> {
-        val documents = mutableListOf<Document>()
+    private suspend fun convertToDocuments(
+        hierarchy: ContentHierarchy,
+        spaceKey: String,
+        kb: KnowledgeBase,
+        existingDocMap: Map<String, com.okestro.okchat.knowledge.model.entity.Document>
+    ): Pair<List<Document>, List<com.okestro.okchat.knowledge.model.entity.Document>> {
+        val vectorDocuments = mutableListOf<Document>()
+        val rdbDocuments = mutableListOf<com.okestro.okchat.knowledge.model.entity.Document>()
+
         val allPages = hierarchy.getAllPages()
         val totalPages = allPages.size
 
-        log.info { "Converting $totalPages pages to vector store documents..." }
+        log.info { "Converting $totalPages pages..." }
 
-        // Limit concurrent API calls to prevent timeout/rate limit issues
-        // Max 5 concurrent OpenAI API calls at a time
         val apiCallSemaphore = Semaphore(5)
 
-        // Only convert pages (not folders) - Process in parallel with concurrency limit
-        val allDocuments = coroutineScope {
-            allPages.mapIndexed { index, node ->
+        val results = coroutineScope {
+            allPages.mapIndexed { _, node ->
                 async(Dispatchers.IO) {
-                    val pageNum = index + 1
                     val path = getPagePath(node, hierarchy)
-
-                    // 빈 제목/내용도 저장 (모두 의미가 있을 수 있음)
                     val pageTitle = node.title.ifBlank { "Untitled-${node.id}" }
                     val pageContent = node.body?.let { stripHtml(it) } ?: ""
 
-                    if (pageContent.isBlank()) {
-                        log.info { "[ConfluenceSync][$pageNum/$totalPages] Processing page with empty content: id=${node.id}, title='$pageTitle'" }
-                    }
-
-                    // Only log every 10th page to reduce noise
-                    if (pageNum % 10 == 0 || pageNum == 1 || pageNum == totalPages) {
-                        log.info { "[ConfluenceSync][$pageNum/$totalPages] Processing: title='$pageTitle', content_length=${pageContent.length}" }
-                    }
-
-                    // Extract keywords FIRST (before building content)
-                    // Use semaphore to limit concurrent API calls
-                    // Skip keyword extraction for empty content to save API calls
+                    // Keyword extraction logic...
                     val keywords = if (pageContent.isBlank()) {
                         emptyList()
                     } else {
@@ -252,40 +221,46 @@ class ConfluenceSyncTask(
                                 val documentMessage = extractFromDocument(pageContent, pageTitle)
                                 documentKeywordExtractionService.execute(documentMessage)
                             } catch (_: Exception) {
-                                log.warn { "[ConfluenceSync] Keyword extraction failed: page_title='$pageTitle'" }
                                 emptyList()
                             }
                         }
                     }
 
-                    // Extract path keywords (each level of hierarchy becomes a keyword)
                     val pathKeywords = path.split(" > ").map { it.trim() }.filter { it.isNotBlank() }
-
-                    // Combine content keywords + path keywords for better hierarchical search
                     val allKeywords = (keywords + pathKeywords).distinct()
 
-                    // Reduced logging for keywords
-
-                    // Create initial document with metadata including ALL keywords (content + path)
-                    // For empty content, store at least the title and metadata
                     val documentContent = pageContent.ifBlank { pageTitle }
-                    val currentSpaceKey = spaceKey
-                    val currentPath = path
-
                     val wikiBaseUrl = confluenceProperties.baseUrl.removeSuffix("/api/v2").removeSuffix("/")
-                    val pageUrl = "$wikiBaseUrl/wiki/spaces/$currentSpaceKey/pages/${node.id}"
+                    val pageUrl = "$wikiBaseUrl/wiki/spaces/$spaceKey/pages/${node.id}"
 
+                    // RDB Entity (Page)
+                    val pageDocId = existingDocMap[node.id]?.id ?: TsidCreator.getTsid().toString()
+                    val rdbDoc = com.okestro.okchat.knowledge.model.entity.Document(
+                        id = pageDocId,
+                        knowledgeBaseId = kb.id!!,
+                        externalId = node.id,
+                        title = pageTitle,
+                        path = path,
+                        webUrl = pageUrl,
+                        metadata = mapOf(
+                            "type" to "confluence-page",
+                            "keywords" to allKeywords,
+                            "spaceKey" to spaceKey
+                        ),
+                        lastSyncedAt = Instant.now()
+                    )
+
+                    // Vector Document (Page)
                     val baseMetadata = metadata {
                         this.id = node.id
                         this.title = pageTitle
                         this.type = "confluence-page"
-                        this.spaceKey = currentSpaceKey
-                        this.path = currentPath
+                        this.spaceKey = spaceKey
+                        this.path = path
                         this.keywords = allKeywords
-
-                        // Additional page properties
                         property(MetadataFields.Additional.IS_EMPTY, pageContent.isBlank())
                         property(MetadataFields.Additional.WEB_URL, pageUrl)
+                        property("knowledgeBaseId", kb.id)
                     }
 
                     val baseDocument = Document(
@@ -294,191 +269,107 @@ class ConfluenceSyncTask(
                         baseMetadata.toMap()
                     )
 
-                    // Split document into chunks if too large
+                    // Chunking for Page
                     val chunks = try {
                         chunkingStrategy.chunk(baseDocument)
                     } catch (e: Exception) {
-                        log.warn { "[ConfluenceSync] Failed to chunk document: page_title='$pageTitle', error=${e.message}" }
-                        // If chunking fails and content is too large, truncate it
-                        val maxLength = 8000 // Safe limit for embedding models
-                        if (documentContent.length > maxLength) {
-                            log.warn { "[ConfluenceSync] Content too large (${documentContent.length} chars), truncating to $maxLength chars" }
-                            val truncated = Document(
-                                baseDocument.id,
-                                documentContent.take(maxLength) + "... [truncated]",
-                                baseDocument.metadata + mapOf("truncated" to true)
-                            )
-                            listOf(truncated)
-                        } else {
-                            listOf(baseDocument)
-                        }
+                        listOf(baseDocument)
                     }
 
-                    // If single chunk, use original page ID
-                    // If multiple chunks, append chunk index to ID
-                    val resultDocuments = if (chunks.size == 1) {
+                    val finalChunks = if (chunks.size == 1) {
                         chunks
                     } else {
-                        if (pageNum % 10 == 0 || chunks.size > 5) {
-                            log.info { "[ConfluenceSync] Split into ${chunks.size} chunks: page_id=${node.id}" }
-                        }
                         chunks.mapIndexed { chunkIndex, chunk ->
                             val chunkMetadata = metadata {
                                 this.id = node.id
                                 this.keywords = allKeywords
-
-                                // Chunk information
                                 property(MetadataFields.Additional.CHUNK_INDEX, chunkIndex)
                                 property(MetadataFields.Additional.TOTAL_CHUNKS, chunks.size)
+                                property("knowledgeBaseId", kb.id)
                             }
-
                             Document(
                                 "${node.id}_chunk_$chunkIndex",
                                 chunk.text ?: "",
                                 chunk.metadata + chunkMetadata.toMap()
                             )
                         }
-                    }
+                    }.toMutableList()
 
-                    // Process PDF attachments for this page
-                    val pdfDocuments = try {
-                        pdfAttachmentService.processPdfAttachments(
-                            pageId = node.id,
-                            pageTitle = pageTitle,
-                            spaceKey = spaceKey,
-                            path = path
-                        )
+                    // PDF Processing
+                    val pdfRdbDocs = mutableListOf<com.okestro.okchat.knowledge.model.entity.Document>()
+                    try {
+                        val pdfDocuments = pdfAttachmentService.processPdfAttachments(node.id, pageTitle, spaceKey, path)
+                        if (pdfDocuments.isNotEmpty()) {
+                            pdfDocuments.forEach { pdfDoc ->
+                                val pdfChunks = try {
+                                    chunkingStrategy.chunk(pdfDoc)
+                                } catch (e: Exception) {
+                                    listOf(pdfDoc)
+                                }
+
+                                val finalPdfChunks = if (pdfChunks.size == 1) {
+                                    pdfChunks
+                                } else {
+                                    pdfChunks.mapIndexed { i, chunk ->
+                                        Document(
+                                            "${pdfDoc.id}_chunk_$i",
+                                            chunk.text ?: "",
+                                            chunk.metadata + mapOf(
+                                                MetadataFields.Additional.CHUNK_INDEX to i,
+                                                MetadataFields.Additional.TOTAL_CHUNKS to pdfChunks.size
+                                            )
+                                        )
+                                    }
+                                }
+                                finalChunks.addAll(finalPdfChunks)
+
+                                // Create RDB entity for PDF - Handle ID reuse
+                                val pdfDocId = existingDocMap[pdfDoc.id]?.id ?: TsidCreator.getTsid().toString()
+
+                                pdfRdbDocs.add(
+                                    com.okestro.okchat.knowledge.model.entity.Document(
+                                        id = pdfDocId,
+                                        knowledgeBaseId = kb.id,
+                                        externalId = pdfDoc.id,
+                                        title = pdfDoc.metadata["title"] as? String ?: "PDF Attachment",
+                                        path = pdfDoc.metadata["path"] as? String ?: path,
+                                        webUrl = pdfDoc.metadata[MetadataFields.Additional.WEB_URL] as? String,
+                                        metadata = pdfDoc.metadata,
+                                        lastSyncedAt = Instant.now()
+                                    )
+                                )
+                            }
+                        }
                     } catch (e: Exception) {
-                        log.warn { "[ConfluenceSync] Failed to process PDF attachments: page_title='$pageTitle', error=${e.message}" }
-                        emptyList()
+                        log.warn(e) { "Failed to process PDFs for page $pageTitle" }
                     }
 
-                    if (pdfDocuments.isNotEmpty() && (pageNum % 10 == 0 || pageNum == 1 || pageNum == totalPages)) {
-                        log.info { "[ConfluenceSync][$pageNum/$totalPages] Found ${pdfDocuments.size} PDF document(s) for page: $pageTitle" }
-                    }
-
-                    // Progress logged only every 10 pages above
-
-                    resultDocuments + pdfDocuments
+                    Pair(finalChunks, listOf(rdbDoc) + pdfRdbDocs)
                 }
-            }.awaitAll().flatten()
+            }.awaitAll()
         }
 
-        documents.addAll(allDocuments)
+        results.forEach { (chunks, rdbDocs) ->
+            vectorDocuments.addAll(chunks)
+            rdbDocuments.addAll(rdbDocs)
+        }
 
-        return documents
+        return Pair(vectorDocuments, rdbDocuments)
     }
 
-    /**
-     * Extract keywords from document content for search indexing.
-     * Handles both content and title to generate comprehensive keywords.
-     */
-    suspend fun extractFromDocument(content: String, title: String? = null): String {
+    private suspend fun extractFromDocument(content: String, title: String? = null): String {
         return """
             Title: ${title ?: "N/A"}
             Content: ${content.take(2000)}...
         """.trimIndent()
     }
 
-    /**
-     * Strip HTML tags from content
-     */
     private fun stripHtml(html: String): String {
-        return html
-            .replace(Regex("<.*?>"), " ")
-            .replace(Regex("\\s+"), " ")
-            .trim()
+        return html.replace(Regex("<.*?>"), " ").replace(Regex("\\s+"), " ").trim()
     }
 
-    /**
-     * Get full path to a page (breadcrumb)
-     */
     private fun getPagePath(node: ContentNode, hierarchy: ContentHierarchy): String {
         val pathNodes = hierarchy.getPathToNode(node.id) ?: return node.title
         return pathNodes.joinToString(" > ") { it.title }
-    }
-
-    /**
-     * Get existing document IDs for a specific space from OpenSearch
-     */
-    private fun getExistingDocumentIds(spaceKey: String): Set<String> {
-        val documentIds = mutableSetOf<String>()
-
-        try {
-            // Search with filter for spaceKey, paginate through all results
-            var from = 0
-            val size = 250
-
-            while (true) {
-                val searchResponse = openSearchClient.search({ s ->
-                    s.index(indexName)
-                        .from(from)
-                        .size(size)
-                        .query { q ->
-                            q.term { t ->
-                                // Use flat field name (metadata is flattened with dot notation)
-                                t.field(MetadataFields.SPACE_KEY)
-                                    .value(org.opensearch.client.opensearch._types.FieldValue.of(spaceKey))
-                            }
-                        }
-                        .source { src -> src.filter { f -> f.includes(listOf("id", MetadataFields.ID)) } }
-                }, Map::class.java)
-
-                val hits = searchResponse.hits().hits()
-                if (hits.isEmpty()) break
-
-                // Extract document IDs (청크 ID가 아닌 실제 문서 ID를 가져와야 함)
-                hits.forEach { hit ->
-                    val source = hit.source()
-                    // 우선순위: metadata.id (실제 Confluence 페이지 ID) > id (청크 ID) > _id
-                    val id = when {
-                        source?.containsKey(MetadataFields.ID) == true -> source[MetadataFields.ID]?.toString()
-                        source?.containsKey("id") == true -> {
-                            // id 필드에서 청크 suffix 제거 (예: "123_chunk_0" -> "123")
-                            val rawId = source["id"]?.toString()
-                            rawId?.let {
-                                if (it.contains("_chunk_")) it.substringBefore("_chunk_") else it
-                            }
-                        }
-                        else -> hit.id()
-                    }
-                    id?.let { documentIds.add(it) }
-                }
-
-                // Check if there are more pages
-                if (hits.size < size) break
-                from += size
-            }
-        } catch (e: Exception) {
-            log.error(e) { "Failed to fetch existing document IDs: ${e.message}" }
-        }
-
-        return documentIds
-    }
-
-    /**
-     * Parse spaceKey from command line arguments
-     * Expected format: spaceKey=XXXX
-     */
-    private fun parseSpaceKey(args: Array<out String?>): String? {
-        return args.filterNotNull()
-            .firstOrNull { it.startsWith("spaceKey=") }
-            ?.substringAfter("spaceKey=")
-            ?.takeIf { it.isNotBlank() }
-    }
-
-    /**
-     * Get current document count from OpenSearch directly
-     */
-    private fun getOpenSearchDocumentCount(): Long {
-        return try {
-            val countResponse = openSearchClient.count { c ->
-                c.index(indexName)
-            }
-            countResponse.count()
-        } catch (e: Exception) {
-            log.warn { "Failed to get OpenSearch document count: ${e.message}" }
-            -1 // Return -1 to indicate failure
-        }
     }
 }

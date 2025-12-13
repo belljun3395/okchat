@@ -7,10 +7,10 @@ import PathManagementPage from './pages/admin/PathManagementPage';
 import UserDetailPage from './pages/admin/UserDetailPage';
 import PathDetailPage from './pages/admin/PathDetailPage';
 import PermissionManagementPage from './pages/admin/PermissionManagementPage';
-
-
 import EmailReviewPage from './pages/admin/EmailReviewPage';
 import DashboardPage from './pages/admin/DashboardPage';
+import KnowledgeBaseListPage from './pages/admin/KnowledgeBaseListPage';
+import KnowledgeBaseMembersPage from './pages/admin/KnowledgeBaseMembersPage';
 
 /**
  * App Component
@@ -44,10 +44,13 @@ const App: React.FC = () => {
           <Route path="permissions/paths" element={<Navigate to="/admin/paths" replace />} />
           <Route path="permissions/path/detail" element={<PathDetailPage />} />
 
+          {/* Knowledge Base Management */}
+          <Route path="knowledge-bases" element={<KnowledgeBaseListPage />} />
+          <Route path="knowledge-bases/:id/members" element={<KnowledgeBaseMembersPage />} />
+          <Route path="permissions/knowledge-bases" element={<Navigate to="/admin/knowledge-bases" replace />} />
+
           {/* Advanced Permissions */}
           <Route path="permissions/manage" element={<PermissionManagementPage />} />
-
-
 
           {/* Email Review */}
           <Route path="email/review" element={<EmailReviewPage />} />

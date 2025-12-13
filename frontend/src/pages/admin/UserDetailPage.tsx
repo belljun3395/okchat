@@ -146,7 +146,7 @@ const UserDetailPage: React.FC = () => {
                     <div className="flex flex-col gap-md">
                         <div>
                             <div className="text-xs text-secondary uppercase font-bold tracking-wider mb-1">Role</div>
-                            <div className="font-medium text-main">User</div>
+                            <div className="font-medium text-main">{user.role}</div>
                         </div>
                         <div>
                             <div className="text-xs text-secondary uppercase font-bold tracking-wider mb-1">Joined</div>

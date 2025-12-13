@@ -12,7 +12,7 @@ const AdminLayout: React.FC = () => {
     const location = useLocation();
 
     // Helper function to check if a link is active
-    const isActive = (path: string) => location.pathname === path;
+    const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
     return (
         <div className="admin-layout">
@@ -25,7 +25,7 @@ const AdminLayout: React.FC = () => {
                 </div>
 
                 <nav className="admin-sidebar-nav">
-                    <Link to="/admin/permissions" className={`nav-item ${isActive('/admin/permissions') ? 'active' : ''}`}>
+                    <Link to="/admin/permissions" className={`nav-item ${location.pathname === '/admin/permissions' ? 'active' : ''}`}>
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
                         </svg>
@@ -44,6 +44,13 @@ const AdminLayout: React.FC = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
                         </svg>
                         Paths
+                    </Link>
+
+                    <Link to="/admin/knowledge-bases" className={`nav-item ${isActive('/admin/knowledge-bases') ? 'active' : ''}`}>
+                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                        </svg>
+                        Knowledge Bases
                     </Link>
 
                     <Link to="/admin/permissions/manage" className={`nav-item ${isActive('/admin/permissions/manage') ? 'active' : ''}`}>

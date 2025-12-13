@@ -1,0 +1,40 @@
+import apiClient from '../lib/api-client';
+import type { KnowledgeBase, KnowledgeBaseUser, KnowledgeBaseUserRole } from '../types';
+
+export interface AddMemberRequest {
+    email: string;
+    role: KnowledgeBaseUserRole;
+}
+
+/**
+ * KnowledgeBase Service
+ * 
+ * APIs:
+ * - GET /api/admin/knowledge-bases - List all KBs
+ * - GET /api/admin/knowledge-bases/{id}/members - List members
+ * - POST /api/admin/knowledge-bases/{id}/members - Add member
+ * - DELETE /api/admin/knowledge-bases/{id}/members/{userId} - Remove member
+ */
+export const knowledgeBaseService = {
+    /**
+     * Get all Knowledge Bases
+     */
+    getAll: () => apiClient.get<KnowledgeBase[]>('/api/admin/knowledge-bases'),
+
+    /**
+     * Get members of a Knowledge Base
+     */
+    getMembers: (kbId: number) => apiClient.get<KnowledgeBaseUser[]>(`/api/admin/knowledge-bases/${kbId}/members?callerEmail=admin@okchat.com`),
+
+    /**
+     * Add member to Knowledge Base
+     */
+    addMember: (kbId: number, email: string, role: KnowledgeBaseUserRole) => 
+        apiClient.post<void>(`/api/admin/knowledge-bases/${kbId}/members?callerEmail=admin@okchat.com`, { email, role }),
+
+    /**
+     * Remove member from Knowledge Base
+     */
+    removeMember: (kbId: number, userId: number) => 
+        apiClient.delete<void>(`/api/admin/knowledge-bases/${kbId}/members/${userId}?callerEmail=admin@okchat.com`)
+};

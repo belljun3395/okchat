@@ -206,7 +206,9 @@ const UserManagementPage: React.FC = () => {
                                             </div>
                                         </td>
                                         <td>
-                                            <span className="badge badge-info">User</span>
+                                            <span className={`badge ${
+                                                user.role === 'SYSTEM_ADMIN' ? 'badge-primary' : 'badge-info'
+                                            }`}>{user.role}</span>
                                         </td>
                                         <td>
                                             {user.active ? (

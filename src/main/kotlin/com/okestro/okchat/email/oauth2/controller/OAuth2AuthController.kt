@@ -34,41 +34,7 @@ class OAuth2AuthController(
         return exchange.response.setComplete()
     }
 
-    /**
-     * OAuth2 callback endpoint
-     * GET /oauth2/callback?code=xxx
-     */
-    @GetMapping("/callback", "/oauth2/callback")
-    fun callback(
-        @RequestParam code: String,
-        @RequestParam(required = false) state: String?
-    ): Mono<Map<String, String>> {
-        if (state.isNullOrBlank()) {
-            return Mono.just(
-                mapOf(
-                    "status" to "error",
-                    "message" to "State parameter is required. Please use the authentication URL from /api/email/oauth2/authenticate endpoint."
-                )
-            )
-        }
 
-        return mono {
-            try {
-                val token = oauth2TokenService.exchangeCodeForToken(state, code)
-                mapOf(
-                    "status" to "success",
-                    "message" to "Successfully authenticated $state",
-                    "tokenPreview" to token.take(20) + "..."
-                )
-            } catch (e: Exception) {
-                logger.error(e) { "Failed to exchange code for token" }
-                mapOf(
-                    "status" to "error",
-                    "message" to "Authentication failed: ${e.message}"
-                )
-            }
-        }
-    }
 
     /**
      * Check stored token

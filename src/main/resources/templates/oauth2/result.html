@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Result - OKChat</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+         .result-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-body);
+        }
+
+        .result-card {
+            width: 100%;
+            max-width: 440px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--space-2xl);
+            box-shadow: var(--shadow-xl);
+            text-align: center;
+        }
+
+        .status-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            margin: 0 auto var(--space-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status-icon.success {
+            background-color: #DEF7EC;
+            color: #03543F;
+        }
+
+        .status-icon.error {
+            background-color: #FDE8E8;
+            color: #9B1C1C;
+        }
+
+        .status-icon svg {
+            width: 32px;
+            height: 32px;
+        }
+
+        .email-display {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: #F3F4F6;
+            border-radius: var(--radius-full);
+            color: var(--text-main);
+            font-weight: 500;
+            font-size: 0.875rem;
+            margin-bottom: var(--space-lg);
+        }
+    </style>
+</head>
+<body>
+    <div class="result-container">
+        <div class="result-card animate-fade-in">
+            <!-- Success State -->
+            <div th:if="${status == 'success'}">
+                <div class="status-icon success">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h1 class="mb-2">Authentication Successful</h1>
+                <p class="text-secondary mb-4">Your email has been connected successfully.</p>
+                <div class="email-display" th:text="${email}">user@example.com</div>
+            </div>
+
+            <!-- Error State -->
+            <div th:if="${status == 'error'}">
+                <div class="status-icon error">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </div>
+                <h1 class="mb-2">Authentication Failed</h1>
+                <p class="text-secondary mb-4" th:text="${message}">Something went wrong.</p>
+            </div>
+
+            <div class="mt-8">
+                <a href="/" class="btn btn-primary w-full justify-center">Return to Home</a>
+                <a href="/oauth2/login" class="btn btn-secondary w-full justify-center mt-2" th:if="${status == 'error'}">Try Again</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

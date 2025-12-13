@@ -6,6 +6,7 @@ data class GrantPathPermissionUseCaseIn(
     val userId: Long,
     val documentPath: String,
     val spaceKey: String? = null,
+    val knowledgeBaseId: Long? = null,
     val grantedBy: Long? = null
 )
 

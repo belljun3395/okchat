@@ -18,7 +18,8 @@ import java.time.Instant
     indexes = [
         Index(name = "idx_path_perm_user", columnList = "user_id"),
         Index(name = "idx_path_perm_path", columnList = "document_path"),
-        Index(name = "idx_path_perm_user_path", columnList = "user_id,document_path")
+        Index(name = "idx_path_perm_kb", columnList = "knowledge_base_id"),
+        Index(name = "idx_path_perm_user_kb_path", columnList = "user_id,knowledge_base_id,document_path")
     ]
 )
 data class DocumentPathPermission(
@@ -41,10 +42,16 @@ data class DocumentPathPermission(
     val documentPath: String,
 
     /**
-     * Optional: Space key for easier management
+     * Optional: Space key for easier management (Deprecated: use knowledgeBaseId)
      */
     @Column(name = "space_key", length = 50)
     val spaceKey: String? = null,
+
+    /**
+     * Knowledge Base ID
+     */
+    @Column(name = "knowledge_base_id")
+    val knowledgeBaseId: Long? = null,
 
     /**
      * Permission level for this path

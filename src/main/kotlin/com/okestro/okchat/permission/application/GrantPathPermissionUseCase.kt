@@ -19,11 +19,16 @@ class GrantPathPermissionUseCase(
 ) {
     suspend fun execute(useCaseIn: GrantPathPermissionUseCaseIn): GrantPathPermissionUseCaseOut =
         withContext(Dispatchers.IO + MDCContext()) {
-            val (userId, documentPath, spaceKey, grantedBy) = useCaseIn
+            val (userId, documentPath, spaceKey, knowledgeBaseId, grantedBy) = useCaseIn
 
             val existing = documentPathPermissionRepository.findByUserIdAndDocumentPath(userId, documentPath)
             if (existing != null) {
                 log.debug { "Path permission already exists: user_id=$userId, path=$documentPath" }
+                // Update KB ID if missing
+                if (knowledgeBaseId != null && existing.knowledgeBaseId == null) {
+                    val updated = existing.copy(knowledgeBaseId = knowledgeBaseId)
+                    documentPathPermissionRepository.save(updated)
+                }
                 return@withContext GrantPathPermissionUseCaseOut(existing)
             }
 
@@ -47,12 +52,13 @@ class GrantPathPermissionUseCase(
                 userId = userId,
                 documentPath = documentPath,
                 spaceKey = spaceKey,
+                knowledgeBaseId = knowledgeBaseId,
                 permissionLevel = PermissionLevel.READ,
                 grantedBy = grantedBy
             )
 
             val savedPermission = documentPathPermissionRepository.save(permission)
-            log.info { "Path permission granted: user_id=$userId, path=$documentPath, space_key=$spaceKey" }
+            log.info { "Path permission granted: user_id=$userId, path=$documentPath, kb_id=$knowledgeBaseId, space_key=$spaceKey" }
             GrantPathPermissionUseCaseOut(savedPermission)
         }
 

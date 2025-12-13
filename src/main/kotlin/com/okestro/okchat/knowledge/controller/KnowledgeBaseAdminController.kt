@@ -1,6 +1,5 @@
 package com.okestro.okchat.knowledge.controller
 
-
 import com.okestro.okchat.knowledge.model.dto.KnowledgeBaseMemberResponse
 import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseUserRole
 import com.okestro.okchat.knowledge.repository.KnowledgeBaseUserRepository
@@ -31,9 +30,58 @@ class KnowledgeBaseAdminController(
 
     @GetMapping
     @Operation(summary = "모든 Knowledge Base 목록 조회")
-    fun getAllKnowledgeBases(): ResponseEntity<Any> {
+    fun getAllKnowledgeBases(): ResponseEntity<List<KnowledgeBaseResponse>> {
         val kbs = knowledgeBaseRepository.findAll()
-        return ResponseEntity.ok(kbs)
+        val response = kbs.map { kb ->
+            KnowledgeBaseResponse(
+                id = kb.id!!,
+                name = kb.name,
+                description = kb.description,
+                type = kb.type,
+                enabled = kb.enabled,
+                createdBy = kb.createdBy,
+                createdAt = kb.createdAt,
+                updatedAt = kb.updatedAt
+            )
+        }
+        return ResponseEntity.ok(response)
+    }
+
+    @PostMapping
+    @Operation(summary = "Knowledge Base 생성")
+    fun createKnowledgeBase(
+        @RequestParam callerEmail: String,
+        @RequestBody request: CreateKnowledgeBaseRequest
+    ): ResponseEntity<Any> {
+        val caller = userRepository.findByEmail(callerEmail)
+            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Caller not found")
+
+        if (caller.role != UserRole.SYSTEM_ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only System Admin can create Knowledge Bases")
+        }
+
+        val newKb = com.okestro.okchat.knowledge.model.entity.KnowledgeBase(
+            name = request.name,
+            description = request.description,
+            type = request.type,
+            config = request.config,
+            createdBy = caller.id!!,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        val savedKb = knowledgeBaseRepository.save(newKb)
+
+        // Add creator as ADMIN of the KB
+        val adminMember = com.okestro.okchat.knowledge.model.entity.KnowledgeBaseUser(
+            userId = requireNotNull(caller.id) { "Caller ID must not be null" },
+            knowledgeBaseId = savedKb.id!!,
+            role = KnowledgeBaseUserRole.ADMIN,
+            approvedBy = caller.id,
+            createdAt = Instant.now()
+        )
+        knowledgeBaseUserRepository.save(adminMember)
+
+        return ResponseEntity.ok(savedKb)
     }
 
     @GetMapping("/{kbId}/members")
@@ -51,17 +99,17 @@ class KnowledgeBaseAdminController(
         }
 
         val members = knowledgeBaseUserRepository.findByKnowledgeBaseId(kbId)
-        
+
         val userIds = members.map { it.userId }.toSet()
         val approverIds = members.mapNotNull { it.approvedBy }.toSet()
         val allUserIds = userIds + approverIds
-        
+
         val users = userRepository.findAllById(allUserIds).associateBy { it.id }
 
         val response = members.map { member ->
             val user = users[member.userId]
             val approver = member.approvedBy?.let { users[it] }
-            
+
             KnowledgeBaseMemberResponse(
                 userId = member.userId,
                 email = user?.email ?: "Unknown",
@@ -71,7 +119,7 @@ class KnowledgeBaseAdminController(
                 approvedBy = approver?.name
             )
         }
-        
+
         return ResponseEntity.ok(response)
     }
 
@@ -145,4 +193,22 @@ class KnowledgeBaseAdminController(
 data class AddMemberRequest(
     val email: String,
     val role: KnowledgeBaseUserRole = KnowledgeBaseUserRole.MEMBER
+)
+
+data class CreateKnowledgeBaseRequest(
+    val name: String,
+    val description: String? = null,
+    val type: com.okestro.okchat.knowledge.model.entity.KnowledgeBaseType,
+    val config: Map<String, Any> = emptyMap()
+)
+
+data class KnowledgeBaseResponse(
+    val id: Long,
+    val name: String,
+    val description: String?,
+    val type: com.okestro.okchat.knowledge.model.entity.KnowledgeBaseType,
+    val enabled: Boolean,
+    val createdBy: Long,
+    val createdAt: Instant,
+    val updatedAt: Instant
 )

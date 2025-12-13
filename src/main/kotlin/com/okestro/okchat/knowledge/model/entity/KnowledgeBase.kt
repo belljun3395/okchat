@@ -36,6 +36,9 @@ data class KnowledgeBase(
     @Column(nullable = false)
     val enabled: Boolean = true,
 
+    @Column(name = "created_by", nullable = false)
+    val createdBy: Long = 0L, // Default for migration
+
     @Column(name = "created_at", nullable = false)
     val createdAt: Instant = Instant.now(),
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { userService, permissionService } from '../../services';
 import { ApiError } from '../../lib/api-client';
@@ -30,14 +30,7 @@ const UserDetailPage: React.FC = () => {
     const [isAdding, setIsAdding] = useState(false);
     const [showGrantModal, setShowGrantModal] = useState(false);
 
-    useEffect(() => {
-        if (email) {
-            fetchUserDetails();
-            fetchAllPaths();
-        }
-    }, [email]);
-
-    const fetchUserDetails = async () => {
+    const fetchUserDetails = useCallback(async () => {
         try {
             setLoading(true);
 
@@ -60,16 +53,27 @@ const UserDetailPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [email]);
 
-    const fetchAllPaths = async () => {
+    const fetchAllPaths = useCallback(async () => {
         try {
             const response = await permissionService.getAllPaths();
             setAllPaths(response.data);
         } catch (err) {
             console.error('Failed to fetch paths:', err);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        if (email) {
+            fetchUserDetails();
+            fetchAllPaths();
+        }
+    }, [email, fetchUserDetails, fetchAllPaths]);
+
+
+
+
 
     const handleGrantPermission = async () => {
         if (!selectedPath || !user) return;

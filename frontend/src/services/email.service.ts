@@ -28,7 +28,7 @@ export interface ReviewRequest {
 export interface EmailApiResponse {
     success: boolean;
     message: string;
-    data?: any;
+    data?: unknown;
 }
 
 export interface PagePendingEmailReply {

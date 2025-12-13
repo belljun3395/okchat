@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { permissionService } from '../../services';
 import type { PathDetailResponse } from '../../types';
@@ -19,13 +19,7 @@ const PathDetailPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    useEffect(() => {
-        if (path) {
-            fetchPathDetails();
-        }
-    }, [path]);
-
-    const fetchPathDetails = async () => {
+    const fetchPathDetails = useCallback(async () => {
         try {
             setLoading(true);
             const response = await permissionService.getPathDetail(path!);
@@ -36,7 +30,15 @@ const PathDetailPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [path]);
+
+    useEffect(() => {
+        if (path) {
+            fetchPathDetails();
+        }
+    }, [path, fetchPathDetails]);
+
+
 
     if (!path) return <div className="p-8 text-center text-danger">Invalid path provided</div>;
     if (loading) return <div className="p-8 text-center">Loading...</div>;

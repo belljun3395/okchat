@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { knowledgeBaseService } from '../../services/knowledgeBase.service';
 import type { KnowledgeBaseUser, KnowledgeBaseUserRole } from '../../types';
@@ -9,22 +9,16 @@ const KnowledgeBaseMembersPage: React.FC = () => {
     
     const [members, setMembers] = useState<KnowledgeBaseUser[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+
     
     const [newMemberEmail, setNewMemberEmail] = useState('');
     const [newMemberRole, setNewMemberRole] = useState<KnowledgeBaseUserRole>('MEMBER');
     const [adding, setAdding] = useState(false);
 
     // Mock caller email (Real implementation should get from auth context)
-    const currentUserEmail = 'admin@okchat.com'; 
+ 
 
-    useEffect(() => {
-        if (!isNaN(kbId)) {
-            fetchMembers();
-        }
-    }, [kbId]);
-
-    const fetchMembers = async () => {
+    const fetchMembers = useCallback(async () => {
         try {
             setLoading(true);
             // Pass callerEmail for backend permission check
@@ -39,14 +33,22 @@ const KnowledgeBaseMembersPage: React.FC = () => {
             // For this implementation, I will just call it.
              
             setMembers(response.data);
-            setError('');
+            // setError(''); // Error state removed
         } catch (err) {
             console.error(err);
-            setError('Failed to load members.');
+            // setError('Failed to load members.'); // Error state removed
         } finally {
             setLoading(false);
         }
-    };
+    }, [kbId]);
+
+    useEffect(() => {
+        if (!isNaN(kbId)) {
+            fetchMembers();
+        }
+    }, [kbId, fetchMembers]);
+
+
 
     const handleAddMember = async (e: React.FormEvent) => {
         e.preventDefault();

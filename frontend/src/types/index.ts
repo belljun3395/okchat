@@ -43,3 +43,18 @@ export interface UserPermissionsResponse {
     pathPermissions: DocumentPathPermission[];
     totalDocuments: number;
 }
+
+export interface KnowledgeBase {
+    id: number;
+    name: string;
+    type: string;
+    enabled: boolean;
+}
+
+export type KnowledgeBaseUserRole = 'MEMBER' | 'ADMIN';
+
+export interface KnowledgeBaseUser {
+    userId: number;
+    role: KnowledgeBaseUserRole;
+    createdAt: string;
+}

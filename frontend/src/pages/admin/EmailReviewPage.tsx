@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { emailService, type PendingEmailReply, type EmailStatus } from '../../services';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -20,19 +20,7 @@ const EmailReviewPage: React.FC = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState('');
 
-    useEffect(() => {
-        loadData();
-        const interval = setInterval(loadData, 30000); // Auto refresh every 30s
-        return () => clearInterval(interval);
-    }, [currentStatus]);
-
-    const loadData = () => {
-        loadEmails(currentStatus);
-    };
-
-
-
-    const loadEmails = async (status: EmailStatus) => {
+    const loadEmails = useCallback(async (status: EmailStatus) => {
         setLoading(true);
         try {
             const response = await emailService.getByStatus(status);
@@ -43,7 +31,23 @@ const EmailReviewPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    const loadData = useCallback(() => {
+        loadEmails(currentStatus);
+    }, [currentStatus, loadEmails]);
+
+    useEffect(() => {
+        loadData();
+        const interval = setInterval(loadData, 30000); // Auto refresh every 30s
+        return () => clearInterval(interval);
+    }, [loadData]);
+
+
+
+
+
+
 
     const togglePreview = (id: number) => {
         setExpandedPreviews(prev =>

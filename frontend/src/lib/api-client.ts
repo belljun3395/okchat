@@ -7,7 +7,7 @@ export class ApiError extends Error {
     constructor(
         public status: number,
         public message: string,
-        public data?: any
+        public data?: unknown
     ) {
         super(message);
         this.name = 'ApiError';
@@ -35,7 +35,7 @@ const apiClient = axios.create({
  * Stream request wrapper using Axios for SSE
  * Ensures we use the same interceptors and config as the main client
  */
-export const streamRequest = async (url: string, data: any, customHeaders: any = {}) => {
+export const streamRequest = async (url: string, data: unknown, customHeaders: Record<string, string> = {}) => {
     return await apiClient.post(url, data, {
         headers: {
             ...customHeaders,
@@ -73,7 +73,7 @@ apiClient.interceptors.response.use(
     },
     (error: AxiosError) => {
         const status = error.response?.status || 500;
-        const message = (error.response?.data as any)?.message || error.message || 'An error occurred';
+        const message = (error.response?.data as { message?: string })?.message || error.message || 'An error occurred';
         const data = error.response?.data;
 
         console.error(`[API Error] ${status} ${error.config?.url}`, message);

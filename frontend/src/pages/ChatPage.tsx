@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useRef } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -27,6 +28,14 @@ const ChatPage: React.FC = () => {
 
     // State for chat messages
     const [messages, setMessages] = useState<Array<{ content: string; isUser: boolean; timestamp: string }>>([]);
+
+    const setDefaultWelcomeMessage = () => {
+        setMessages([{
+            content: "**Hello! I'm OKChat.**\n\nI can help you search documents, summarize meetings, and answer questions.\n\nTry asking: \"What was discussed in the last marketing meeting?\"",
+            isUser: false,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+    };
 
     // Initialize state on mount (handle migration and load)
     useEffect(() => {
@@ -65,23 +74,25 @@ const ChatPage: React.FC = () => {
         setSessions(parsedSessions);
 
         // 3. Determine current Session ID
-        let currentId = sessionId;
-        if (!currentId) {
-            if (parsedSessions.length > 0) {
-                currentId = parsedSessions[0].id;
-            } else {
-                // Create first session
-                currentId = 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-                const newSession = { id: currentId, title: 'New Chat', timestamp: Date.now() };
-                parsedSessions = [newSession];
-                setSessions(parsedSessions);
-                localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(parsedSessions));
-            }
+        let currentId = '';
+        if (parsedSessions.length > 0) {
+            currentId = parsedSessions[0].id;
+        } else {
+            // Create first session
+            currentId = 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            const newSession = { id: currentId, title: 'New Chat', timestamp: Date.now() };
+            parsedSessions = [newSession];
+            setSessions(parsedSessions);
+            localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(parsedSessions));
         }
         setSessionId(currentId);
+    }, []);
 
-        // 4. Load messages for this session
-        const savedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES_PREFIX + currentId);
+    // 4. Load messages for this session
+    useEffect(() => {
+        if (!sessionId) return;
+
+        const savedMessages = localStorage.getItem(STORAGE_KEY_MESSAGES_PREFIX + sessionId);
         if (savedMessages) {
             try {
                 setMessages(JSON.parse(savedMessages));
@@ -92,15 +103,9 @@ const ChatPage: React.FC = () => {
         } else {
             setDefaultWelcomeMessage();
         }
-    }, [sessionId]); // Re-run when sessionId changes (for loading messages) but NOT when sessions list changes
+    }, [sessionId]); // Re-run when sessionId changes
 
-    const setDefaultWelcomeMessage = () => {
-        setMessages([{
-            content: "**Hello! I'm OKChat.**\n\nI can help you search documents, summarize meetings, and answer questions.\n\nTry asking: \"What was discussed in the last marketing meeting?\"",
-            isUser: false,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }]);
-    };
+
 
     // State for input field
     const [inputValue, setInputValue] = useState('');
@@ -311,7 +316,7 @@ const ChatPage: React.FC = () => {
                     }
                 }
             },
-            onError: (error: any) => {
+            onError: (error: Error | { message?: string }) => {
                 console.error('Error sending message:', error);
                 setIsTyping(false);
 

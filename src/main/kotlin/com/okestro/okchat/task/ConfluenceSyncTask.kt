@@ -259,7 +259,7 @@ class ConfluenceSyncTask(
                         this.keywords = allKeywords
                         property(MetadataFields.Additional.IS_EMPTY, pageContent.isBlank())
                         property(MetadataFields.Additional.WEB_URL, pageUrl)
-                        property("knowledgeBaseId", kb.id)
+                        property(MetadataFields.Additional.KNOWLEDGE_BASE_ID, kb.id)
                     }
 
                     val baseDocument = Document(

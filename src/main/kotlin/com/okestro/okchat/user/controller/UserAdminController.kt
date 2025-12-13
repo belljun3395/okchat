@@ -38,7 +38,7 @@ private val log = KotlinLogging.logger {}
     name = "User API",
     description = "사용자 관리 API. 사용자 생성, 조회, 비활성화 기능을 제공합니다."
 )
-class UserAdminWebController(
+class UserAdminController(
     private val getAllActiveUsersUseCase: GetAllActiveUsersUseCase,
     private val findUserByEmailUseCase: FindUserByEmailUseCase,
     private val findOrCreateUserUseCase: FindOrCreateUserUseCase,

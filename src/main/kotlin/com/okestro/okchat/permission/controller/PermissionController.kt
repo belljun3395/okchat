@@ -1,10 +1,13 @@
 package com.okestro.okchat.permission.controller
 
+import com.okestro.okchat.permission.application.GetAllowedPathsForUserUseCase
+import com.okestro.okchat.permission.application.GetPathPermissionsUseCase
 import com.okestro.okchat.permission.application.GetUserPermissionsUseCase
 import com.okestro.okchat.permission.application.GrantDenyPathPermissionUseCase
 import com.okestro.okchat.permission.application.GrantPathPermissionUseCase
 import com.okestro.okchat.permission.application.RevokeAllUserPermissionsUseCase
 import com.okestro.okchat.permission.application.RevokePathPermissionUseCase
+import com.okestro.okchat.permission.application.dto.GetAllowedPathsForUserUseCaseIn
 import com.okestro.okchat.permission.application.dto.GetUserPermissionsUseCaseIn
 import com.okestro.okchat.permission.application.dto.GrantDenyPathPermissionUseCaseIn
 import com.okestro.okchat.permission.application.dto.GrantPathPermissionUseCaseIn
@@ -12,7 +15,10 @@ import com.okestro.okchat.permission.application.dto.RevokeAllUserPermissionsUse
 import com.okestro.okchat.permission.application.dto.RevokePathPermissionUseCaseIn
 import com.okestro.okchat.permission.model.entity.DocumentPathPermission
 import com.okestro.okchat.permission.service.dto.DocumentSearchResult
+import com.okestro.okchat.search.application.SearchAllByPathUseCase
+import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseIn
 import com.okestro.okchat.user.application.FindUserByEmailUseCase
+import com.okestro.okchat.user.application.GetAllActiveUsersUseCase
 import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
 import com.okestro.okchat.user.model.entity.User
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -45,17 +51,23 @@ class PermissionController(
     private val grantPathPermissionUseCase: GrantPathPermissionUseCase,
     private val grantDenyPathPermissionUseCase: GrantDenyPathPermissionUseCase,
     private val revokePathPermissionUseCase: RevokePathPermissionUseCase,
-    private val documentPermissionService: com.okestro.okchat.permission.service.DocumentPermissionService,
-    private val getAllActiveUsersUseCase: com.okestro.okchat.user.application.GetAllActiveUsersUseCase,
-    private val getPathPermissionsUseCase: com.okestro.okchat.permission.application.GetPathPermissionsUseCase
+    private val getAllActiveUsersUseCase: GetAllActiveUsersUseCase,
+    private val getPathPermissionsUseCase: GetPathPermissionsUseCase,
+    private val getAllowedPathsForUserUseCase: GetAllowedPathsForUserUseCase,
+    private val searchAllByPathUseCase: SearchAllByPathUseCase
 ) {
 
     @GetMapping("/paths")
     @Operation(summary = "모든 문서 경로 조회")
-    suspend fun getAllPaths(): ResponseEntity<List<String>> {
-        log.info { "Get all paths request" }
-        val paths = documentPermissionService.searchAllPaths()
-        return ResponseEntity.ok(paths)
+    suspend fun getAllPaths(@RequestParam(defaultValue = "admin@okestro.com") callerEmail: String): ResponseEntity<Any> {
+        try {
+            val result = getAllowedPathsForUserUseCase.execute(GetAllowedPathsForUserUseCaseIn(callerEmail))
+            return ResponseEntity.ok(result.paths)
+        } catch (e: IllegalArgumentException) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.message)
+        } catch (e: IllegalAccessException) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.message)
+        }
     }
 
     @GetMapping("/path/detail")
@@ -63,13 +75,13 @@ class PermissionController(
     suspend fun getPathDetail(@RequestParam path: String): ResponseEntity<PathDetailResponse> {
         log.info { "Get path detail request: path=$path" }
 
-        val documents = documentPermissionService.searchAllByPath(path)
+        val documents = searchAllByPathUseCase.execute(SearchAllByPathUseCaseIn(path)).documents
             .map { doc ->
                 DocumentSearchResult(
                     id = doc.id,
-                    title = doc.title,
-                    url = doc.path,
-                    spaceKey = doc.spaceKey
+                    title = doc.title ?: "Untitled",
+                    url = doc.path ?: "",
+                    spaceKey = doc.spaceKey ?: ""
                 )
             }
         val permissions = getPathPermissionsUseCase.execute(com.okestro.okchat.permission.application.dto.GetPathPermissionsUseCaseIn(path)).permissions

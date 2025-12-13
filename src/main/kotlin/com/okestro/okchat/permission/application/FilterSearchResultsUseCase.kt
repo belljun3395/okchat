@@ -1,9 +1,13 @@
 package com.okestro.okchat.permission.application
 
+import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseUserRole
+import com.okestro.okchat.knowledge.repository.KnowledgeBaseUserRepository
 import com.okestro.okchat.permission.application.dto.FilterSearchResultsUseCaseIn
 import com.okestro.okchat.permission.application.dto.FilterSearchResultsUseCaseOut
 import com.okestro.okchat.permission.model.PermissionLevel
 import com.okestro.okchat.permission.repository.DocumentPathPermissionRepository
+import com.okestro.okchat.user.model.entity.UserRole
+import com.okestro.okchat.user.repository.UserRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.slf4j.MDCContext
@@ -14,7 +18,9 @@ private val log = KotlinLogging.logger {}
 
 @Service
 class FilterSearchResultsUseCase(
-    private val documentPathPermissionRepository: DocumentPathPermissionRepository
+    private val documentPathPermissionRepository: DocumentPathPermissionRepository,
+    private val knowledgeBaseUserRepository: KnowledgeBaseUserRepository,
+    private val userRepository: UserRepository
 ) {
 
     suspend fun execute(useCaseIn: FilterSearchResultsUseCaseIn): FilterSearchResultsUseCaseOut =
@@ -24,40 +30,73 @@ class FilterSearchResultsUseCase(
                 return@withContext FilterSearchResultsUseCaseOut(emptyList())
             }
 
-            log.debug { "[PermissionFilter] Filtering ${results.size} results for user_id=$userId" }
-
-            val allPermissions = documentPathPermissionRepository.findByUserId(userId)
-
-            log.debug {
-                "[PermissionFilter] User has ${allPermissions.size} total path permissions " +
-                    "(READ: ${allPermissions.count { it.permissionLevel == PermissionLevel.READ }}, " +
-                    "DENY: ${allPermissions.count { it.permissionLevel == PermissionLevel.DENY }})"
+            // 1. Identify User & Global Role
+            val user = userRepository.findById(userId).orElse(null)
+            if (user == null) {
+                log.warn { "[PermissionFilter] User not found: id=$userId" }
+                return@withContext FilterSearchResultsUseCaseOut(emptyList())
             }
 
-            val filtered = results.filter { result ->
-                val docPath = result.path
+            // [Layer 0] System Admin Bypass
+            if (user.role == UserRole.SYSTEM_ADMIN) {
+                log.info { "[PermissionFilter] System Admin bypass for user: ${user.email}" }
+                return@withContext FilterSearchResultsUseCaseOut(results)
+            }
 
-                val matchingPermissions = allPermissions.filter { perm ->
-                    isPathMatchingOrParent(docPath, perm.documentPath)
+            log.debug { "[PermissionFilter] Filtering ${results.size} results for user_id=$userId (${user.role})" }
+
+            // Fetch all KB memberships for this user
+            val kbMemberships = knowledgeBaseUserRepository.findByUserId(userId)
+            val membershipMap = kbMemberships.associateBy { it.knowledgeBaseId }
+
+            // Fetch all Path Permissions (Exceptions)
+            val pathPermissions = documentPathPermissionRepository.findByUserId(userId)
+
+            val filtered = results.filter { result ->
+                val kbId = result.knowledgeBaseId
+
+                // [Layer 1] Knowledge Base Membership Check
+                val membership = membershipMap[kbId]
+                if (membership == null) {
+                    log.trace { "[PermissionFilter] Access Denied: User not a member of KB $kbId" }
+                    return@filter false
+                }
+
+                // [Layer 1.5] Space Admin Check
+                if (membership.role == KnowledgeBaseUserRole.ADMIN) {
+                    // Space Admin sees EVERYTHING in this KB (ignoring DENY paths)
+                    return@filter true
+                }
+
+                // [Layer 2] Document Path Check (Member)
+                // Default: ALLOW (since member), Exception: DENY
+                val docPath = result.path
+                if (docPath.isBlank()) return@filter true // Root docs always allowed for members unless specifically denied (implementation detail: root usually safe)
+
+                val matchingPermissions = pathPermissions.filter { perm ->
+                    // Check if permission applies to this specific KB (optional safety check if paths are unique across KBs? better to check kbId too if permission has it)
+                    (perm.knowledgeBaseId == null || perm.knowledgeBaseId == kbId) &&
+                        isPathMatchingOrParent(docPath, perm.documentPath)
                 }
 
                 if (matchingPermissions.isEmpty()) {
-                    log.trace { "[PermissionFilter] No permissions match: path=$docPath" }
-                    return@filter false
+                    // No specific rules -> Default Allow for Member
+                    return@filter true
                 }
 
                 val mostSpecific = matchingPermissions.maxByOrNull { it.documentPath.length }!!
 
-                val isAllowed = mostSpecific.permissionLevel == PermissionLevel.READ
-
-                if (!isAllowed) {
+                // If most specific rule is DENY -> Block
+                if (mostSpecific.permissionLevel == PermissionLevel.DENY) {
                     log.trace {
-                        "[PermissionFilter] Denied by most specific permission: " +
-                            "path=$docPath, matched=${mostSpecific.documentPath}, level=${mostSpecific.permissionLevel}"
+                        "[PermissionFilter] Access Denied by Path Rule: " +
+                            "path=$docPath, matched=${mostSpecific.documentPath}, level=DENY"
                     }
+                    return@filter false
                 }
 
-                isAllowed
+                // If most specific rule is READ -> Allow (Explicit Allow overriding a parent Deny, though Deny usually propagates down. Simple logic: Most specific wins)
+                return@filter true
             }
 
             val filteredCount = results.size - filtered.size

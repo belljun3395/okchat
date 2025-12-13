@@ -29,7 +29,7 @@ data class KnowledgeBase(
     @Column(nullable = false, length = 20)
     val type: KnowledgeBaseType,
 
-    @Column(name = "config", columnDefinition = "jsonb")
+    @Column(name = "config", columnDefinition = "json")
     @JdbcTypeCode(SqlTypes.JSON)
     val config: Map<String, Any> = emptyMap(),
 

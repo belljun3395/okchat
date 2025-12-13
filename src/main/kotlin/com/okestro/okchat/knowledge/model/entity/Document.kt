@@ -37,13 +37,13 @@ data class Document(
     @Column(nullable = false, length = 500)
     val title: String,
 
-    @Column(nullable = false, length = 1000)
+    @Column(nullable = false, length = 750)
     val path: String,
 
     @Column(name = "web_url", length = 1000)
     val webUrl: String? = null,
 
-    @Column(name = "metadata", columnDefinition = "jsonb")
+    @Column(name = "metadata", columnDefinition = "json")
     @JdbcTypeCode(SqlTypes.JSON)
     val metadata: Map<String, Any> = emptyMap(),
 

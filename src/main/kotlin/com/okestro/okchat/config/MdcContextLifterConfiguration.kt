@@ -39,7 +39,7 @@ class MdcContextLifterConfiguration {
  * Helper that copies the state of Reactor [Context] to MDC on the #onNext function.
  */
 class MdcContextLifter<T>(
-    private val coreSubscriber: CoreSubscriber<T>,
+    private val coreSubscriber: CoreSubscriber<T>
 ) : CoreSubscriber<T> {
     override fun onSubscribe(subscription: Subscription) {
         coreSubscriber.onSubscribe(subscription)

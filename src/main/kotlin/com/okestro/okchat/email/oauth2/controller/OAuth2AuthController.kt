@@ -2,7 +2,6 @@ package com.okestro.okchat.email.oauth2.controller
 
 import com.okestro.okchat.email.oauth2.OAuth2TokenService
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.reactor.mono
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -33,8 +32,6 @@ class OAuth2AuthController(
         exchange.response.headers.location = URI.create(authUrl)
         return exchange.response.setComplete()
     }
-
-
 
     /**
      * Check stored token

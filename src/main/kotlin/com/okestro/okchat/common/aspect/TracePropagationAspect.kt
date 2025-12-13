@@ -19,7 +19,7 @@ class TracePropagationAspect {
     @Around("execution(* com.okestro.okchat..repository..*(..))")
     fun propagateMdc(joinPoint: ProceedingJoinPoint): Any? {
         val contextMap = MDC.getCopyOfContextMap()
-        
+
         try {
             return joinPoint.proceed()
         } finally {

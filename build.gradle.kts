@@ -130,6 +130,9 @@ dependencies {
     implementation("io.github.resilience4j:resilience4j-reactor:2.2.0")
     implementation("io.github.resilience4j:resilience4j-micrometer:2.2.0")
     implementation("io.github.resilience4j:resilience4j-kotlin:2.2.0")
+
+    /** tsid */
+    implementation("com.github.f4b6a3:tsid-creator:5.2.6")
 }
 
 dependencyManagement {

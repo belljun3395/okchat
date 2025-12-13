@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { knowledgeBaseService } from '../../services/knowledgeBase.service';
-import type { KnowledgeBaseUser, KnowledgeBaseUserRole } from '../../types';
+import { knowledgeBaseService, KnowledgeBaseMember } from '../../services/knowledgeBase.service';
+import type { KnowledgeBaseUserRole } from '../../types';
 
 const KnowledgeBaseMembersPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const kbId = Number(id);
     
-    const [members, setMembers] = useState<KnowledgeBaseUser[]>([]);
+    const [members, setMembers] = useState<KnowledgeBaseMember[]>([]);
     const [loading, setLoading] = useState(true);
 
     
@@ -123,8 +123,9 @@ const KnowledgeBaseMembersPage: React.FC = () => {
                     <table className="table">
                         <thead>
                             <tr>
-                                <th>User ID</th>
+                                <th>User</th>
                                 <th>Role</th>
+                                <th>Approved By</th>
                                 <th>Joined</th>
                                 <th className="text-right">Actions</th>
                             </tr>
@@ -133,15 +134,21 @@ const KnowledgeBaseMembersPage: React.FC = () => {
                             {loading ? (
                                 <tr><td colSpan={4} className="text-center p-8">Loading...</td></tr>
                             ) : members.length === 0 ? (
-                                <tr><td colSpan={4} className="text-center p-8">No members found</td></tr>
+                                <tr><td colSpan={5} className="text-center p-8">No members found</td></tr>
                             ) : (
                                 members.map(member => (
                                     <tr key={member.userId}>
-                                        <td className="text-main">{member.userId}</td>
+                                        <td className="text-main">
+                                            <div className="font-medium">{member.name}</div>
+                                            <div className="text-xs text-secondary">{member.email}</div>
+                                        </td>
                                         <td>
                                             <span className={`badge ${member.role === 'ADMIN' ? 'badge-info' : 'badge-secondary'}`}>
                                                 {member.role}
                                             </span>
+                                        </td>
+                                        <td className="text-secondary text-sm">
+                                            {member.approvedBy || '-'}
                                         </td>
                                         <td className="text-secondary text-sm">
                                             {new Date(member.createdAt).toLocaleDateString()}

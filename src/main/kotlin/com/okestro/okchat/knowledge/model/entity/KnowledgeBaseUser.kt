@@ -35,6 +35,9 @@ data class KnowledgeBaseUser(
     @Column(nullable = false, length = 20)
     val role: KnowledgeBaseUserRole = KnowledgeBaseUserRole.MEMBER,
 
+    @Column(name = "approved_by")
+    val approvedBy: Long? = null,
+
     @Column(name = "created_at", nullable = false)
     val createdAt: Instant = Instant.now()
 )

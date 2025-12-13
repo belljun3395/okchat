@@ -1,5 +1,7 @@
 package com.okestro.okchat.knowledge.controller
 
+
+import com.okestro.okchat.knowledge.model.dto.KnowledgeBaseMemberResponse
 import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseUserRole
 import com.okestro.okchat.knowledge.repository.KnowledgeBaseUserRepository
 import com.okestro.okchat.user.model.entity.UserRole
@@ -49,7 +51,28 @@ class KnowledgeBaseAdminController(
         }
 
         val members = knowledgeBaseUserRepository.findByKnowledgeBaseId(kbId)
-        return ResponseEntity.ok(members)
+        
+        val userIds = members.map { it.userId }.toSet()
+        val approverIds = members.mapNotNull { it.approvedBy }.toSet()
+        val allUserIds = userIds + approverIds
+        
+        val users = userRepository.findAllById(allUserIds).associateBy { it.id }
+
+        val response = members.map { member ->
+            val user = users[member.userId]
+            val approver = member.approvedBy?.let { users[it] }
+            
+            KnowledgeBaseMemberResponse(
+                userId = member.userId,
+                email = user?.email ?: "Unknown",
+                name = user?.name ?: "Unknown",
+                role = member.role,
+                createdAt = member.createdAt,
+                approvedBy = approver?.name
+            )
+        }
+        
+        return ResponseEntity.ok(response)
     }
 
     @PostMapping("/{kbId}/members")
@@ -78,6 +101,7 @@ class KnowledgeBaseAdminController(
             userId = targetUser.id,
             knowledgeBaseId = kbId,
             role = request.role,
+            approvedBy = caller.id,
             createdAt = Instant.now()
         )
         knowledgeBaseUserRepository.save(newMember)

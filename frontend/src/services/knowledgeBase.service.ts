@@ -1,5 +1,14 @@
 import apiClient from '../lib/api-client';
-import type { KnowledgeBase, KnowledgeBaseUser, KnowledgeBaseUserRole } from '../types';
+import type { KnowledgeBase, KnowledgeBaseUserRole } from '../types';
+
+export interface KnowledgeBaseMember {
+    userId: number;
+    email: string;
+    name: string;
+    role: KnowledgeBaseUserRole;
+    createdAt: string;
+    approvedBy?: string;
+}
 
 export interface AddMemberRequest {
     email: string;
@@ -24,7 +33,7 @@ export const knowledgeBaseService = {
     /**
      * Get members of a Knowledge Base
      */
-    getMembers: (kbId: number) => apiClient.get<KnowledgeBaseUser[]>(`/api/admin/knowledge-bases/${kbId}/members?callerEmail=admin@okchat.com`),
+    getMembers: (kbId: number) => apiClient.get<KnowledgeBaseMember[]>(`/api/admin/knowledge-bases/${kbId}/members?callerEmail=admin@okchat.com`),
 
     /**
      * Add member to Knowledge Base

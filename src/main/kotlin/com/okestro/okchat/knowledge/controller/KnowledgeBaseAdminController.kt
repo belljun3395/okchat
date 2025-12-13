@@ -1,12 +1,21 @@
 package com.okestro.okchat.knowledge.controller
 
-import com.okestro.okchat.knowledge.model.config.KnowledgeBaseEmailConfig
-import com.okestro.okchat.knowledge.model.dto.KnowledgeBaseMemberResponse
-import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseEmail
+import com.okestro.okchat.knowledge.application.AddKnowledgeBaseMemberUseCase
+import com.okestro.okchat.knowledge.application.CreateKnowledgeBaseUseCase
+import com.okestro.okchat.knowledge.application.GetAllKnowledgeBasesUseCase
+import com.okestro.okchat.knowledge.application.GetKnowledgeBaseDetailUseCase
+import com.okestro.okchat.knowledge.application.GetKnowledgeBaseMembersUseCase
+import com.okestro.okchat.knowledge.application.RemoveKnowledgeBaseMemberUseCase
+import com.okestro.okchat.knowledge.application.UpdateKnowledgeBaseUseCase
+import com.okestro.okchat.knowledge.application.dto.AddKnowledgeBaseMemberUseCaseIn
+import com.okestro.okchat.knowledge.application.dto.CreateKnowledgeBaseUseCaseIn
+import com.okestro.okchat.knowledge.application.dto.GetAllKnowledgeBasesUseCaseIn
+import com.okestro.okchat.knowledge.application.dto.GetKnowledgeBaseDetailUseCaseIn
+import com.okestro.okchat.knowledge.application.dto.GetKnowledgeBaseMembersUseCaseIn
+import com.okestro.okchat.knowledge.application.dto.RemoveKnowledgeBaseMemberUseCaseIn
+import com.okestro.okchat.knowledge.application.dto.UpdateKnowledgeBaseUseCaseIn
+import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseType
 import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseUserRole
-import com.okestro.okchat.knowledge.repository.KnowledgeBaseUserRepository
-import com.okestro.okchat.user.model.entity.UserRole
-import com.okestro.okchat.user.repository.UserRepository
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
@@ -15,6 +24,7 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -25,11 +35,13 @@ import java.time.Instant
 @RequestMapping("/api/admin/knowledge-bases")
 @Tag(name = "Knowledge Base Admin API", description = "Knowledge Base 관리 및 멤버십 관리 API")
 class KnowledgeBaseAdminController(
-    private val knowledgeBaseUserRepository: KnowledgeBaseUserRepository,
-    private val userRepository: UserRepository,
-    private val knowledgeBaseRepository: com.okestro.okchat.knowledge.repository.KnowledgeBaseRepository,
-    private val knowledgeBaseEmailRepository: com.okestro.okchat.knowledge.repository.KnowledgeBaseEmailRepository,
-    private val objectMapper: com.fasterxml.jackson.databind.ObjectMapper
+    private val getKnowledgeBaseDetailUseCase: GetKnowledgeBaseDetailUseCase,
+    private val getAllKnowledgeBasesUseCase: GetAllKnowledgeBasesUseCase,
+    private val createKnowledgeBaseUseCase: CreateKnowledgeBaseUseCase,
+    private val updateKnowledgeBaseUseCase: UpdateKnowledgeBaseUseCase,
+    private val getKnowledgeBaseMembersUseCase: GetKnowledgeBaseMembersUseCase,
+    private val addKnowledgeBaseMemberUseCase: AddKnowledgeBaseMemberUseCase,
+    private val removeKnowledgeBaseMemberUseCase: RemoveKnowledgeBaseMemberUseCase
 ) {
 
     @GetMapping("/{kbId}")
@@ -38,51 +50,40 @@ class KnowledgeBaseAdminController(
         @PathVariable kbId: Long,
         @RequestParam callerEmail: String
     ): ResponseEntity<Any> {
-        val caller = userRepository.findByEmail(callerEmail)
-            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Caller not found")
+        return try {
+            val result = getKnowledgeBaseDetailUseCase.execute(
+                GetKnowledgeBaseDetailUseCaseIn(kbId, callerEmail)
+            )
 
-        // Check Permission
-        if (!canManageKb(caller, kbId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Insufficient permissions")
+            // Map DTO to Response
+            val response = KnowledgeBaseResponse(
+                id = result.id,
+                name = result.name,
+                description = result.description,
+                type = result.type,
+                enabled = result.enabled,
+                createdBy = result.createdBy,
+                createdAt = result.createdAt,
+                updatedAt = result.updatedAt,
+                config = result.config
+            )
+            ResponseEntity.ok(response)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.message)
+        } catch (e: IllegalAccessException) {
+            ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.message)
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.notFound().build()
         }
-
-        val kb = knowledgeBaseRepository.findById(kbId).orElse(null)
-            ?: return ResponseEntity.notFound().build()
-
-        val emailConfigs = knowledgeBaseEmailRepository.findAllByKnowledgeBaseId(kbId)
-
-        // Reconstruct Email Config
-        val config = kb.config.toMutableMap()
-        if (emailConfigs.isNotEmpty()) {
-            val emailProviders = emailConfigs.associate { entity ->
-                val type = entity.providerType.name.lowercase()
-                type to entity.toEmailProviderConfig()
-            }
-            config["emailProviders"] = emailProviders
-        }
-
-        val response = KnowledgeBaseResponse(
-            id = kb.id!!,
-            name = kb.name,
-            description = kb.description,
-            type = kb.type,
-            enabled = kb.enabled,
-            createdBy = kb.createdBy,
-            createdAt = kb.createdAt,
-            updatedAt = kb.updatedAt,
-            config = config
-        )
-
-        return ResponseEntity.ok(response)
     }
 
     @GetMapping
     @Operation(summary = "모든 Knowledge Base 목록 조회")
     fun getAllKnowledgeBases(): ResponseEntity<List<KnowledgeBaseResponse>> {
-        val kbs = knowledgeBaseRepository.findAll()
+        val kbs = getAllKnowledgeBasesUseCase.execute(GetAllKnowledgeBasesUseCaseIn())
         val response = kbs.map { kb ->
             KnowledgeBaseResponse(
-                id = kb.id!!,
+                id = kb.id,
                 name = kb.name,
                 description = kb.description,
                 type = kb.type,
@@ -90,7 +91,7 @@ class KnowledgeBaseAdminController(
                 createdBy = kb.createdBy,
                 createdAt = kb.createdAt,
                 updatedAt = kb.updatedAt,
-                config = emptyMap() // Minimal info for list view
+                config = kb.config
             )
         }
         return ResponseEntity.ok(response)
@@ -102,48 +103,22 @@ class KnowledgeBaseAdminController(
         @RequestParam callerEmail: String,
         @RequestBody request: CreateKnowledgeBaseRequest
     ): ResponseEntity<Any> {
-        val caller = userRepository.findByEmail(callerEmail)
-            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Caller not found")
-
-        if (caller.role != UserRole.SYSTEM_ADMIN) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only System Admin can create Knowledge Bases")
+        return try {
+            val savedKb = createKnowledgeBaseUseCase.execute(
+                CreateKnowledgeBaseUseCaseIn(
+                    callerEmail = callerEmail,
+                    name = request.name,
+                    description = request.description,
+                    type = request.type,
+                    config = request.config
+                )
+            )
+            ResponseEntity.ok(savedKb)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.message)
+        } catch (e: IllegalAccessException) {
+            ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.message)
         }
-
-        // Sanitize config - remove emailProviders to be stored separately
-        val sanitizedConfig = request.config.toMutableMap()
-        sanitizedConfig.remove("emailProviders")
-
-        val newKb = com.okestro.okchat.knowledge.model.entity.KnowledgeBase(
-            name = request.name,
-            description = request.description,
-            type = request.type,
-            config = sanitizedConfig,
-            createdBy = caller.id!!,
-            createdAt = Instant.now(),
-            updatedAt = Instant.now()
-        )
-        val savedKb = knowledgeBaseRepository.save(newKb)
-
-        // Save Email Config if exists
-        try {
-            saveEmailConfig(savedKb.id!!, request.config)
-        } catch (e: Exception) {
-            // Log error but don't fail KB creation? Or rollback?
-            // For now, simple log.
-            e.printStackTrace()
-        }
-
-        // Add creator as ADMIN of the KB
-        val adminMember = com.okestro.okchat.knowledge.model.entity.KnowledgeBaseUser(
-            userId = requireNotNull(caller.id) { "Caller ID must not be null" },
-            knowledgeBaseId = savedKb.id!!,
-            role = KnowledgeBaseUserRole.ADMIN,
-            approvedBy = caller.id,
-            createdAt = Instant.now()
-        )
-        knowledgeBaseUserRepository.save(adminMember)
-
-        return ResponseEntity.ok(savedKb)
     }
 
     @GetMapping("/{kbId}/members")
@@ -152,37 +127,27 @@ class KnowledgeBaseAdminController(
         @PathVariable kbId: Long,
         @RequestParam callerEmail: String
     ): ResponseEntity<Any> {
-        val caller = userRepository.findByEmail(callerEmail)
-            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Caller not found")
-
-        // Check Permission
-        if (!canManageKb(caller, kbId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Insufficient permissions")
-        }
-
-        val members = knowledgeBaseUserRepository.findByKnowledgeBaseId(kbId)
-
-        val userIds = members.map { it.userId }.toSet()
-        val approverIds = members.mapNotNull { it.approvedBy }.toSet()
-        val allUserIds = userIds + approverIds
-
-        val users = userRepository.findAllById(allUserIds).associateBy { it.id }
-
-        val response = members.map { member ->
-            val user = users[member.userId]
-            val approver = member.approvedBy?.let { users[it] }
-
-            KnowledgeBaseMemberResponse(
-                userId = member.userId,
-                email = user?.email ?: "Unknown",
-                name = user?.name ?: "Unknown",
-                role = member.role,
-                createdAt = member.createdAt,
-                approvedBy = approver?.name
+        return try {
+            val members = getKnowledgeBaseMembersUseCase.execute(
+                GetKnowledgeBaseMembersUseCaseIn(kbId, callerEmail)
             )
-        }
 
-        return ResponseEntity.ok(response)
+            val response = members.map { member ->
+                KnowledgeBaseMemberResponse(
+                    userId = member.userId,
+                    email = member.email,
+                    name = member.name,
+                    role = member.role,
+                    createdAt = member.createdAt,
+                    approvedBy = member.approvedBy
+                )
+            }
+            ResponseEntity.ok(response)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.message)
+        } catch (e: IllegalAccessException) {
+            ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.message)
+        }
     }
 
     @PostMapping("/{kbId}/members")
@@ -192,31 +157,28 @@ class KnowledgeBaseAdminController(
         @RequestParam callerEmail: String,
         @RequestBody request: AddMemberRequest
     ): ResponseEntity<Any> {
-        val caller = userRepository.findByEmail(callerEmail)
-            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Caller not found")
-
-        if (!canManageKb(caller, kbId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Insufficient permissions")
+        return try {
+            addKnowledgeBaseMemberUseCase.execute(
+                AddKnowledgeBaseMemberUseCaseIn(
+                    kbId = kbId,
+                    callerEmail = callerEmail,
+                    targetEmail = request.email,
+                    role = request.role
+                )
+            )
+            ResponseEntity.ok("Member added")
+        } catch (e: IllegalArgumentException) {
+            // Distinguish between caller not found vs member already exists vs illegal argument
+            if (e.message == "User is already a member") {
+                ResponseEntity.badRequest().body(e.message)
+            } else {
+                ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.message)
+            }
+        } catch (e: IllegalAccessException) {
+            ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.message)
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.message)
         }
-
-        val targetUser = userRepository.findByEmail(request.email)
-            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Target user not found")
-
-        val existing = knowledgeBaseUserRepository.findByUserIdAndKnowledgeBaseId(targetUser.id!!, kbId)
-        if (existing != null) {
-            return ResponseEntity.badRequest().body("User is already a member")
-        }
-
-        val newMember = com.okestro.okchat.knowledge.model.entity.KnowledgeBaseUser(
-            userId = targetUser.id,
-            knowledgeBaseId = kbId,
-            role = request.role,
-            approvedBy = caller.id,
-            createdAt = Instant.now()
-        )
-        knowledgeBaseUserRepository.save(newMember)
-
-        return ResponseEntity.ok("Member added")
     }
 
     @DeleteMapping("/{kbId}/members/{userId}")
@@ -226,100 +188,49 @@ class KnowledgeBaseAdminController(
         @PathVariable userId: Long,
         @RequestParam callerEmail: String
     ): ResponseEntity<Any> {
-        val caller = userRepository.findByEmail(callerEmail)
-            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Caller not found")
-
-        if (!canManageKb(caller, kbId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Insufficient permissions")
+        return try {
+            removeKnowledgeBaseMemberUseCase.execute(
+                RemoveKnowledgeBaseMemberUseCaseIn(
+                    kbId = kbId,
+                    callerEmail = callerEmail,
+                    targetUserId = userId
+                )
+            )
+            ResponseEntity.ok("Member removed")
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.message)
+        } catch (e: IllegalAccessException) {
+            ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.message)
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.message)
         }
-
-        val membership =
-            knowledgeBaseUserRepository.findByUserIdAndKnowledgeBaseId(userId, kbId) ?: return ResponseEntity.status(
-                HttpStatus.NOT_FOUND
-            ).body("Member not found")
-
-        knowledgeBaseUserRepository.delete(membership)
-        return ResponseEntity.ok("Member removed")
     }
 
-    @org.springframework.web.bind.annotation.PutMapping("/{kbId}")
+    @PutMapping("/{kbId}")
     @Operation(summary = "Knowledge Base 수정")
     fun updateKnowledgeBase(
         @PathVariable kbId: Long,
         @RequestParam callerEmail: String,
         @RequestBody request: UpdateKnowledgeBaseRequest
     ): ResponseEntity<Any> {
-        val caller = userRepository.findByEmail(callerEmail)
-            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Caller not found")
-
-        // Permission check
-        if (!canManageKb(caller, kbId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Insufficient permissions")
-        }
-
-        val kb = knowledgeBaseRepository.findById(kbId).orElse(null)
-            ?: return ResponseEntity.notFound().build()
-
-        // Update fields
-        val sanitizedConfig = request.config.toMutableMap()
-        sanitizedConfig.remove("emailProviders")
-
-        val updatedKb = kb.copy(
-            name = request.name,
-            description = request.description,
-            type = request.type,
-            config = sanitizedConfig,
-            updatedAt = Instant.now()
-        )
-
-        val savedKb = knowledgeBaseRepository.save(updatedKb)
-
-        // Update Email Config
-        try {
-            saveEmailConfig(savedKb.id!!, request.config)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        return ResponseEntity.ok(savedKb)
-    }
-
-    private fun canManageKb(caller: com.okestro.okchat.user.model.entity.User, kbId: Long): Boolean {
-        // 1. System Admin
-        if (caller.role == UserRole.SYSTEM_ADMIN) return true
-
-        // 2. Space Admin
-        val membership = knowledgeBaseUserRepository.findByUserIdAndKnowledgeBaseId(caller.id!!, kbId)
-        return membership?.role == KnowledgeBaseUserRole.ADMIN
-    }
-
-    private fun saveEmailConfig(kbId: Long, configMap: Map<String, Any>) {
-        // Delete existing
-        knowledgeBaseEmailRepository.deleteByKnowledgeBaseId(kbId)
-
-        if (!configMap.containsKey("emailProviders")) return
-
-        val kbConfig = try {
-            objectMapper.convertValue(configMap, KnowledgeBaseEmailConfig::class.java)
-        } catch (e: Exception) {
-            return
-        }
-
-        kbConfig.emailProviders.values.forEach { provider ->
-            if (provider.enabled) {
-                val entity = KnowledgeBaseEmail(
-                    knowledgeBaseId = kbId,
-                    providerType = provider.type,
-                    emailAddress = provider.username,
-                    authType = provider.authType,
-                    clientId = provider.oauth2.clientId,
-                    clientSecret = provider.oauth2.clientSecret,
-                    tenantId = provider.oauth2.tenantId,
-                    scopes = provider.oauth2.scopes.joinToString(","),
-                    redirectUri = provider.oauth2.redirectUri
+        return try {
+            val savedKb = updateKnowledgeBaseUseCase.execute(
+                UpdateKnowledgeBaseUseCaseIn(
+                    kbId = kbId,
+                    callerEmail = callerEmail,
+                    name = request.name,
+                    description = request.description,
+                    type = request.type,
+                    config = request.config
                 )
-                knowledgeBaseEmailRepository.save(entity)
-            }
+            )
+            ResponseEntity.ok(savedKb)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.message)
+        } catch (e: IllegalAccessException) {
+            ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.message)
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.notFound().build()
         }
     }
 }
@@ -332,14 +243,14 @@ data class AddMemberRequest(
 data class CreateKnowledgeBaseRequest(
     val name: String,
     val description: String? = null,
-    val type: com.okestro.okchat.knowledge.model.entity.KnowledgeBaseType,
+    val type: KnowledgeBaseType,
     val config: Map<String, Any> = emptyMap()
 )
 
 data class UpdateKnowledgeBaseRequest(
     val name: String,
     val description: String? = null,
-    val type: com.okestro.okchat.knowledge.model.entity.KnowledgeBaseType,
+    val type: KnowledgeBaseType,
     val config: Map<String, Any> = emptyMap()
 )
 
@@ -347,10 +258,19 @@ data class KnowledgeBaseResponse(
     val id: Long,
     val name: String,
     val description: String?,
-    val type: com.okestro.okchat.knowledge.model.entity.KnowledgeBaseType,
+    val type: KnowledgeBaseType,
     val enabled: Boolean,
     val createdBy: Long,
     val createdAt: Instant,
     val updatedAt: Instant,
     val config: Map<String, Any> = emptyMap()
+)
+
+data class KnowledgeBaseMemberResponse(
+    val userId: Long,
+    val email: String,
+    val name: String,
+    val role: KnowledgeBaseUserRole,
+    val createdAt: Instant,
+    val approvedBy: String?
 )

@@ -2,9 +2,6 @@ package com.okestro.okchat.task.controller
 
 import com.okestro.okchat.task.dto.TaskExecutionDto
 import com.okestro.okchat.task.dto.TaskStatsDto
-import com.okestro.okchat.task.dto.toDto
-import com.okestro.okchat.task.repository.TaskExecutionParamsRepository
-import com.okestro.okchat.task.repository.TaskExecutionRepository
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -16,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.core.scheduler.Schedulers
 
 /**
  * REST API for querying Task execution history
@@ -33,8 +29,10 @@ import reactor.core.scheduler.Schedulers
     matchIfMissing = true
 )
 class TaskExecutionController(
-    private val taskExecutionRepository: TaskExecutionRepository,
-    private val taskExecutionParamsRepository: TaskExecutionParamsRepository
+    private val getRecentTaskExecutionsUseCase: com.okestro.okchat.task.application.GetRecentTaskExecutionsUseCase,
+    private val getTaskExecutionByIdUseCase: com.okestro.okchat.task.application.GetTaskExecutionByIdUseCase,
+    private val getTaskStatsUseCase: com.okestro.okchat.task.application.GetTaskStatsUseCase,
+    private val getTaskParamsUseCase: com.okestro.okchat.task.application.GetTaskParamsUseCase
 ) {
 
     /**
@@ -47,11 +45,9 @@ class TaskExecutionController(
     )
     @ApiResponse(responseCode = "200", description = "조회 성공")
     fun getAllTaskExecutions(): Flux<TaskExecutionDto> =
-        Mono.fromCallable {
-            taskExecutionRepository.findRecentExecutions().map { it.toDto() }
-        }
-            .flatMapMany { Flux.fromIterable(it) }
-            .subscribeOn(Schedulers.boundedElastic())
+        getRecentTaskExecutionsUseCase.execute(
+            com.okestro.okchat.task.application.dto.GetRecentTaskExecutionsUseCaseIn()
+        )
 
     /**
      * Get specific task execution by ID
@@ -67,12 +63,9 @@ class TaskExecutionController(
         @PathVariable
         id: Long
     ): Mono<TaskExecutionDto> =
-        Mono.fromCallable {
-            taskExecutionRepository.findById(id)
-                .orElseThrow { NoSuchElementException("Task execution not found: $id") }
-                .toDto()
-        }
-            .subscribeOn(Schedulers.boundedElastic())
+        getTaskExecutionByIdUseCase.execute(
+            com.okestro.okchat.task.application.dto.GetTaskExecutionByIdUseCaseIn(id)
+        )
 
     /**
      * Get task execution statistics
@@ -84,29 +77,16 @@ class TaskExecutionController(
     )
     @ApiResponse(responseCode = "200", description = "조회 성공")
     fun getTaskStats(): Mono<TaskStatsDto> =
-        Mono.fromCallable {
-            val stats = taskExecutionRepository.getStatistics()
-            val lastExecution = taskExecutionRepository.findRecentExecutions()
-                .firstOrNull()
-                ?.startTime
-
-            TaskStatsDto(
-                total = stats["total"] ?: 0L,
-                success = stats["success"] ?: 0L,
-                failure = stats["failure"] ?: 0L,
-                lastExecution = lastExecution
-            )
-        }
-            .subscribeOn(Schedulers.boundedElastic())
+        getTaskStatsUseCase.execute(
+            com.okestro.okchat.task.application.dto.GetTaskStatsUseCaseIn()
+        )
 
     /**
      * Get task execution parameters
      */
     @GetMapping("/{id}/params")
     fun getTaskParams(@PathVariable id: Long): Flux<String> =
-        Mono.fromCallable {
-            taskExecutionParamsRepository.findParamsByExecutionId(id)
-        }
-            .flatMapMany { Flux.fromIterable(it) }
-            .subscribeOn(Schedulers.boundedElastic())
+        getTaskParamsUseCase.execute(
+            com.okestro.okchat.task.application.dto.GetTaskParamsUseCaseIn(id)
+        )
 }

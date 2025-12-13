@@ -1,6 +1,5 @@
 package com.okestro.okchat.email.oauth2.controller
 
-import com.okestro.okchat.email.oauth2.OAuth2TokenService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
@@ -14,7 +13,9 @@ private val logger = KotlinLogging.logger {}
 
 @RestController
 class OAuth2AuthController(
-    private val oauth2TokenService: OAuth2TokenService
+    private val startOAuth2AuthUseCase: com.okestro.okchat.email.oauth2.application.StartOAuth2AuthUseCase,
+    private val getOAuth2TokenUseCase: com.okestro.okchat.email.oauth2.application.GetOAuth2TokenUseCase,
+    private val clearOAuth2TokenUseCase: com.okestro.okchat.email.oauth2.application.ClearOAuth2TokenUseCase
 ) {
     /**
      * Start OAuth2 authentication
@@ -25,7 +26,9 @@ class OAuth2AuthController(
         @RequestParam username: String,
         exchange: ServerWebExchange
     ): Mono<Void> {
-        val authUrl = oauth2TokenService.getAuthorizationUrl(username)
+        val authUrl = startOAuth2AuthUseCase.execute(
+            com.okestro.okchat.email.oauth2.application.dto.StartOAuth2AuthUseCaseIn(username)
+        )
         logger.info { "Redirecting to OAuth2 login for $username" }
 
         exchange.response.statusCode = HttpStatus.FOUND
@@ -41,7 +44,9 @@ class OAuth2AuthController(
     fun getToken(
         @RequestParam username: String
     ): Mono<Map<String, String>> =
-        oauth2TokenService.getAccessToken(username)
+        getOAuth2TokenUseCase.execute(
+            com.okestro.okchat.email.oauth2.application.dto.GetOAuth2TokenUseCaseIn(username)
+        )
             .map { token ->
                 mapOf(
                     "status" to "success",
@@ -67,7 +72,9 @@ class OAuth2AuthController(
     fun clearToken(
         @RequestParam username: String
     ): Mono<Map<String, String>> =
-        oauth2TokenService.clearToken(username)
+        clearOAuth2TokenUseCase.execute(
+            com.okestro.okchat.email.oauth2.application.dto.ClearOAuth2TokenUseCaseIn(username)
+        )
             .thenReturn(
                 mapOf(
                     "status" to "success",

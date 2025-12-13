@@ -9,6 +9,7 @@ data class SearchResult(
     var content: String,
     val path: String,
     val spaceKey: String,
+    val knowledgeBaseId: Long, // KB ID for permission filtering
     val keywords: String = "",
     val score: SearchScore.SimilarityScore,
     val type: String = "confluence-page", // Document type: confluence-page or confluence-pdf-attachment
@@ -39,6 +40,7 @@ data class SearchResult(
             content: String,
             path: String,
             spaceKey: String,
+            knowledgeBaseId: Long,
             keywords: String = "",
             distance: Double,
             type: String = "confluence-page",
@@ -47,7 +49,7 @@ data class SearchResult(
             downloadUrl: String = ""
         ): SearchResult {
             val score = SearchScore.fromDistance(distance).toSimilarity()
-            return SearchResult(id, title, content, path, spaceKey, keywords, score, type, pageId, webUrl, downloadUrl)
+            return SearchResult(id, title, content, path, spaceKey, knowledgeBaseId, keywords, score, type, pageId, webUrl, downloadUrl)
         }
 
         /**
@@ -59,6 +61,7 @@ data class SearchResult(
             content: String,
             path: String,
             spaceKey: String,
+            knowledgeBaseId: Long,
             keywords: String = "",
             similarity: SearchScore.SimilarityScore,
             type: String = "confluence-page",
@@ -66,7 +69,7 @@ data class SearchResult(
             webUrl: String = "",
             downloadUrl: String = ""
         ): SearchResult {
-            return SearchResult(id, title, content, path, spaceKey, keywords, similarity, type, pageId, webUrl, downloadUrl)
+            return SearchResult(id, title, content, path, spaceKey, knowledgeBaseId, keywords, similarity, type, pageId, webUrl, downloadUrl)
         }
     }
 }

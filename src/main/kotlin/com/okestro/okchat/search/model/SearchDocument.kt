@@ -40,7 +40,10 @@ data class SearchDocument(
     val metadataId: String? = null,
 
     @JsonProperty(MetadataFields.TYPE)
-    val metadataType: String? = null
+    val metadataType: String? = null,
+
+    @JsonProperty("knowledgeBaseId")
+    val metadataKnowledgeBaseId: Long? = null
 ) {
     /**
      * Get the actual page ID, handling chunked document IDs
@@ -93,6 +96,13 @@ data class SearchDocument(
      */
     fun getType(): String {
         return metadataType ?: metadata.type ?: "confluence-page"
+    }
+
+    /**
+     * Get knowledgeBaseId from either nested metadata or flattened field
+     */
+    fun getKnowledgeBaseId(): Long {
+        return metadataKnowledgeBaseId ?: metadata.getStringValue("knowledgeBaseId").toLongOrNull() ?: 0L
     }
 
     /**
@@ -160,7 +170,8 @@ data class SearchDocument(
                     metadataSpaceKey = map[MetadataFields.SPACE_KEY]?.toString(),
                     metadataKeywords = map[MetadataFields.KEYWORDS]?.toString(),
                     metadataId = map[MetadataFields.ID]?.toString(),
-                    metadataType = map[MetadataFields.TYPE]?.toString()
+                    metadataType = map[MetadataFields.TYPE]?.toString(),
+                    metadataKnowledgeBaseId = (map["knowledgeBaseId"] as? Number)?.toLong()
                 )
             }
         }

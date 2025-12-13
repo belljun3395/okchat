@@ -6,6 +6,7 @@ data class Document(
     var content: String? = null,
     val path: String? = null,
     val spaceKey: String? = null,
+    val knowledgeBaseId: Long? = null,
     val keywords: String ? = null,
     val score: SearchScore.SimilarityScore? = null
 )

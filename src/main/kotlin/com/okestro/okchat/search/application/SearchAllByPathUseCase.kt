@@ -63,7 +63,8 @@ class SearchAllByPathUseCase(
                                         MetadataFields.ID,
                                         MetadataFields.TITLE,
                                         MetadataFields.PATH,
-                                        MetadataFields.SPACE_KEY
+                                        MetadataFields.SPACE_KEY,
+                                        "knowledgeBaseId"
                                     )
                                 )
                             }
@@ -86,12 +87,14 @@ class SearchAllByPathUseCase(
                                 val title = source[MetadataFields.TITLE]?.toString() ?: "Untitled"
                                 val path = source[MetadataFields.PATH]?.toString() ?: ""
                                 val spaceKey = source[MetadataFields.SPACE_KEY]?.toString()
+                                val kbId = source["knowledgeBaseId"]?.toString()?.toLongOrNull()
 
                                 documents[baseId] = Document(
                                     id = baseId,
                                     title = title,
                                     path = path,
-                                    spaceKey = spaceKey
+                                    spaceKey = spaceKey,
+                                    knowledgeBaseId = kbId
                                 )
                             }
                         }

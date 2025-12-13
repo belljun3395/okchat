@@ -2,9 +2,11 @@ package com.okestro.okchat.search.application
 
 import com.okestro.okchat.search.application.dto.SearchAllPathsUseCaseIn
 import com.okestro.okchat.search.application.dto.SearchAllPathsUseCaseOut
+import com.okestro.okchat.search.model.AllowedKnowledgeBases
 import com.okestro.okchat.search.support.MetadataFields
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
+import org.opensearch.client.opensearch._types.FieldValue
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 
@@ -17,6 +19,12 @@ class SearchAllPathsUseCase(
 ) {
     fun execute(useCaseIn: SearchAllPathsUseCaseIn): SearchAllPathsUseCaseOut {
         val paths = mutableSetOf<String>()
+        val scope = useCaseIn.allowedKbIds
+
+        // If scope is Subset with empty list, it means user has NO access -> return empty
+        if (scope is AllowedKnowledgeBases.Subset && scope.ids.isEmpty()) {
+            return SearchAllPathsUseCaseOut(emptyList())
+        }
 
         try {
             var from = 0
@@ -27,6 +35,21 @@ class SearchAllPathsUseCase(
                     s.index(indexName)
                         .from(from)
                         .size(size)
+                        .query { q ->
+                            when (scope) {
+                                is AllowedKnowledgeBases.Subset -> {
+                                    q.terms { t ->
+                                        t.field("knowledgeBaseId")
+                                            .terms { v ->
+                                                v.value(scope.ids.map { FieldValue.of(it) })
+                                            }
+                                    }
+                                }
+                                AllowedKnowledgeBases.All -> {
+                                    q.matchAll { it }
+                                }
+                            }
+                        }
                         .source { src ->
                             src.filter { f ->
                                 f.includes(listOf(MetadataFields.PATH))
@@ -51,7 +74,7 @@ class SearchAllPathsUseCase(
                 from += size
             }
 
-            log.info { "Found ${paths.size} unique paths from index" }
+            log.info { "Found ${paths.size} unique paths from index (filtered=${scope is AllowedKnowledgeBases.Subset})" }
         } catch (e: Exception) {
             log.error(e) { "Failed to fetch paths from index: ${e.message}" }
         }

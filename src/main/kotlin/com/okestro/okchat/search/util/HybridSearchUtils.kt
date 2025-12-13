@@ -30,6 +30,7 @@ object HybridSearchUtils {
             val spaceKey = document.getSpaceKey()
             val keywords = document.getKeywords()
             val type = document.getType() // Get document type (page or PDF attachment)
+            val knowledgeBaseId = document.getKnowledgeBaseId()
 
             // Extract link information from metadata
             val webUrl = document.metadata.getStringValue("webUrl")
@@ -37,7 +38,7 @@ object HybridSearchUtils {
 
             val combinedScore = scoresCombiner(hit.textScore, hit.vectorScore)
 
-            log.trace { "[Parse] id=$actualPageId, title=$title, type=$type, textScore=${hit.textScore}, vectorScore=${hit.vectorScore}, combined=$combinedScore" }
+            log.trace { "[Parse] id=$actualPageId, title=$title, type=$type, kb=$knowledgeBaseId, textScore=${hit.textScore}, vectorScore=${hit.vectorScore}, combined=$combinedScore" }
 
             SearchResult.withSimilarity(
                 id = actualPageId,
@@ -45,6 +46,7 @@ object HybridSearchUtils {
                 content = document.content,
                 path = path,
                 spaceKey = spaceKey,
+                knowledgeBaseId = knowledgeBaseId,
                 keywords = keywords,
                 similarity = SearchScore.SimilarityScore(combinedScore),
                 type = type,

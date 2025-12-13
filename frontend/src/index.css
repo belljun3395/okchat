@@ -162,6 +162,10 @@ body {
   gap: 12px;
 }
 
+.gap-8 {
+  gap: 32px;
+}
+
 .gap-sm {
   gap: 8px;
 }
@@ -172,6 +176,10 @@ body {
 
 .gap-lg {
   gap: 24px;
+}
+
+.gap-xl {
+  gap: 32px;
 }
 
 .grid {
@@ -235,6 +243,16 @@ body {
 
 .pt-4 {
   padding-top: 16px;
+}
+
+.py-6 {
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+
+.px-8 {
+  padding-left: 32px;
+  padding-right: 32px;
 }
 
 .text-lg {
@@ -550,6 +568,14 @@ a:hover {
   margin-top: 16px;
 }
 
+.space-y-5>*+* {
+  margin-top: 20px;
+}
+
+.space-y-6>*+* {
+  margin-top: 24px;
+}
+
 .h-full {
   height: 100%;
 }
@@ -605,6 +631,19 @@ a:hover {
 
 .p-8 {
   padding: 32px;
+}
+
+/* Sizing Utilities */
+.w-4 { width: 16px; }
+.h-4 { height: 16px; }
+.w-5 { width: 20px; }
+.h-5 { height: 20px; }
+.w-7 { width: 28px; }
+.h-7 { height: 28px; }
+
+.modal-content {
+  max-width: 850px;
+  max-height: 90vh;
 }
 
 .text-2xl {

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { knowledgeBaseService, CreateKnowledgeBasePayload } from '../../services/knowledgeBase.service'; // Ensure imports
+import { knowledgeBaseService, CreateKnowledgeBasePayload } from '../../services/knowledgeBase.service';
 import { KnowledgeBase } from '../../types';
+import { KnowledgeBaseModal } from '../../components/knowledge-base/CreateKnowledgeBaseModal';
 
 const DashboardPage: React.FC = () => {
     const [kbs, setKbs] = useState<KnowledgeBase[]>([]);
@@ -9,14 +10,9 @@ const DashboardPage: React.FC = () => {
     const [error, setError] = useState('');
     
     // Modal State
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [newKbData, setNewKbData] = useState<CreateKnowledgeBasePayload>({
-        name: '',
-        description: '',
-        type: 'CONFLUENCE', // Default
-        config: {}
-    });
-    const [creating, setCreating] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [selectedKb, setSelectedKb] = useState<KnowledgeBase | undefined>(undefined);
+    const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         fetchKbs();
@@ -36,19 +32,39 @@ const DashboardPage: React.FC = () => {
         }
     };
 
-    const handleCreate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setCreating(true);
+    const handleCreateOrUpdate = async (data: CreateKnowledgeBasePayload) => {
+        setSubmitting(true);
         try {
-            await knowledgeBaseService.create(newKbData);
-            setShowCreateModal(false);
-            setNewKbData({ name: '', description: '', type: 'CONFLUENCE', config: {} });
+            if (selectedKb) {
+                await knowledgeBaseService.update(selectedKb.id, data);
+            } else {
+                await knowledgeBaseService.create(data);
+            }
+            setShowModal(false);
+            setSelectedKb(undefined);
             fetchKbs(); // Refresh list
         } catch (err) {
-            console.error('Failed to create KB:', err);
-            alert('Failed to create Knowledge Base');
+            console.error('Failed to save KB:', err);
+            alert('Failed to save Knowledge Base. ' + (err instanceof Error ? err.message : ''));
         } finally {
-            setCreating(false);
+            setSubmitting(false);
+        }
+    };
+
+    const openCreateModal = () => {
+        setSelectedKb(undefined);
+        setShowModal(true);
+    };
+
+    const openEditModal = async (kb: KnowledgeBase) => {
+        try {
+            // Fetch strict data (including config) from backend
+            const detailedKb = await knowledgeBaseService.getById(kb.id);
+            setSelectedKb(detailedKb);
+            setShowModal(true);
+        } catch (err) {
+            console.error(err);
+            alert("Failed to load Knowledge Base details.");
         }
     };
 
@@ -65,7 +81,7 @@ const DashboardPage: React.FC = () => {
                     </Link>
                     <button 
                         className="btn btn-primary"
-                        onClick={() => setShowCreateModal(true)}
+                        onClick={openCreateModal}
                     >
                         + Create Knowledge Base
                     </button>
@@ -113,12 +129,20 @@ const DashboardPage: React.FC = () => {
                                             )}
                                         </td>
                                         <td>
-                                            <Link 
-                                                to={`/admin/knowledge-bases/${kb.id}`}
-                                                className="btn btn-sm btn-secondary"
-                                            >
-                                                Manage
-                                            </Link>
+                                            <div className="flex gap-2">
+                                                <Link 
+                                                    to={`/admin/knowledge-bases/${kb.id}`}
+                                                    className="btn btn-sm btn-secondary"
+                                                >
+                                                    Manage
+                                                </Link>
+                                                <button
+                                                    className="btn btn-sm btn-outline"
+                                                    onClick={() => openEditModal(kb)}
+                                                >
+                                                    Edit
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -128,61 +152,14 @@ const DashboardPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Create Component Modal - Simplified Inline */}
-            {showCreateModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in">
-                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-                        <h2 className="text-xl font-bold mb-4">Create Knowledge Base</h2>
-                        <form onSubmit={handleCreate}>
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium mb-1">Name</label>
-                                <input 
-                                    type="text" 
-                                    className="form-control w-full"
-                                    value={newKbData.name}
-                                    onChange={e => setNewKbData({...newKbData, name: e.target.value})}
-                                    required
-                                />
-                            </div>
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium mb-1">Description</label>
-                                <textarea 
-                                    className="form-control w-full"
-                                    value={newKbData.description}
-                                    onChange={e => setNewKbData({...newKbData, description: e.target.value})}
-                                />
-                            </div>
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium mb-1">Type</label>
-                                <select 
-                                    className="form-control w-full"
-                                    value={newKbData.type}
-                                    onChange={e => setNewKbData({...newKbData, type: e.target.value})}
-                                >
-                                    <option value="CONFLUENCE">Confluence</option>
-                                    <option value="ETC">ETC</option>
-                                </select>
-                            </div>
-                            <div className="flex justify-end gap-2 mt-6">
-                                <button 
-                                    type="button" 
-                                    className="btn btn-secondary"
-                                    onClick={() => setShowCreateModal(false)}
-                                    disabled={creating}
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    type="submit" 
-                                    className="btn btn-primary"
-                                    disabled={creating}
-                                >
-                                    {creating ? 'Creating...' : 'Create'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+            {/* Create/Edit Component Modal */}
+            {showModal && (
+                <KnowledgeBaseModal 
+                    onClose={() => setShowModal(false)}
+                    onSubmit={handleCreateOrUpdate}
+                    loading={submitting}
+                    initialData={selectedKb}
+                />
             )}
         </div>
     );

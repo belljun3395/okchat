@@ -60,3 +60,23 @@ export interface KnowledgeBaseUser {
     role: KnowledgeBaseUserRole;
     createdAt: string;
 }
+
+export interface KnowledgeBaseEmailConfig {
+    emailProviders: Record<string, EmailProviderConfig>;
+}
+
+export interface EmailProviderConfig {
+    type: 'OUTLOOK' | 'GMAIL';
+    host: string;
+    port: number;
+    username: string;
+    authType: 'OAUTH2';
+    enabled: boolean;
+    oauth2?: {
+        clientId: string;
+        clientSecret: string;
+        tenantId?: string;
+        scopes?: string[];
+        redirectUri?: string;
+    };
+}

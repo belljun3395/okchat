@@ -42,10 +42,24 @@ export const knowledgeBaseService = {
         apiClient.post<void>(`/api/admin/knowledge-bases/${kbId}/members?callerEmail=admin@okchat.com`, { email, role }),
 
     /**
+     * Get a Knowledge Base by ID
+     */
+    getById: async (id: number) => {
+        const response = await apiClient.get<KnowledgeBase>(`/api/admin/knowledge-bases/${id}?callerEmail=admin@okchat.com`);
+        return response.data;
+    },
+
+    /**
      * Create a new Knowledge Base
      */
     create: (data: CreateKnowledgeBasePayload) => 
         apiClient.post<KnowledgeBase>('/api/admin/knowledge-bases?callerEmail=admin@okchat.com', data),
+
+    /**
+     * Update an existing Knowledge Base
+     */
+    update: (id: number, data: CreateKnowledgeBasePayload) =>
+        apiClient.put<KnowledgeBase>(`/api/admin/knowledge-bases/${id}?callerEmail=admin@okchat.com`, data),
 
     /**
      * Remove member from Knowledge Base

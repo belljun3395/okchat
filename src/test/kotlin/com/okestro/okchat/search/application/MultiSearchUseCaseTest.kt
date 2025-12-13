@@ -33,10 +33,10 @@ class MultiSearchUseCaseTest : BehaviorSpec({
 
         val mockResult = MultiSearchResult.fromMap(
             mapOf(
-                SearchType.KEYWORD to KeywordSearchResults(listOf(SearchResult(id = "k1", title = "k1", content = "k1", path = "k1", spaceKey = "k1", score = SearchScore.fromSimilarity(0.1)))),
-                SearchType.TITLE to TitleSearchResults(listOf(SearchResult(id = "t1", title = "t1", content = "t1", path = "t1", spaceKey = "t1", score = SearchScore.fromSimilarity(0.2)))),
-                SearchType.CONTENT to ContentSearchResults(listOf(SearchResult(id = "c1", title = "c1", content = "c1", path = "c1", spaceKey = "c1", score = SearchScore.fromSimilarity(0.3)))),
-                SearchType.PATH to PathSearchResults(listOf(SearchResult(id = "p1", title = "p1", content = "p1", path = "p1", spaceKey = "p1", score = SearchScore.fromSimilarity(0.4))))
+                SearchType.KEYWORD to KeywordSearchResults(listOf(SearchResult(id = "k1", title = "k1", content = "k1", path = "k1", spaceKey = "k1", score = SearchScore.fromSimilarity(0.1), knowledgeBaseId = 0L))),
+                SearchType.TITLE to TitleSearchResults(listOf(SearchResult(id = "t1", title = "t1", content = "t1", path = "t1", spaceKey = "t1", score = SearchScore.fromSimilarity(0.2), knowledgeBaseId = 0L))),
+                SearchType.CONTENT to ContentSearchResults(listOf(SearchResult(id = "c1", title = "c1", content = "c1", path = "c1", spaceKey = "c1", score = SearchScore.fromSimilarity(0.3), knowledgeBaseId = 0L))),
+                SearchType.PATH to PathSearchResults(listOf(SearchResult(id = "p1", title = "p1", content = "p1", path = "p1", spaceKey = "p1", score = SearchScore.fromSimilarity(0.4), knowledgeBaseId = 0L)))
             )
         )
 

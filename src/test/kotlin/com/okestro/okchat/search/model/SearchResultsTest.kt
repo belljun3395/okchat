@@ -13,7 +13,8 @@ class SearchResultsTest {
             content = "Content $id",
             path = "/path/$id",
             spaceKey = "TEST",
-            similarity = SearchScore.SimilarityScore(score)
+            similarity = SearchScore.SimilarityScore(score),
+            knowledgeBaseId = 0L
         )
     }
 

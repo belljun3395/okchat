@@ -18,7 +18,8 @@ class SearchResultTest {
             content = "Content",
             path = "/test",
             spaceKey = "TEST",
-            distance = distance
+            distance = distance,
+            knowledgeBaseId = 1L
         )
 
         // Then
@@ -37,7 +38,8 @@ class SearchResultTest {
             content = "Content",
             path = "/test",
             spaceKey = "TEST",
-            similarity = similarity
+            similarity = similarity,
+            knowledgeBaseId = 1L
         )
 
         // Then
@@ -53,7 +55,8 @@ class SearchResultTest {
             content = "Content1",
             path = "/test1",
             spaceKey = "TEST",
-            similarity = SearchScore.SimilarityScore(0.9)
+            similarity = SearchScore.SimilarityScore(0.9),
+            knowledgeBaseId = 1L
         )
         val result2 = SearchResult.withSimilarity(
             id = "2",
@@ -61,7 +64,8 @@ class SearchResultTest {
             content = "Content2",
             path = "/test2",
             spaceKey = "TEST",
-            similarity = SearchScore.SimilarityScore(0.5)
+            similarity = SearchScore.SimilarityScore(0.5),
+            knowledgeBaseId = 1L
         )
 
         // Then
@@ -77,7 +81,8 @@ class SearchResultTest {
             content = "First content",
             path = "/test",
             spaceKey = "TEST",
-            similarity = SearchScore.SimilarityScore(0.5)
+            similarity = SearchScore.SimilarityScore(0.5),
+            knowledgeBaseId = 1L
         )
 
         // When
@@ -96,7 +101,8 @@ class SearchResultTest {
             content = "Content",
             path = "/test",
             spaceKey = "TEST",
-            similarity = SearchScore.SimilarityScore(0.75)
+            similarity = SearchScore.SimilarityScore(0.75),
+            knowledgeBaseId = 1L
         )
 
         // Then

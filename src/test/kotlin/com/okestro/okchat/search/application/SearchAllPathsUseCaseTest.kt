@@ -1,6 +1,7 @@
 package com.okestro.okchat.search.application
 
 import com.okestro.okchat.search.application.dto.SearchAllPathsUseCaseIn
+import com.okestro.okchat.search.model.AllowedKnowledgeBases
 import com.okestro.okchat.search.support.MetadataFields
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -40,7 +41,7 @@ class SearchAllPathsUseCaseTest : BehaviorSpec({
         coEvery { openSearchClient.search(any<java.util.function.Function<org.opensearch.client.opensearch.core.SearchRequest.Builder, org.opensearch.client.util.ObjectBuilder<org.opensearch.client.opensearch.core.SearchRequest>>>(), any<Class<Map<String, Any>>>()) } returnsMany listOf(searchResponse1, searchResponse2)
 
         `when`("searchAllPaths is called") {
-            val result = searchAllPathsUseCase.execute(SearchAllPathsUseCaseIn())
+            val result = searchAllPathsUseCase.execute(SearchAllPathsUseCaseIn(AllowedKnowledgeBases.All))
 
             then("it should return a list of unique paths") {
                 result.paths.size shouldBe 2
@@ -57,7 +58,7 @@ class SearchAllPathsUseCaseTest : BehaviorSpec({
         coEvery { openSearchClient.search(any<java.util.function.Function<org.opensearch.client.opensearch.core.SearchRequest.Builder, org.opensearch.client.util.ObjectBuilder<org.opensearch.client.opensearch.core.SearchRequest>>>(), any<Class<Map<String, Any>>>()) } returns searchResponse
 
         `when`("searchAllPaths is called") {
-            val result = searchAllPathsUseCase.execute(SearchAllPathsUseCaseIn())
+            val result = searchAllPathsUseCase.execute(SearchAllPathsUseCaseIn(AllowedKnowledgeBases.All))
 
             then("it should return an empty list") {
                 result.paths.shouldBeEmpty()

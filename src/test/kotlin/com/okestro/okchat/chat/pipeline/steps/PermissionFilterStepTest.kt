@@ -165,6 +165,7 @@ class PermissionFilterStepTest {
             content = "content",
             path = "path",
             spaceKey = "TEST",
+            knowledgeBaseId = 0L,
             score = SearchScore.fromSimilarity(0.8)
         )
     }

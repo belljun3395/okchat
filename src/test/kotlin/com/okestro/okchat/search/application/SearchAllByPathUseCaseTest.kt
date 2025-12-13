@@ -31,14 +31,16 @@ class SearchAllByPathUseCaseTest : BehaviorSpec({
             coEvery { source() } returns mapOf(
                 MetadataFields.ID to docId1,
                 MetadataFields.TITLE to docTitle1,
-                MetadataFields.PATH to documentPath
+                MetadataFields.PATH to documentPath,
+                "knowledgeBaseId" to 0L
             )
         }
         val hit2 = mockk<Hit<Map<String, Any>>>() {
             coEvery { source() } returns mapOf(
                 MetadataFields.ID to docId2,
                 MetadataFields.TITLE to docTitle2,
-                MetadataFields.PATH to documentPath
+                MetadataFields.PATH to documentPath,
+                "knowledgeBaseId" to 0L
             )
         }
 
@@ -62,8 +64,8 @@ class SearchAllByPathUseCaseTest : BehaviorSpec({
             then("it should return a list of documents") {
                 result.documents.size shouldBe 2
                 result.documents shouldContainExactly listOf(
-                    Document(id = docId1, title = docTitle1, path = documentPath, content = null, spaceKey = null, keywords = null, score = null),
-                    Document(id = docId2, title = docTitle2, path = documentPath, content = null, spaceKey = null, keywords = null, score = null)
+                    Document(id = docId1, title = docTitle1, path = documentPath, content = null, spaceKey = null, keywords = null, score = null, knowledgeBaseId = 0L),
+                    Document(id = docId2, title = docTitle2, path = documentPath, content = null, spaceKey = null, keywords = null, score = null, knowledgeBaseId = 0L)
                 )
             }
         }

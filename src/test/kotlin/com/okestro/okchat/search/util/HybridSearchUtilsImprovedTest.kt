@@ -33,7 +33,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                                 title = "Title 1",
                                 path = "/path1",
                                 spaceKey = "TEST",
-                                keywords = "keyword1"
+                                keywords = "keyword1",
+                                knowledgeBaseId = 0L
                             ),
                             textScore = 0.8,
                             vectorScore = 0.6
@@ -45,7 +46,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                                 title = "Title 2",
                                 path = "/path2",
                                 spaceKey = "TEST",
-                                keywords = "keyword2"
+                                keywords = "keyword2",
+                                knowledgeBaseId = 0L
                             ),
                             textScore = 0.5,
                             vectorScore = 0.9
@@ -107,7 +109,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                                 content = "Content 1",
                                 title = "Title 1",
                                 path = "/path1",
-                                spaceKey = "TEST"
+                                spaceKey = "TEST",
+                                knowledgeBaseId = 0L
                             ),
                             textScore = textScore,
                             vectorScore = vectorScore
@@ -160,7 +163,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                                 content = "Content",
                                 title = "Title",
                                 path = "/path",
-                                spaceKey = "TEST"
+                                spaceKey = "TEST",
+                                knowledgeBaseId = 0L
                             ),
                             textScore = 0.8,
                             vectorScore = 0.6
@@ -199,7 +203,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                                 "content" to "Content",
                                 "metadata.title" to "Title",
                                 "metadata.path" to "/path",
-                                "metadata.spaceKey" to "TEST"
+                                "metadata.spaceKey" to "TEST",
+                                "metadata.knowledgeBaseId" to 0L
                                 // keywords missing
                             ),
                             textScore = 0.8,
@@ -231,7 +236,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                         content = "Chunk 1",
                         path = "/path",
                         spaceKey = "TEST",
-                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.8)
+                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.8),
+                        knowledgeBaseId = 0L
                     ),
                     SearchResult.withSimilarity(
                         id = "page1",
@@ -239,7 +245,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                         content = "Chunk 2",
                         path = "/path",
                         spaceKey = "TEST",
-                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.6)
+                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.6),
+                        knowledgeBaseId = 0L
                     ),
                     SearchResult.withSimilarity(
                         id = "page2",
@@ -247,7 +254,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                         content = "Different content",
                         path = "/path2",
                         spaceKey = "TEST",
-                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.5)
+                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.5),
+                        knowledgeBaseId = 0L
                     )
                 )
 
@@ -272,7 +280,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                         content = "Content",
                         path = "/path",
                         spaceKey = "TEST",
-                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.8)
+                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.8),
+                        knowledgeBaseId = 0L
                     )
                 )
 
@@ -321,7 +330,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                         content = "Content $i",
                         path = "/path",
                         spaceKey = "TEST",
-                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.8 - (i * 0.05))
+                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.8 - (i * 0.05)),
+                        knowledgeBaseId = 0L
                     )
                 }
 
@@ -344,7 +354,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                         content = "Content 1",
                         path = "/path1",
                         spaceKey = "TEST",
-                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.5)
+                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.5),
+                        knowledgeBaseId = 0L
                     ),
                     SearchResult.withSimilarity(
                         id = "page2",
@@ -352,7 +363,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                         content = "Content 2",
                         path = "/path2",
                         spaceKey = "TEST",
-                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.9)
+                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.9),
+                        knowledgeBaseId = 0L
                     ),
                     SearchResult.withSimilarity(
                         id = "page3",
@@ -360,7 +372,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                         content = "Content 3",
                         path = "/path3",
                         spaceKey = "TEST",
-                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.7)
+                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.7),
+                        knowledgeBaseId = 0L
                     )
                 )
 
@@ -391,7 +404,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                         content = "First chunk",
                         path = "/path",
                         spaceKey = "TEST",
-                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.8)
+                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.8),
+                        knowledgeBaseId = 0L
                     ),
                     SearchResult.withSimilarity(
                         id = "page1",
@@ -399,7 +413,8 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                         content = "Second chunk",
                         path = "/path",
                         spaceKey = "TEST",
-                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.7)
+                        similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.7),
+                        knowledgeBaseId = 0L
                     )
                 )
 

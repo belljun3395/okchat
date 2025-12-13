@@ -74,10 +74,12 @@ object TestFixtures {
         var pageId: String = ""
         var webUrl: String = ""
         var downloadUrl: String = ""
+        var knowledgeBaseId: Long = 0L
 
         infix fun withSimilarity(score: Double) = apply { this.similarity = score }
         infix fun inSpace(key: String) = apply { this.spaceKey = key }
         infix fun atPath(path: String) = apply { this.path = path }
+        infix fun withKnowledgeBaseId(id: Long) = apply { this.knowledgeBaseId = id }
 
         fun build(): SearchResult = SearchResult.withSimilarity(
             id = id,
@@ -90,7 +92,8 @@ object TestFixtures {
             type = type,
             pageId = pageId,
             webUrl = webUrl,
-            downloadUrl = downloadUrl
+            downloadUrl = downloadUrl,
+            knowledgeBaseId = knowledgeBaseId
         )
     }
 
@@ -112,6 +115,7 @@ object TestFixtures {
         var maxScore: Double = 0.9
         var minScore: Double = 0.5
         var spaceKey: String = "TEST"
+        var knowledgeBaseId: Long = 0L
 
         fun build(): List<SearchResult> {
             val scoreStep = (maxScore - minScore) / count.coerceAtLeast(1)
@@ -119,6 +123,7 @@ object TestFixtures {
             val collectionTitlePrefix = titlePrefix
             val collectionMaxScore = maxScore
             val collectionSpaceKey = spaceKey
+            val collectionKnowledgeBaseId = knowledgeBaseId
 
             return (1..count).map { index ->
                 searchResult {
@@ -127,6 +132,7 @@ object TestFixtures {
                     content = "Content for document $index"
                     path = "/path$index"
                     this.spaceKey = collectionSpaceKey
+                    this.knowledgeBaseId = collectionKnowledgeBaseId
                     similarity = collectionMaxScore - (scoreStep * (index - 1))
                 }
             }
@@ -307,9 +313,11 @@ object TestFixtures {
         var path: String = "/test"
         var spaceKey: String = "TEST"
         var keywords: String? = null
+        var knowledgeBaseId: Long = 0L
 
         infix fun withKeywords(kw: String) = apply { this.keywords = kw }
         infix fun withId(id: String) = apply { this.id = id }
+        infix fun withKnowledgeBaseId(id: Long) = apply { this.knowledgeBaseId = id }
 
         fun build(): Map<String, Any> {
             val doc = mutableMapOf<String, Any>(
@@ -317,7 +325,8 @@ object TestFixtures {
                 "content" to content,
                 "metadata.title" to title,
                 "metadata.path" to path,
-                "metadata.spaceKey" to spaceKey
+                "metadata.spaceKey" to spaceKey,
+                "metadata.knowledgeBaseId" to knowledgeBaseId
             )
             keywords?.let { doc["metadata.keywords"] = it }
             return doc
@@ -336,7 +345,8 @@ object TestFixtures {
             title: String = "Test Title",
             path: String = "/test",
             spaceKey: String = "TEST",
-            keywords: String? = null
+            keywords: String? = null,
+            knowledgeBaseId: Long = 0L
         ): Map<String, Any> = searchHitDocument {
             this.id = id
             this.content = content
@@ -344,6 +354,7 @@ object TestFixtures {
             this.path = path
             this.spaceKey = spaceKey
             this.keywords = keywords
+            this.knowledgeBaseId = knowledgeBaseId
         }
     }
 

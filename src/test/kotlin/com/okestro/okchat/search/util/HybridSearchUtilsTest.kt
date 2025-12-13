@@ -21,7 +21,8 @@ class HybridSearchUtilsTest {
                         "metadata.title" to "Title 1",
                         "metadata.path" to "/path1",
                         "metadata.spaceKey" to "TEST",
-                        "metadata.keywords" to "keyword1"
+                        "metadata.keywords" to "keyword1",
+                        "metadata.knowledgeBaseId" to 0L
                     ),
                     textScore = 0.8,
                     vectorScore = 0.6
@@ -33,7 +34,8 @@ class HybridSearchUtilsTest {
                         "metadata.title" to "Title 2",
                         "metadata.path" to "/path2",
                         "metadata.spaceKey" to "TEST",
-                        "metadata.keywords" to "keyword2"
+                        "metadata.keywords" to "keyword2",
+                        "metadata.knowledgeBaseId" to 0L
                     ),
                     textScore = 0.5,
                     vectorScore = 0.9
@@ -61,7 +63,8 @@ class HybridSearchUtilsTest {
                         "content" to "Content 1",
                         "metadata.title" to "Title 1",
                         "metadata.path" to "/path1",
-                        "metadata.spaceKey" to "TEST"
+                        "metadata.spaceKey" to "TEST",
+                        "metadata.knowledgeBaseId" to 0L
                     ),
                     textScore = 0.8,
                     vectorScore = 0.6
@@ -90,7 +93,8 @@ class HybridSearchUtilsTest {
                         "content" to "Content",
                         "metadata.title" to "Title",
                         "metadata.path" to "/path",
-                        "metadata.spaceKey" to "TEST"
+                        "metadata.spaceKey" to "TEST",
+                        "metadata.knowledgeBaseId" to 0L
                     ),
                     textScore = 0.8,
                     vectorScore = 0.6
@@ -115,7 +119,8 @@ class HybridSearchUtilsTest {
                 content = "Chunk 1",
                 path = "/path",
                 spaceKey = "TEST",
-                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.8)
+                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.8),
+                knowledgeBaseId = 0L
             ),
             SearchResult.withSimilarity(
                 id = "page1",
@@ -123,7 +128,8 @@ class HybridSearchUtilsTest {
                 content = "Chunk 2",
                 path = "/path",
                 spaceKey = "TEST",
-                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.6)
+                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.6),
+                knowledgeBaseId = 0L
             ),
             SearchResult.withSimilarity(
                 id = "page2",
@@ -131,7 +137,8 @@ class HybridSearchUtilsTest {
                 content = "Different content",
                 path = "/path2",
                 spaceKey = "TEST",
-                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.5)
+                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.5),
+                knowledgeBaseId = 0L
             )
         )
 
@@ -158,7 +165,8 @@ class HybridSearchUtilsTest {
                 content = "Content",
                 path = "/path",
                 spaceKey = "TEST",
-                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.8)
+                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.8),
+                knowledgeBaseId = 0L
             )
         )
 
@@ -180,7 +188,8 @@ class HybridSearchUtilsTest {
                 content = "Content 1",
                 path = "/path1",
                 spaceKey = "TEST",
-                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.5)
+                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.5),
+                knowledgeBaseId = 0L
             ),
             SearchResult.withSimilarity(
                 id = "page2",
@@ -188,7 +197,8 @@ class HybridSearchUtilsTest {
                 content = "Content 2",
                 path = "/path2",
                 spaceKey = "TEST",
-                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.9)
+                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.9),
+                knowledgeBaseId = 0L
             ),
             SearchResult.withSimilarity(
                 id = "page3",
@@ -196,7 +206,8 @@ class HybridSearchUtilsTest {
                 content = "Content 3",
                 path = "/path3",
                 spaceKey = "TEST",
-                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.7)
+                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.7),
+                knowledgeBaseId = 0L
             )
         )
 

@@ -44,9 +44,7 @@ import java.time.Instant
  * This task can be run as:
  * 1. Standalone application
  * 2. Kubernetes Job/CronJob
- * 3. Scheduled task in cloud environments
- *
- * Run with: --spring.cloud.task.name=confluence-sync-task
+ * 3. 클라우드 환경의 예약된 작업 (Scheduled Task)
  */
 @Component
 @ConditionalOnProperty(

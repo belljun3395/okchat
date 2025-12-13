@@ -39,7 +39,7 @@ class SearchAllPathsUseCase(
                             when (scope) {
                                 is AllowedKnowledgeBases.Subset -> {
                                     q.terms { t ->
-                                        t.field("knowledgeBaseId")
+                                        t.field(MetadataFields.KNOWLEDGE_BASE_ID)
                                             .terms { v ->
                                                 v.value(scope.ids.map { FieldValue.of(it) })
                                             }

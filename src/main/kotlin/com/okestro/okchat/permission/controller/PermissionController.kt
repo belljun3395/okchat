@@ -59,9 +59,14 @@ class PermissionController(
 
     @GetMapping("/paths")
     @Operation(summary = "모든 문서 경로 조회")
-    suspend fun getAllPaths(@RequestParam(defaultValue = "admin@okchat.com") callerEmail: String): ResponseEntity<Any> {
+    suspend fun getAllPaths(
+        @RequestParam(defaultValue = "admin@okchat.com") callerEmail: String,
+        @RequestParam(required = false) knowledgeBaseId: Long?
+    ): ResponseEntity<Any> {
         try {
-            val result = getAllowedPathsForUserUseCase.execute(GetAllowedPathsForUserUseCaseIn(callerEmail))
+            val result = getAllowedPathsForUserUseCase.execute(
+                GetAllowedPathsForUserUseCaseIn(callerEmail, knowledgeBaseId)
+            )
             return ResponseEntity.ok(result.paths)
         } catch (e: IllegalArgumentException) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.message)

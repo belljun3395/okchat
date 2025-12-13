@@ -30,18 +30,30 @@ class GetAllowedPathsForUserUseCase(
             ?: throw IllegalArgumentException("Caller not found: $email")
 
         val scope: AllowedKnowledgeBases = if (caller.role == UserRole.SYSTEM_ADMIN) {
-            AllowedKnowledgeBases.All
+            if (useCaseIn.knowledgeBaseId != null) {
+                AllowedKnowledgeBases.Subset(listOf(useCaseIn.knowledgeBaseId))
+            } else {
+                AllowedKnowledgeBases.All
+            }
         } else {
             val memberships = withContext(Dispatchers.IO + MDCContext()) {
                 knowledgeBaseUserRepository.findByUserId(caller.id!!)
             }
             val spaceAdminKbIds =
-                memberships.filter { it.role == KnowledgeBaseUserRole.ADMIN }.map { it.knowledgeBaseId }
+                memberships.filter { it.role == KnowledgeBaseUserRole.ADMIN }.map { it.knowledgeBaseId }.toSet()
 
             if (spaceAdminKbIds.isEmpty()) {
                 throw IllegalAccessException("Insufficient permissions for user: $email")
             }
-            AllowedKnowledgeBases.Subset(spaceAdminKbIds)
+
+            if (useCaseIn.knowledgeBaseId != null) {
+                if (!spaceAdminKbIds.contains(useCaseIn.knowledgeBaseId)) {
+                    throw IllegalAccessException("User $email does not have permission for Knowledge Base ${useCaseIn.knowledgeBaseId}")
+                }
+                AllowedKnowledgeBases.Subset(listOf(useCaseIn.knowledgeBaseId))
+            } else {
+                AllowedKnowledgeBases.Subset(spaceAdminKbIds.toList())
+            }
         }
 
         log.info { "Get allowed paths for $email (Allowed KBs: $scope)" }

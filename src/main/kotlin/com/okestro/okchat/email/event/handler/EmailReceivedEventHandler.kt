@@ -95,7 +95,8 @@ class EmailReceivedEventHandler(
                     originalMessage = message,
                     replyContent = errorResponse,
                     providerType = event.providerType,
-                    toEmail = message.to.firstOrNull() ?: "unknown"
+                    toEmail = message.to.firstOrNull() ?: "unknown",
+                    knowledgeBaseId = event.knowledgeBaseId
                 )
             )
             logger.info { "[EmailHandler] Empty content error response saved for review: from=${message.from}" }
@@ -135,7 +136,8 @@ class EmailReceivedEventHandler(
                     originalMessage = message,
                     replyContent = replyContent,
                     providerType = event.providerType,
-                    toEmail = message.to.firstOrNull() ?: "unknown"
+                    toEmail = message.to.firstOrNull() ?: "unknown",
+                    knowledgeBaseId = event.knowledgeBaseId
                 )
             )
             logger.info { "AI-generated reply saved for review: from=${message.from}, subject=${message.subject}" }

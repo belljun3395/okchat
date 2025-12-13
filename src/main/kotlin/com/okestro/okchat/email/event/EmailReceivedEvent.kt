@@ -10,5 +10,6 @@ import com.okestro.okchat.email.provider.EmailMessage
 data class EmailReceivedEvent(
     val message: EmailMessage,
     val providerType: EmailProperties.EmailProviderType,
+    val knowledgeBaseId: Long,
     val timestamp: Long = System.currentTimeMillis()
 )

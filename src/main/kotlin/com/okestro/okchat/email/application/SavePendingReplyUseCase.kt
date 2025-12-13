@@ -33,7 +33,8 @@ class SavePendingReplyUseCase(
                 providerType = useCaseIn.providerType,
                 messageId = messageId,
                 status = ReviewStatus.PENDING,
-                createdAt = Instant.now()
+                createdAt = Instant.now(),
+                knowledgeBaseId = useCaseIn.knowledgeBaseId
             )
 
             val saved = pendingEmailReplyRepository.save(pendingReply)

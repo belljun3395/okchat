@@ -3,6 +3,8 @@ package com.okestro.okchat.task
 import com.okestro.okchat.email.event.EmailEventBus
 import com.okestro.okchat.email.event.EmailReceivedEvent
 import com.okestro.okchat.email.provider.EmailProvider
+import com.okestro.okchat.email.provider.EmailProviderFactory
+import com.okestro.okchat.knowledge.repository.KnowledgeBaseRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Component
  * - Periodic execution via @Scheduled
  * - Single instance guarantee via Spring Cloud Task (enabled in TaskConfig)
  * - Automatic failover when primary instance fails
+ * - Per-KnowledgeBase polling
  */
 @Component
 @ConditionalOnProperty(
@@ -31,7 +34,9 @@ import org.springframework.stereotype.Component
     matchIfMissing = false
 )
 class EmailPollingTask(
-    private val emailProviders: List<EmailProvider>,
+    private val knowledgeBaseRepository: KnowledgeBaseRepository,
+    private val knowledgeBaseEmailRepository: com.okestro.okchat.knowledge.repository.KnowledgeBaseEmailRepository,
+    private val emailProviderFactory: EmailProviderFactory,
     private val emailEventBus: EmailEventBus,
     private val meterRegistry: MeterRegistry
 ) : CommandLineRunner {
@@ -49,8 +54,8 @@ class EmailPollingTask(
      * Scheduled polling (protected by Spring Cloud Task single instance)
      */
     @Scheduled(
-        fixedDelayString = "\${email.polling.interval}",
-        initialDelayString = "\${email.polling.initial-delay}"
+        fixedDelayString = "\${email.polling.interval:60000}",
+        initialDelayString = "\${email.polling.initial-delay:10000}"
     )
     fun pollEmails() {
         log.info { "========== Start Email Polling Task ==========" }
@@ -58,23 +63,48 @@ class EmailPollingTask(
         val tags = Tags.of("task", "email-polling")
 
         try {
-            if (emailProviders.isEmpty()) {
-                log.warn { "No email providers configured. Skipping email polling." }
+            val knowledgeBases = knowledgeBaseRepository.findAllByEnabledTrue()
+
+            if (knowledgeBases.isEmpty()) {
+                log.info { "No enabled Knowledge Bases found. Skipping email polling." }
                 return
             }
 
-            log.info { "Polling ${emailProviders.size} email provider(s)..." }
+            log.info { "Checking ${knowledgeBases.size} enabled Knowledge Bases..." }
 
             var totalMessages = 0
             var totalEvents = 0
+            var processedKbs = 0
 
-            emailProviders.forEach { provider ->
-                val (messages, events) = pollProvider(provider)
-                totalMessages += messages
-                totalEvents += events
+            knowledgeBases.forEach { kb ->
+                try {
+                    val emailConfigs = knowledgeBaseEmailRepository.findAllByKnowledgeBaseId(kb.id!!)
+
+                    if (emailConfigs.isEmpty()) {
+                        return@forEach
+                    }
+
+                    processedKbs++
+                    log.info { "Polling emails for Knowledge Base: ${kb.name} (ID: ${kb.id})" }
+
+                    emailConfigs.forEach { emailConfig ->
+                        // Create provider instance dynamically
+                        val pollingConfig = emailConfig.toEmailProviderConfig()
+                        val provider = emailProviderFactory.createProvider(pollingConfig)
+
+                        if (provider != null) {
+                            val (messages, events) = pollProvider(provider, kb.id!!)
+                            totalMessages += messages
+                            totalEvents += events
+                        }
+                    }
+                } catch (e: Exception) {
+                    log.error(e) { "Error processing Knowledge Base ID=${kb.id}" }
+                }
             }
 
             log.info { "========== Email Polling Completed ==========" }
+            log.info { "Processed KBs: $processedKbs" }
             log.info { "Total messages fetched: $totalMessages" }
             log.info { "Total events published: $totalEvents" }
 
@@ -85,7 +115,7 @@ class EmailPollingTask(
         } catch (e: Exception) {
             sample.stop(meterRegistry.timer("task.execution.time", tags.and("status", "failure")))
             meterRegistry.counter("task.execution.count", tags.and("status", "failure")).increment()
-            log.error(e) { "Error during email polling: ${e.message}" }
+            log.error(e) { "Error during email polling task: ${e.message}" }
         }
     }
 
@@ -93,7 +123,7 @@ class EmailPollingTask(
      * Poll a single email provider and publish events
      * Returns pair of (messages fetched, events published)
      */
-    private fun pollProvider(provider: EmailProvider): Pair<Int, Int> = runBlocking {
+    private fun pollProvider(provider: EmailProvider, knowledgeBaseId: Long): Pair<Int, Int> = runBlocking {
         val providerType = provider.getProviderType()
 
         try {
@@ -117,7 +147,8 @@ class EmailPollingTask(
                 val events = messages.map { message ->
                     EmailReceivedEvent(
                         message = message,
-                        providerType = providerType
+                        providerType = providerType,
+                        knowledgeBaseId = knowledgeBaseId
                     )
                 }
 

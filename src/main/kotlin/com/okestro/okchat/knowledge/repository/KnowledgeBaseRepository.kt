@@ -8,4 +8,5 @@ import org.springframework.stereotype.Repository
 @Repository
 interface KnowledgeBaseRepository : JpaRepository<KnowledgeBase, Long> {
     fun findAllByEnabledTrueAndType(type: KnowledgeBaseType): List<KnowledgeBase>
+    fun findAllByEnabledTrue(): List<KnowledgeBase>
 }

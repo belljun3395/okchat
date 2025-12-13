@@ -73,6 +73,12 @@ data class PendingEmailReply(
     val messageId: String? = null,
 
     /**
+     * Knowledge Base ID this email belongs to
+     */
+    @Column(name = "knowledge_base_id", nullable = false)
+    val knowledgeBaseId: Long = 0L,
+
+    /**
      * Review status
      */
     @Column(nullable = false, length = 20)

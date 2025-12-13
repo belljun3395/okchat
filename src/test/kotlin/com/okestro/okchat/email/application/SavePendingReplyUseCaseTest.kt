@@ -58,7 +58,8 @@ class SavePendingReplyUseCaseTest : BehaviorSpec({
                         originalMessage = message,
                         replyContent = "답변 내용",
                         providerType = EmailProperties.EmailProviderType.GMAIL,
-                        toEmail = "reply@example.com"
+                        toEmail = "reply@example.com",
+                        knowledgeBaseId = 0L
                     )
                 )
             }

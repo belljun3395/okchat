@@ -8,7 +8,8 @@ data class SavePendingReplyUseCaseIn(
     val originalMessage: EmailMessage,
     val replyContent: String,
     val providerType: EmailProperties.EmailProviderType,
-    val toEmail: String
+    val toEmail: String,
+    val knowledgeBaseId: Long
 )
 
 data class SavePendingReplyUseCaseOut(

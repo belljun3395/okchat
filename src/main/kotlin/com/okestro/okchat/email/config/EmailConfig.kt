@@ -1,7 +1,5 @@
 package com.okestro.okchat.email.config
 
-import com.okestro.okchat.email.provider.EmailProvider
-import com.okestro.okchat.email.provider.EmailProviderFactory
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -11,15 +9,6 @@ import reactor.core.scheduler.Schedulers
 @Configuration
 @EnableConfigurationProperties(EmailProperties::class)
 class EmailConfig {
-    @Bean
-    fun emailProviders(
-        emailProperties: EmailProperties,
-        emailProviderFactory: EmailProviderFactory
-    ): List<EmailProvider> =
-        emailProperties.providers
-            .mapNotNull { (name, config) ->
-                emailProviderFactory.createProvider(name, config)
-            }
 
     /**
      * Dedicated scheduler for blocking email operations (Jakarta Mail)

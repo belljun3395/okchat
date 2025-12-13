@@ -13,11 +13,9 @@ class EmailProviderFactory(
     private val emailProperties: EmailProperties
 ) {
     fun createProvider(
-        name: String,
         config: EmailProperties.EmailProviderConfig
     ): EmailProvider? {
         if (!config.enabled) {
-            logger.info { "Email provider '$name' is disabled" }
             return null
         }
 

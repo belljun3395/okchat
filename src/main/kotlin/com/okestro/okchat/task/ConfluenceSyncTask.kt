@@ -11,6 +11,7 @@ import com.okestro.okchat.confluence.service.PdfAttachmentService
 import com.okestro.okchat.confluence.util.ContentHierarchyVisualizer
 import com.okestro.okchat.knowledge.model.entity.KnowledgeBase
 import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseType
+import com.okestro.okchat.knowledge.model.value.ContentPath
 import com.okestro.okchat.knowledge.repository.DocumentRepository
 import com.okestro.okchat.knowledge.repository.KnowledgeBaseRepository
 import com.okestro.okchat.search.support.MetadataFields
@@ -226,7 +227,7 @@ class ConfluenceSyncTask(
                         }
                     }
 
-                    val pathKeywords = path.split(" > ").map { it.trim() }.filter { it.isNotBlank() }
+                    val pathKeywords = ContentPath.split(path).map { it.trim() }.filter { it.isNotBlank() }
                     val allKeywords = (keywords + pathKeywords).distinct()
 
                     val documentContent = pageContent.ifBlank { pageTitle }
@@ -243,9 +244,9 @@ class ConfluenceSyncTask(
                         path = path,
                         webUrl = pageUrl,
                         metadata = mapOf(
-                            "type" to "confluence-page",
-                            "keywords" to allKeywords,
-                            "spaceKey" to spaceKey
+                            MetadataFields.Nested.TYPE to KnowledgeBaseType.CONFLUENCE.name,
+                            MetadataFields.Nested.KEYWORDS to allKeywords,
+                            MetadataFields.Nested.SPACE_KEY to spaceKey
                         ),
                         lastSyncedAt = Instant.now()
                     )
@@ -254,7 +255,7 @@ class ConfluenceSyncTask(
                     val baseMetadata = metadata {
                         this.id = node.id
                         this.title = pageTitle
-                        this.type = "confluence-page"
+                        this.type = KnowledgeBaseType.CONFLUENCE.name
                         this.spaceKey = spaceKey
                         this.path = path
                         this.keywords = allKeywords
@@ -370,6 +371,6 @@ class ConfluenceSyncTask(
 
     private fun getPagePath(node: ContentNode, hierarchy: ContentHierarchy): String {
         val pathNodes = hierarchy.getPathToNode(node.id) ?: return node.title
-        return pathNodes.joinToString(" > ") { it.title }
+        return ContentPath.of(pathNodes.map { it.title })
     }
 }

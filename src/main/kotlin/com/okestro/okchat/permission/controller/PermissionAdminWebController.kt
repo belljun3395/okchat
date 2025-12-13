@@ -1,5 +1,6 @@
 package com.okestro.okchat.permission.controller
 
+import com.okestro.okchat.knowledge.model.value.ContentPath
 import com.okestro.okchat.permission.application.GetPathPermissionsUseCase
 import com.okestro.okchat.permission.application.GetUserPermissionsUseCase
 import com.okestro.okchat.permission.application.dto.GetPathPermissionsUseCaseIn
@@ -126,7 +127,7 @@ class PermissionAdminWebController(
 
         // Group paths by hierarchy
         val groupedPaths = paths.groupBy { path ->
-            val parts = path.split(" > ")
+            val parts = ContentPath.split(path)
             if (parts.size > 1) parts[0] else "Root"
         }
 

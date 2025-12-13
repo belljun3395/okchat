@@ -1,5 +1,6 @@
 package com.okestro.okchat.search.application
 
+import com.okestro.okchat.knowledge.model.value.ContentPath
 import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseIn
 import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseOut
 import com.okestro.okchat.search.model.Document
@@ -48,7 +49,7 @@ class SearchAllByPathUseCase(
                                         // Prefix match for sub-paths (path starts with documentPath + " > ")
                                         sh.prefix { p ->
                                             p.field(MetadataFields.PATH)
-                                                .value(documentPath)
+                                                .value(documentPath + ContentPath.SEPARATOR)
                                         }
                                     }
                                     .minimumShouldMatch("1")

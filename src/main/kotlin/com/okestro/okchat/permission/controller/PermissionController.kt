@@ -59,7 +59,7 @@ class PermissionController(
 
     @GetMapping("/paths")
     @Operation(summary = "모든 문서 경로 조회")
-    suspend fun getAllPaths(@RequestParam(defaultValue = "admin@okestro.com") callerEmail: String): ResponseEntity<Any> {
+    suspend fun getAllPaths(@RequestParam(defaultValue = "admin@okchat.com") callerEmail: String): ResponseEntity<Any> {
         try {
             val result = getAllowedPathsForUserUseCase.execute(GetAllowedPathsForUserUseCaseIn(callerEmail))
             return ResponseEntity.ok(result.paths)

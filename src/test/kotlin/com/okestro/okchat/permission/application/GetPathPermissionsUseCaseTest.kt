@@ -21,34 +21,34 @@ class GetPathPermissionsUseCaseTest : BehaviorSpec({
         clearAllMocks()
     }
 
-    given("특정 경로에 여러 권한이 존재할 때") {
-        val path = "문서 > 팀 A"
+    given("Multiple permissions exist for a specific path") {
+        val path = "Documents > Team A"
         val permissions = listOf(
             DocumentPathPermission(id = 1L, userId = 1L, documentPath = path, spaceKey = "S", permissionLevel = PermissionLevel.READ, grantedBy = null),
             DocumentPathPermission(id = 2L, userId = 2L, documentPath = path, spaceKey = "S", permissionLevel = PermissionLevel.DENY, grantedBy = null)
         )
         every { documentPathPermissionRepository.findByDocumentPath(path) } returns permissions
 
-        `when`("경로의 권한을 조회하면") {
+        `when`("Permissions for the path are requested") {
             val input = GetPathPermissionsUseCaseIn(path)
             val result = useCase.execute(input)
 
-            then("모든 권한 목록이 반환된다") {
+            then("All permissions are returned") {
                 result.permissions shouldHaveSize 2
                 result.permissions shouldBe permissions
             }
         }
     }
 
-    given("특정 경로에 권한이 없을 때") {
-        val path = "문서 > 팀 B"
+    given("No permissions exist for a specific path") {
+        val path = "Documents > Team B"
         every { documentPathPermissionRepository.findByDocumentPath(path) } returns emptyList()
 
-        `when`("경로의 권한을 조회하면") {
+        `when`("Permissions for the path are requested") {
             val input = GetPathPermissionsUseCaseIn(path)
             val result = useCase.execute(input)
 
-            then("빈 목록이 반환된다") {
+            then("Empty list is returned") {
                 result.permissions.shouldBeEmpty()
             }
         }

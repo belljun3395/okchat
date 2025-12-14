@@ -34,8 +34,8 @@ class EmailReplyServiceEnhancedTest {
         @DisplayName("should build reply content with answer and original message")
         fun `should build reply content with answer and original message`() {
             // given
-            val answer = "이것은 AI의 답변입니다"
-            val originalContent = "원본 질문 내용입니다"
+            val answer = "This is an AI answer"
+            val originalContent = "Original question content"
 
             // when
             val result = service.buildReplyContent(answer, originalContent)
@@ -72,7 +72,7 @@ class EmailReplyServiceEnhancedTest {
         @DisplayName("should truncate long original content")
         fun `should truncate long original content`() {
             // given
-            val answer = "답변"
+            val answer = "Answer"
             val originalContent = (1..50).joinToString("\n") { "Line $it" }
 
             // when
@@ -119,8 +119,8 @@ class EmailReplyServiceEnhancedTest {
         @DisplayName("should handle special characters in content")
         fun `should handle special characters in content`() {
             // given
-            val answer = "답변: 한글 테스트 <test@example.com>"
-            val originalContent = "질문: 특수문자 & < > \" '"
+            val answer = "Answer: Test <test@example.com>"
+            val originalContent = "Question: Special chars & < > \" '"
 
             // when
             val result = service.buildReplyContent(answer, originalContent)

@@ -39,21 +39,21 @@ class FilterSearchResultsUseCaseTest : BehaviorSpec({
 
     fun createTestSearchResult(path: String, kbId: Long = 1L): SearchResult = SearchResult(
         id = "id-$path",
-        title = "제목",
-        content = "내용",
+        title = "Title",
+        content = "Content",
         path = path,
         spaceKey = "TEST",
         knowledgeBaseId = kbId,
         score = SearchScore.PERFECT
     )
 
-    given("사용자가 여러 문서에 대한 READ 및 DENY 권한을 가지고 있을 때") {
+    given("User has READ and DENY permissions for multiple documents") {
         val userId = 1L
         val user = User(id = userId, email = "user@test.com", name = "User", role = UserRole.USER)
         val permissions = listOf(
-            DocumentPathPermission(id = 1L, userId = userId, documentPath = "문서 > 팀 A", spaceKey = "S", permissionLevel = PermissionLevel.READ, grantedBy = null),
-            DocumentPathPermission(id = 2L, userId = userId, documentPath = "문서 > 팀 B", spaceKey = "S", permissionLevel = PermissionLevel.DENY, grantedBy = null),
-            DocumentPathPermission(id = 3L, userId = userId, documentPath = "문서 > 팀 B > 개인", spaceKey = "S", permissionLevel = PermissionLevel.READ, grantedBy = null)
+            DocumentPathPermission(id = 1L, userId = userId, documentPath = "Documents > Team A", spaceKey = "S", permissionLevel = PermissionLevel.READ, grantedBy = null),
+            DocumentPathPermission(id = 2L, userId = userId, documentPath = "Documents > Team B", spaceKey = "S", permissionLevel = PermissionLevel.DENY, grantedBy = null),
+            DocumentPathPermission(id = 3L, userId = userId, documentPath = "Documents > Team B > Personal", spaceKey = "S", permissionLevel = PermissionLevel.READ, grantedBy = null)
         )
         val memberships = listOf(
             KnowledgeBaseUser(id = 1L, userId = userId, knowledgeBaseId = 1L, role = KnowledgeBaseUserRole.MEMBER, createdAt = Instant.now())
@@ -64,32 +64,32 @@ class FilterSearchResultsUseCaseTest : BehaviorSpec({
         every { documentPathPermissionRepository.findByUserId(userId) } returns permissions
 
         val searchResults = listOf(
-            createTestSearchResult("문서 > 팀 A > 회의록"),
-            createTestSearchResult("문서 > 팀 C > 보고서"),
-            createTestSearchResult("문서 > 팀 B > 공지"),
-            createTestSearchResult("문서 > 팀 B > 개인 > 업무일지")
+            createTestSearchResult("Documents > Team A > Minutes"),
+            createTestSearchResult("Documents > Team C > Report"),
+            createTestSearchResult("Documents > Team B > Notice"),
+            createTestSearchResult("Documents > Team B > Personal > Journal")
         )
 
-        `when`("검색 결과를 필터링하면") {
+        `when`("Filtering search results") {
             val input = FilterSearchResultsUseCaseIn(searchResults, userId)
             val result = useCase.execute(input)
 
-            then("가장 구체적인 권한 규칙에 따라 접근 가능한 문서만 반환된다") {
+            then("Only accessible documents are returned based on most specific permission rules") {
                 result.filteredResults.map { it.path }.shouldContainExactly(
-                    "문서 > 팀 A > 회의록",
-                    "문서 > 팀 C > 보고서",
-                    "문서 > 팀 B > 개인 > 업무일지"
+                    "Documents > Team A > Minutes",
+                    "Documents > Team C > Report",
+                    "Documents > Team B > Personal > Journal"
                 )
             }
         }
     }
 
-    given("사용자가 상위 경로에 READ, 하위 경로에 DENY 권한을 가질 때") {
+    given("User has READ on parent path and DENY on child path") {
         val userId = 2L
         val user = User(id = userId, email = "user2@test.com", name = "User2", role = UserRole.USER)
         val permissions = listOf(
-            DocumentPathPermission(id = 4L, userId = userId, documentPath = "프로젝트", spaceKey = "S", permissionLevel = PermissionLevel.READ, grantedBy = null),
-            DocumentPathPermission(id = 5L, userId = userId, documentPath = "프로젝트 > 기밀", spaceKey = "S", permissionLevel = PermissionLevel.DENY, grantedBy = null)
+            DocumentPathPermission(id = 4L, userId = userId, documentPath = "Project", spaceKey = "S", permissionLevel = PermissionLevel.READ, grantedBy = null),
+            DocumentPathPermission(id = 5L, userId = userId, documentPath = "Project > Confidential", spaceKey = "S", permissionLevel = PermissionLevel.DENY, grantedBy = null)
         )
         val memberships = listOf(
             KnowledgeBaseUser(id = 2L, userId = userId, knowledgeBaseId = 1L, role = KnowledgeBaseUserRole.MEMBER, createdAt = Instant.now())
@@ -100,22 +100,22 @@ class FilterSearchResultsUseCaseTest : BehaviorSpec({
         every { documentPathPermissionRepository.findByUserId(userId) } returns permissions
 
         val searchResults = listOf(
-            createTestSearchResult("프로젝트 > 일반"),
-            createTestSearchResult("프로젝트 > 기밀 > 1급"),
-            createTestSearchResult("프로젝트 > 기밀")
+            createTestSearchResult("Project > General"),
+            createTestSearchResult("Project > Confidential > Top Secret"),
+            createTestSearchResult("Project > Confidential")
         )
 
-        `when`("검색 결과를 필터링하면") {
+        `when`("Filtering search results") {
             val input = FilterSearchResultsUseCaseIn(searchResults, userId)
             val result = useCase.execute(input)
 
-            then("더 구체적인 DENY 규칙이 우선하여 적용된다") {
-                result.filteredResults.map { it.path }.shouldContainExactly("프로젝트 > 일반")
+            then("More specific DENY rule takes precedence") {
+                result.filteredResults.map { it.path }.shouldContainExactly("Project > General")
             }
         }
     }
 
-    given("사용자가 아무런 권한도 가지고 있지 않을 때") {
+    given("User has no permissions") {
         val userId = 3L
         val user = User(id = userId, email = "user3@test.com", name = "User3", role = UserRole.USER)
         val memberships = listOf(
@@ -126,27 +126,27 @@ class FilterSearchResultsUseCaseTest : BehaviorSpec({
         every { knowledgeBaseUserRepository.findByUserId(userId) } returns memberships
         every { documentPathPermissionRepository.findByUserId(userId) } returns emptyList()
 
-        val searchResults = listOf(createTestSearchResult("문서1"), createTestSearchResult("문서2"))
+        val searchResults = listOf(createTestSearchResult("Doc1"), createTestSearchResult("Doc2"))
 
-        `when`("검색 결과를 필터링하면") {
+        `when`("Filtering search results") {
             val input = FilterSearchResultsUseCaseIn(searchResults, userId)
             val result = useCase.execute(input)
 
-            then("멤버십만 있다면 기본적으로 허용된다 (경로 권한 없음)") {
+            then("Access is allowed by default if membership exists (no path permissions)") {
                 result.filteredResults shouldHaveSize 2
             }
         }
     }
 
-    given("검색 결과가 비어있을 때") {
+    given("Search results are empty") {
         val userId = 1L
         // No mocks needed for empty results check as it returns early
 
-        `when`("빈 검색 결과를 필터링하면") {
+        `when`("Filtering empty search results") {
             val input = FilterSearchResultsUseCaseIn(emptyList(), userId)
             val result = useCase.execute(input)
 
-            then("결과는 비어 있어야 한다") {
+            then("Result should be empty") {
                 result.filteredResults.shouldBeEmpty()
             }
         }

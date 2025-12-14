@@ -36,11 +36,11 @@ class EmailChatServiceTest {
     @DisplayName("processEmailQuestion should process successfully")
     fun `should process email question successfully`() = runTest {
         // given
-        val subject = "질문입니다"
-        val content = "안녕하세요. 궁금한 점이 있습니다."
+        val subject = "Question"
+        val content = "Hello. I have a question."
         val requestSlot = slot<ChatServiceRequest>()
 
-        coEvery { documentBaseChatService.chat(capture(requestSlot)) } returns Flux.just("답변", " 내용", " 입니다.")
+        coEvery { documentBaseChatService.chat(capture(requestSlot)) } returns Flux.just("Answer", " content", " here.")
 
         // when
         val result = emailChatService.processEmailQuestion(subject, content)
@@ -48,12 +48,12 @@ class EmailChatServiceTest {
         // then
         StepVerifier.create(result)
             .expectNextMatches { it.contains("Hello. This email is an automatically generated response") }
-            .expectNext(" 내용")
-            .expectNext(" 입니다.")
+            .expectNext(" content")
+            .expectNext(" here.")
             .expectNextMatches { it.contains("The above content is an automatically generated response by AI") }
             .verifyComplete()
 
-        requestSlot.captured.message shouldBe "질문입니다 안녕하세요. 궁금한 점이 있습니다."
+        requestSlot.captured.message shouldBe "Question Hello. I have a question."
         requestSlot.captured.isDeepThink shouldBe true
     }
 
@@ -62,10 +62,10 @@ class EmailChatServiceTest {
     fun `should skip subject when it is (No subject)`() = runTest {
         // given
         val subject = "(No subject)"
-        val content = "질문 내용"
+        val content = "Question content"
         val requestSlot = slot<ChatServiceRequest>()
 
-        coEvery { documentBaseChatService.chat(capture(requestSlot)) } returns Flux.just("답변")
+        coEvery { documentBaseChatService.chat(capture(requestSlot)) } returns Flux.just("Answer")
 
         // when
         val result = emailChatService.processEmailQuestion(subject, content)
@@ -75,7 +75,7 @@ class EmailChatServiceTest {
             .expectNextCount(2) // header with first chunk + footer
             .verifyComplete()
 
-        requestSlot.captured.message shouldBe "질문 내용" // subject not included
+        requestSlot.captured.message shouldBe "Question content" // subject not included
     }
 
     @Test
@@ -83,10 +83,10 @@ class EmailChatServiceTest {
     fun `should skip blank subject`() = runTest {
         // given
         val subject = "   "
-        val content = "질문 내용"
+        val content = "Question content"
         val requestSlot = slot<ChatServiceRequest>()
 
-        coEvery { documentBaseChatService.chat(capture(requestSlot)) } returns Flux.just("답변")
+        coEvery { documentBaseChatService.chat(capture(requestSlot)) } returns Flux.just("Answer")
 
         // when
         val result = emailChatService.processEmailQuestion(subject, content)
@@ -96,7 +96,7 @@ class EmailChatServiceTest {
             .expectNextCount(2) // header + footer
             .verifyComplete()
 
-        requestSlot.captured.message shouldBe "질문 내용"
+        requestSlot.captured.message shouldBe "Question content"
     }
 
     @Test
@@ -119,11 +119,11 @@ class EmailChatServiceTest {
     @DisplayName("processEmailQuestion should include subject with Re prefix")
     fun `should include subject with Re prefix`() = runTest {
         // given
-        val subject = "Re: 기존 질문"
-        val content = "추가 질문"
+        val subject = "Re: Original question"
+        val content = "Additional question"
         val requestSlot = slot<ChatServiceRequest>()
 
-        coEvery { documentBaseChatService.chat(capture(requestSlot)) } returns Flux.just("답변")
+        coEvery { documentBaseChatService.chat(capture(requestSlot)) } returns Flux.just("Answer")
 
         // when
         val result = emailChatService.processEmailQuestion(subject, content)
@@ -133,18 +133,18 @@ class EmailChatServiceTest {
             .expectNextCount(2)
             .verifyComplete()
 
-        requestSlot.captured.message shouldBe "Re: 기존 질문 추가 질문"
+        requestSlot.captured.message shouldBe "Re: Original question Additional question"
     }
 
     @Test
     @DisplayName("processEmailQuestion should handle long content")
     fun `should handle long content`() = runTest {
         // given
-        val subject = "긴 질문"
+        val subject = "Long question"
         val content = "a".repeat(1000)
         val requestSlot = slot<ChatServiceRequest>()
 
-        coEvery { documentBaseChatService.chat(capture(requestSlot)) } returns Flux.just("답변")
+        coEvery { documentBaseChatService.chat(capture(requestSlot)) } returns Flux.just("Answer")
 
         // when
         val result = emailChatService.processEmailQuestion(subject, content)
@@ -154,6 +154,6 @@ class EmailChatServiceTest {
             .expectNextCount(2)
             .verifyComplete()
 
-        requestSlot.captured.message.length shouldBe 1000 + "긴 질문 ".length
+        requestSlot.captured.message.length shouldBe 1000 + "Long question ".length
     }
 }

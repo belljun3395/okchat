@@ -18,16 +18,16 @@ class RevokePathPermissionUseCaseTest : BehaviorSpec({
         clearAllMocks()
     }
 
-    given("삭제할 경로 목록이 주어졌을 때") {
+    given("A list of paths to revoke is provided") {
         val userId = 1L
-        val pathsToRevoke = listOf("문서 > 팀 A", "문서 > 팀 B")
+        val pathsToRevoke = listOf("Document/Team A", "Document/Team B")
         every { documentPathPermissionRepository.deleteByUserIdAndDocumentPathIn(userId, pathsToRevoke) } returns Unit
 
-        `when`("경로 권한을 취소하면") {
+        `when`("Revoking path permissions") {
             val input = RevokePathPermissionUseCaseIn(userId, pathsToRevoke)
             val result = useCase.execute(input)
 
-            then("성공 결과와 함께 삭제가 호출된다") {
+            then("Revocation is successful and repository delete is called") {
                 result.success shouldBe true
                 result.revokedCount shouldBe pathsToRevoke.size
                 verify(exactly = 1) { documentPathPermissionRepository.deleteByUserIdAndDocumentPathIn(userId, pathsToRevoke) }
@@ -35,15 +35,15 @@ class RevokePathPermissionUseCaseTest : BehaviorSpec({
         }
     }
 
-    given("삭제할 경로 목록이 비어있을 때") {
+    given("The list of paths to revoke is empty") {
         val userId = 2L
         val emptyPaths = emptyList<String>()
 
-        `when`("경로 권한을 취소하면") {
+        `when`("Revoking path permissions") {
             val input = RevokePathPermissionUseCaseIn(userId, emptyPaths)
             val result = useCase.execute(input)
 
-            then("성공 결과와 함께 0이 반환되고, 삭제는 호출되지 않는다") {
+            then("Success is returned with count 0 and no repository delete call") {
                 result.success shouldBe true
                 result.revokedCount shouldBe 0
                 verify(exactly = 0) { documentPathPermissionRepository.deleteByUserIdAndDocumentPathIn(any(), any()) }

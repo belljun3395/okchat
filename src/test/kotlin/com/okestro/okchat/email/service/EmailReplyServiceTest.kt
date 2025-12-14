@@ -25,8 +25,8 @@ class EmailReplyServiceTest {
     @DisplayName("should build reply content with original message")
     fun `should build reply content with original message`() {
         // given
-        val answer = "이것은 답변입니다"
-        val originalContent = "원본 질문 내용입니다"
+        val answer = "This is an answer"
+        val originalContent = "Original question content"
 
         // when
         val result = service.buildReplyContent(answer, originalContent)
@@ -42,7 +42,7 @@ class EmailReplyServiceTest {
     @DisplayName("should truncate long original content")
     fun `should truncate long original content`() {
         // given
-        val answer = "답변"
+        val answer = "Answer"
         val originalContent = (1..50).joinToString("\n") { "Line $it" }
 
         // when

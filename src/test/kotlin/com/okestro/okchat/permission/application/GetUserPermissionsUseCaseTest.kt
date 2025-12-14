@@ -21,7 +21,7 @@ class GetUserPermissionsUseCaseTest : BehaviorSpec({
         clearAllMocks()
     }
 
-    given("사용자가 여러 권한을 가지고 있을 때") {
+    given("User has multiple permissions") {
         val userId = 1L
         val permissions = listOf(
             DocumentPathPermission(id = 1L, userId = userId, documentPath = "path1", spaceKey = "S", permissionLevel = PermissionLevel.READ, grantedBy = null),
@@ -29,26 +29,26 @@ class GetUserPermissionsUseCaseTest : BehaviorSpec({
         )
         every { documentPathPermissionRepository.findByUserId(userId) } returns permissions
 
-        `when`("사용자의 권한을 조회하면") {
+        `when`("User permissions are requested") {
             val input = GetUserPermissionsUseCaseIn(userId)
             val result = useCase.execute(input)
 
-            then("모든 권한 목록이 반환된다") {
+            then("All permissions are returned") {
                 result.permissions shouldHaveSize 2
                 result.permissions shouldBe permissions
             }
         }
     }
 
-    given("사용자가 권한을 가지고 있지 않을 때") {
+    given("User has no permissions") {
         val userId = 2L
         every { documentPathPermissionRepository.findByUserId(userId) } returns emptyList()
 
-        `when`("사용자의 권한을 조회하면") {
+        `when`("User permissions are requested") {
             val input = GetUserPermissionsUseCaseIn(userId)
             val result = useCase.execute(input)
 
-            then("빈 목록이 반환된다") {
+            then("Empty list is returned") {
                 result.permissions.shouldBeEmpty()
             }
         }

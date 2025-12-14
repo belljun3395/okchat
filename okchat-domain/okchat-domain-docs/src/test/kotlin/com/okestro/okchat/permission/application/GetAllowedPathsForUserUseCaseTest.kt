@@ -58,8 +58,9 @@ class GetAllowedPathsForUserUseCaseTest : BehaviorSpec({
                 verify {
                     searchAllPathsUseCase.execute(
                         match {
-                            it.allowedKbIds is AllowedKnowledgeBases.Subset &&
-                                it.allowedKbIds.ids.contains(requestKbId)
+                            val kbIds = it.allowedKbIds
+                            kbIds is AllowedKnowledgeBases.Subset &&
+                                kbIds.ids.contains(requestKbId)
                         }
                     )
                 }

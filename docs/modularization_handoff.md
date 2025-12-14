@@ -144,7 +144,28 @@
 - docs 도메인 테스트를 루트(`src/test/kotlin`)에서 `okchat-domain/okchat-domain-docs/src/test/kotlin`로 이동하여 모듈 경계에 맞게 정리
 - `./gradlew ktlintMainSourceSetCheck` 통과
 
-### 남은 TODO(Phase2-2 후속)
+### Phase 2-2 마무리 (Completed)
 
-- runtime 설정 정리: `internal.services.user.url`을 `application/*.yaml`에 명시해 운영/로컬 프로파일 정리
-- docs 모듈로 옮긴 영역에 대해 “External API는 root, Internal API는 domain” 원칙 재점검(필요 시 internal controller 보강)
+- runtime 설정 정리: `internal.services.user.url`을 `application/core.yaml`에 추가
+- Docs 도메인 Internal API 구현 완료
+  - `SearchInternalController` (MultiSearch)
+  - `PermissionInternalController` (GetAllowedPaths)
+  - DTOs: `InternalMultiSearchRequest/Response`, `InternalGetAllowedPathsResponse` etc.
+
+---
+
+## Phase 2-3 (okchat-domain-ai) 계획
+
+### 목표
+- `ai` 도메인(chat, prompt, classifier, extraction, chunking)을 독립 모듈로 분리
+- `docs` 도메인과의 컴파일 의존성 제거 (Internal API 사용)
+
+### 주요 작업
+1. `okchat-domain-ai` 모듈 생성
+2. 코드 이관: `chat`, `prompt` 등
+3. `DocsClient` (Feign/WebClient) 구현
+   - `SearchInternalController` 호출
+   - `PermissionInternalController` 호출
+4. Chat Pipeline 수정
+   - `DocumentSearchStep` -> uses `DocsClient`
+   - `PermissionFilterStep` -> uses `DocsClient`

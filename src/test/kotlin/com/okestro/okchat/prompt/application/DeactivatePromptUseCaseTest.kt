@@ -15,13 +15,14 @@ class DeactivatePromptUseCaseTest : BehaviorSpec({
     val promptCacheService: PromptCacheService = mockk()
     val deactivatePromptUseCase = DeactivatePromptUseCase(promptRepository, promptCacheService)
 
-    given("An existing prompt") {
-        val type = "test"
-        val version = 1
-        val prompt = Prompt(id = 1, type = type, version = version, content = "test content", active = true)
-        coEvery { promptRepository.findByTypeAndVersionAndActive(type, version) } returns prompt
-        coEvery { promptRepository.findLatestByTypeAndActive(type) } returns null
-        coEvery { promptCacheService.evictLatestPromptCache(type) } returns Unit
+	    given("An existing prompt") {
+	        val type = "test"
+	        val version = 1
+	        val prompt = Prompt(id = 1, type = type, version = version, content = "test content", active = true)
+	        coEvery { promptRepository.findByTypeAndVersionAndActive(type, version) } returns prompt
+	        coEvery { promptRepository.save(any()) } returns prompt
+	        coEvery { promptRepository.findLatestByTypeAndActive(type) } returns null
+	        coEvery { promptCacheService.evictLatestPromptCache(type) } returns Unit
 
         `when`("the use case is executed") {
             val result = deactivatePromptUseCase.execute(DeactivatePromptUseCaseIn(type, version))

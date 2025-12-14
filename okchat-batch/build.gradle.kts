@@ -1,8 +1,7 @@
 plugins {
     kotlin("jvm")
     kotlin("plugin.spring")
-    kotlin("plugin.jpa")
-    id("java-library")
+    id("org.springframework.boot")
     id("io.spring.dependency-management")
 }
 
@@ -20,22 +19,19 @@ dependencyManagement {
 }
 
 dependencies {
-    implementation(project(":okchat-lib:okchat-lib-persistence"))
     implementation(project(":okchat-lib:okchat-lib-web"))
+    implementation(project(":okchat-lib:okchat-lib-persistence"))
+    implementation(project(":okchat-domain:okchat-domain-task"))
 
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.cloud:spring-cloud-starter-task")
 
-    // Common tools
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("io.projectreactor:reactor-test")
-    testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
-    testImplementation("io.kotest:kotest-assertions-core:5.9.1")
-    testImplementation("io.mockk:mockk:1.13.12")
     testImplementation(kotlin("test-junit5"))
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks.withType<Test> {

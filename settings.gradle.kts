@@ -26,6 +26,9 @@ include(":okchat-lib:okchat-lib-web")
 include(":okchat-lib:okchat-lib-persistence")
 include(":okchat-lib:okchat-lib-ai")
 
+// Batch runner
+include(":okchat-batch")
+
 // Domains
 include(":okchat-domain:okchat-domain-user")
 include(":okchat-domain:okchat-domain-docs")

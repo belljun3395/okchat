@@ -1,12 +1,11 @@
-package com.okestro.okchat.task
+package com.okestro.okchat.batch.task
 
-import com.okestro.okchat.email.application.usecase.PollEmailUseCase
-import com.okestro.okchat.knowledge.repository.KnowledgeBaseRepository
+import com.okestro.okchat.batch.client.docs.DocsClient
+import com.okestro.okchat.batch.client.user.UserEmailClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.micrometer.core.instrument.Timer
-
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
@@ -31,8 +30,8 @@ import org.springframework.stereotype.Component
     matchIfMissing = false
 )
 class EmailPollingTask(
-    private val knowledgeBaseRepository: KnowledgeBaseRepository,
-    private val pollEmailUseCase: PollEmailUseCase,
+    private val docsClient: DocsClient,
+    private val userEmailClient: UserEmailClient,
     private val meterRegistry: MeterRegistry
 ) : CommandLineRunner {
 
@@ -52,7 +51,7 @@ class EmailPollingTask(
         val tags = Tags.of("task", "email-polling")
 
         try {
-            val knowledgeBases = knowledgeBaseRepository.findAllByEnabledTrue()
+            val knowledgeBases = docsClient.getEnabledKnowledgeBases()
 
             if (knowledgeBases.isEmpty()) {
                 log.info { "No enabled Knowledge Bases found. Skipping email polling." }
@@ -67,7 +66,7 @@ class EmailPollingTask(
 
             knowledgeBases.forEach { kb ->
                 try {
-                    val result = pollEmailUseCase.execute(kb.id!!)
+                    val result = userEmailClient.pollEmails(kb.id)
                     if (result.messagesCount > 0 || result.eventsCount > 0) {
                         processedKbs++
                         totalMessages += result.messagesCount

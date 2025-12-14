@@ -176,25 +176,37 @@
 
 ---
 
-## Phase 2-4 (okchat-domain-task) 계획 (Strategy Alignment)
-### 목표
-- **Docs, AI, User 도메인에 모두 의존**하는 `task` 도메인의 마이그레이션 (가장 마지막 순서)
-- 배치 작업(`ConfluenceSyncTask`, `EmailPollingTask` 등)의 완전한 모듈 분리
-- Root 모듈 의존성 제거
+## Phase 2-4 (okchat-domain-task & Email) 진행 상황
 
-### 주요 작업 예정
-1.  **코드 이관** (`src/main/kotlin/com/okestro/okchat/task` -> `okchat-domain/okchat-domain-task`)
-    - `ConfluenceSyncTask.kt`
-    - `EmailPollingTask.kt`
-    - `MetricsUpdateTask.kt`
-    - 관련 Repository 및 Entity
-2.  **Feign/WebClient 구현**
-    - `AiClient` (AI 도메인 호출)
-    - `DocsClient` (Search/Knowledge 호출)
-    - `UserClient` (Notification/EmailProvider 호출)
-3.  **의존성 정리**
-    - 컴파일 의존성(`implementation project(...)`) 제거 후 `Client`로 대체
-4.  **`okchat-domain-task` 빌드 및 테스트 구성**
+### Step 1: Email Domain Migration (Completed)
+- **이관 및 캡슐화**:
+  - `src/main/kotlin/com/okestro/okchat/email` -> `okchat-domain/okchat-domain-user` 이동
+  - `PollEmailUseCase` 생성 (Polling 로직 캡슐화)
+  - `EmailInternalController` 생성 (`POST /internal/api/v1/emails/poll/{kbId}`)
+- **Task Orchestration**:
+  - `EmailPollingTask` (Root) -> `PollEmailUseCase` 위임 방식으로 변경
+  - `EmailReceivedEventHandler`, `EmailReplyService`는 Orchestrator 역할로 Root에 잔류 (Circular Dependency 방지)
+- **테스트 및 검증**:
+  - Email 관련 테스트 코드(`src/test/.../email`) -> `okchat-domain-user/src/test/...` 이동
+  - `ktlintFormat` 및 빌드 검증 완료
+
+### Step 2: Batch Execution Module (`okchat-batch`) [NEW]
+- **목표**: 실제 배치 실행(Runner)을 담당하는 독립 애플리케이션 모듈 생성.
+- **계획**:
+  1. `okchat-batch` 모듈 생성 (`settings.gradle.kts` 포함).
+  2. `EmailPollingTask` (Root) -> `okchat-batch` 이동.
+  3. `ConfluenceSyncTask` (Root) -> `okchat-batch` 이동 및 `DocsClient` 적용.
+  4. `User, Docs, AI` 각 도메인과 통신하기 위한 Client(Feign/WebClient) 구현.
+
+### Step 3: Task Domain (`okchat-domain-task`)
+- **목표**: 작업 이력(`TaskExecutionEntity`) 및 메타데이터 관리 전담.
+- **계획**:
+  1. `TaskExecutionEntity` 등 Spring Cloud Task 관련 엔티티/Repository 유지.
+  2. `okchat-batch` 실행 시 이력 저장을 위해 `okchat-domain-task` 의존(또는 DB 공유).
+
+### Final: Root Cleaning
+- Root 모듈에서 `task` 패키지 완전 제거.
+
 
 ---
 

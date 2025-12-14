@@ -141,6 +141,7 @@
 ### 테스트/검증
 
 - 테스트 수정(새 ctor/client/suspend 반영) 후 `./gradlew test` 통과
+- docs 도메인 테스트를 루트(`src/test/kotlin`)에서 `okchat-domain/okchat-domain-docs/src/test/kotlin`로 이동하여 모듈 경계에 맞게 정리
 - `./gradlew ktlintMainSourceSetCheck` 통과
 
 ### 남은 TODO(Phase2-2 후속)

@@ -1,6 +1,5 @@
 package com.okestro.okchat.confluence.service
 
-import com.okestro.okchat.fixture.TestFixtures
 import com.okestro.okchat.search.support.MetadataFields
 import com.okestro.okchat.search.support.metadata
 import io.kotest.core.spec.style.DescribeSpec
@@ -23,12 +22,12 @@ class PdfAttachmentServiceImprovedTest : DescribeSpec({
 
             it("should create PDF metadata with DSL") {
                 // Given
-                val attachmentId = TestFixtures.PdfMetadata.ATTACHMENT_ID
-                val pageTitle = TestFixtures.PdfMetadata.PAGE_TITLE
-                val attachmentTitle = TestFixtures.PdfMetadata.ATTACHMENT_TITLE
-                val spaceKey = TestFixtures.PdfMetadata.SPACE_KEY
-                val path = TestFixtures.PdfMetadata.PATH
-                val pageId = TestFixtures.PdfMetadata.PAGE_ID
+                val attachmentId = PdfMetadata.ATTACHMENT_ID
+                val pageTitle = PdfMetadata.PAGE_TITLE
+                val attachmentTitle = PdfMetadata.ATTACHMENT_TITLE
+                val spaceKey = PdfMetadata.SPACE_KEY
+                val path = PdfMetadata.PATH
+                val pageId = PdfMetadata.PAGE_ID
                 val index = 0
                 val totalPages = 5
 
@@ -44,8 +43,8 @@ class PdfAttachmentServiceImprovedTest : DescribeSpec({
                     "attachmentTitle" to attachmentTitle
                     "pdfPageNumber" to (index + 1)
                     "totalPdfPages" to totalPages
-                    "fileSize" to TestFixtures.PdfMetadata.FILE_SIZE
-                    "mediaType" to TestFixtures.PdfMetadata.MEDIA_TYPE
+                    "fileSize" to PdfMetadata.FILE_SIZE
+                    "mediaType" to PdfMetadata.MEDIA_TYPE
                 }
 
                 // Then
@@ -60,8 +59,8 @@ class PdfAttachmentServiceImprovedTest : DescribeSpec({
                 pdfMetadata.additionalProperties["attachmentTitle"] shouldBe attachmentTitle
                 pdfMetadata.additionalProperties["pdfPageNumber"] shouldBe 1
                 pdfMetadata.additionalProperties["totalPdfPages"] shouldBe totalPages
-                pdfMetadata.additionalProperties["fileSize"] shouldBe TestFixtures.PdfMetadata.FILE_SIZE
-                pdfMetadata.additionalProperties["mediaType"] shouldBe TestFixtures.PdfMetadata.MEDIA_TYPE
+                pdfMetadata.additionalProperties["fileSize"] shouldBe PdfMetadata.FILE_SIZE
+                pdfMetadata.additionalProperties["mediaType"] shouldBe PdfMetadata.MEDIA_TYPE
             }
         }
 
@@ -305,3 +304,14 @@ class PdfAttachmentServiceImprovedTest : DescribeSpec({
         }
     }
 })
+
+private object PdfMetadata {
+    const val ATTACHMENT_ID = "att123"
+    const val PAGE_TITLE = "Technical Documentation"
+    const val ATTACHMENT_TITLE = "Architecture.pdf"
+    const val SPACE_KEY = "TECH"
+    const val PATH = "Documentation > Technical"
+    const val PAGE_ID = "page456"
+    const val FILE_SIZE = 1024000L
+    const val MEDIA_TYPE = "application/pdf"
+}

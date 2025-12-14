@@ -52,8 +52,11 @@ dependencies {
     implementation("com.github.f4b6a3:tsid-creator:5.2.6")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
     testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
     testImplementation("io.kotest:kotest-assertions-core:5.9.1")
+    testImplementation("io.kotest:kotest-framework-datatest:5.9.1")
     testImplementation("io.mockk:mockk:1.13.12")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

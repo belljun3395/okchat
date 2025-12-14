@@ -1,6 +1,5 @@
 package com.okestro.okchat.search.util
 
-import com.okestro.okchat.fixture.TestFixtures
 import com.okestro.okchat.search.client.HybridSearchResponse
 import com.okestro.okchat.search.client.SearchHit
 import com.okestro.okchat.search.model.SearchResult
@@ -27,7 +26,7 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                 val response = HybridSearchResponse(
                     hits = listOf(
                         SearchHit(
-                            document = TestFixtures.SearchUtils.createSearchHitDocument(
+                            document = createSearchHitDocument(
                                 id = "doc1",
                                 content = "Content 1",
                                 title = "Title 1",
@@ -40,7 +39,7 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                             vectorScore = 0.6
                         ),
                         SearchHit(
-                            document = TestFixtures.SearchUtils.createSearchHitDocument(
+                            document = createSearchHitDocument(
                                 id = "doc2",
                                 content = "Content 2",
                                 title = "Title 2",
@@ -104,7 +103,7 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                 val response = HybridSearchResponse(
                     hits = listOf(
                         SearchHit(
-                            document = TestFixtures.SearchUtils.createSearchHitDocument(
+                            document = createSearchHitDocument(
                                 id = "doc1",
                                 content = "Content 1",
                                 title = "Title 1",
@@ -158,7 +157,7 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                 val response = HybridSearchResponse(
                     hits = listOf(
                         SearchHit(
-                            document = TestFixtures.SearchUtils.createSearchHitDocument(
+                            document = createSearchHitDocument(
                                 id = inputId,
                                 content = "Content",
                                 title = "Title",
@@ -446,3 +445,24 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
         }
     }
 })
+
+private fun createSearchHitDocument(
+    id: String = "doc1",
+    content: String = "Test content",
+    title: String = "Test Title",
+    path: String = "/test",
+    spaceKey: String = "TEST",
+    keywords: String? = null,
+    knowledgeBaseId: Long = 0L
+): Map<String, Any> {
+    val doc = mutableMapOf<String, Any>(
+        "id" to id,
+        "content" to content,
+        "metadata.title" to title,
+        "metadata.path" to path,
+        "metadata.spaceKey" to spaceKey,
+        "metadata.knowledgeBaseId" to knowledgeBaseId
+    )
+    keywords?.let { doc["metadata.keywords"] = it }
+    return doc
+}

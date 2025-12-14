@@ -23,6 +23,7 @@ class DeactivatePromptUseCase(
             val prompt = promptRepository.findByTypeAndVersionAndActive(type, version)
                 ?: throw IllegalArgumentException("Prompt not found: type=$type, version=$version")
             prompt.deActive()
+            promptRepository.save(prompt)
 
             val latestPrompt = promptRepository.findLatestByTypeAndActive(type)
             if (latestPrompt != null && latestPrompt.id == prompt.id) {

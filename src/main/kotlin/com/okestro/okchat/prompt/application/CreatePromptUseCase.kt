@@ -41,7 +41,10 @@ class CreatePromptUseCase(
                 updatedAt = LocalDateTime.now()
             )
 
-            latestPrompt?.deActive()
+            latestPrompt?.let {
+                it.deActive()
+                promptRepository.save(it)
+            }
             val saved = promptRepository.save(prompt)
             log.info { "Created new prompt: type=$type, version=$version" }
             promptCacheService.cacheLatestPrompt(type, content)

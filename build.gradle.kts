@@ -15,6 +15,10 @@ group = "com.okestro"
 version = "0.0.1-SNAPSHOT"
 description = "okchat"
 
+subprojects {
+    apply(plugin = "org.jlleitschuh.gradle.ktlint")
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)

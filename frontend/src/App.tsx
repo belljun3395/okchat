@@ -11,6 +11,7 @@ import PermissionManagementPage from './pages/admin/PermissionManagementPage';
 import EmailReviewPage from './pages/admin/EmailReviewPage';
 import DashboardPage from './pages/admin/DashboardPage';
 import KnowledgeBaseMembersPage from './pages/admin/KnowledgeBaseMembersPage';
+import PromptManagementPage from './pages/admin/PromptManagementPage';
 
 /**
  * App Component
@@ -37,6 +38,7 @@ const App: React.FC = () => {
           {/* User Management */}
           <Route path="users" element={<UserManagementPage />} />
           <Route path="permissions/user/:email" element={<UserDetailPage />} />
+          <Route path="prompts" element={<PromptManagementPage />} />
           
           {/* Legacy Redirects */}
           <Route path="knowledge-bases" element={<Navigate to="/admin/dashboard" replace />} />

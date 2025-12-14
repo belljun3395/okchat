@@ -32,11 +32,16 @@ data class Prompt(
     val content: String,
 
     @Column(name = "is_active", nullable = false)
-    val active: Boolean = true,
+    var active: Boolean = true,
 
     @Column(name = "created_at", nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now(),
 
     @Column(name = "updated_at", nullable = false)
-    val updatedAt: LocalDateTime = LocalDateTime.now()
-)
+    var updatedAt: LocalDateTime = LocalDateTime.now()
+) {
+    fun deActive() {
+        this.active = false
+        this.updatedAt = LocalDateTime.now()
+    }
+}

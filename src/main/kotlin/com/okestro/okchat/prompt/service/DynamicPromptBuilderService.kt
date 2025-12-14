@@ -1,19 +1,16 @@
-package com.okestro.okchat.prompt.support
+package com.okestro.okchat.prompt.service
 
 import com.okestro.okchat.ai.service.classifier.QueryClassifier
 import com.okestro.okchat.prompt.application.GetPromptUseCase
 import com.okestro.okchat.prompt.application.dto.GetPromptUseCaseIn
-import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
-
-private val log = KotlinLogging.logger {}
 
 /**
  * Build dynamic system prompts based on query type
  * Loads prompt templates from database with Redis caching
  */
 @Component
-class DynamicPromptBuilder(
+class DynamicPromptBuilderService(
     private val getPromptUseCase: GetPromptUseCase
 ) {
     suspend fun buildPrompt(queryType: QueryClassifier.QueryType): String {

@@ -3,7 +3,7 @@ package com.okestro.okchat.chat.pipeline.steps
 import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.chat.pipeline.CompleteChatContext
 import com.okestro.okchat.chat.pipeline.LastChatPipelineStep
-import com.okestro.okchat.prompt.support.DynamicPromptBuilder
+import com.okestro.okchat.prompt.service.DynamicPromptBuilderService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.ai.chat.prompt.PromptTemplate
 import org.springframework.stereotype.Component
@@ -17,7 +17,7 @@ private val log = KotlinLogging.logger {}
  */
 @Component
 class PromptGenerationStep(
-    private val dynamicPromptBuilder: DynamicPromptBuilder
+    private val dynamicPromptBuilderService: DynamicPromptBuilderService
 ) : LastChatPipelineStep {
 
     override suspend fun execute(context: ChatContext): CompleteChatContext {
@@ -33,7 +33,7 @@ class PromptGenerationStep(
         }
 
         // Build dynamic prompt based on query type (from externalized templates)
-        val promptTemplate = dynamicPromptBuilder.buildPrompt(analysis.queryAnalysis.type)
+        val promptTemplate = dynamicPromptBuilderService.buildPrompt(analysis.queryAnalysis.type)
         log.info { "[${getStepName()}] Using ${analysis.queryAnalysis.type} specialized prompt (with RAG context: ${context.search?.contextText != null})" }
 
         // Create prompt with context and question

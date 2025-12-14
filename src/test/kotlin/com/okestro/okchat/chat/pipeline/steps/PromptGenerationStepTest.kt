@@ -3,7 +3,7 @@ package com.okestro.okchat.chat.pipeline.steps
 import com.okestro.okchat.ai.service.classifier.QueryClassifier
 import com.okestro.okchat.chat.pipeline.ChatContext
 import com.okestro.okchat.chat.pipeline.CompleteChatContext
-import com.okestro.okchat.prompt.support.DynamicPromptBuilder
+import com.okestro.okchat.prompt.service.DynamicPromptBuilderService
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -19,13 +19,13 @@ import org.junit.jupiter.api.Test
 @DisplayName("PromptGenerationStep Unit Tests")
 class PromptGenerationStepTest {
 
-    private lateinit var dynamicPromptBuilder: DynamicPromptBuilder
+    private lateinit var dynamicPromptBuilderService: DynamicPromptBuilderService
     private lateinit var step: PromptGenerationStep
 
     @BeforeEach
     fun setUp() {
-        dynamicPromptBuilder = mockk()
-        step = PromptGenerationStep(dynamicPromptBuilder)
+        dynamicPromptBuilderService = mockk()
+        step = PromptGenerationStep(dynamicPromptBuilderService)
     }
 
     @AfterEach
@@ -49,7 +49,7 @@ class PromptGenerationStepTest {
         // given
         val context = createContextWithRAG()
         val promptTemplate = "Context: {context}\nQuestion: {question}"
-        coEvery { dynamicPromptBuilder.buildPrompt(QueryClassifier.QueryType.DOCUMENT_SEARCH) } returns promptTemplate
+        coEvery { dynamicPromptBuilderService.buildPrompt(QueryClassifier.QueryType.DOCUMENT_SEARCH) } returns promptTemplate
 
         // when
         val result = step.execute(context)
@@ -66,7 +66,7 @@ class PromptGenerationStepTest {
         // given
         val context = createContextWithoutRAG()
         val promptTemplate = "Context: {context}\nQuestion: {question}"
-        coEvery { dynamicPromptBuilder.buildPrompt(QueryClassifier.QueryType.GENERAL) } returns promptTemplate
+        coEvery { dynamicPromptBuilderService.buildPrompt(QueryClassifier.QueryType.GENERAL) } returns promptTemplate
 
         // when
         val result = step.execute(context)
@@ -82,7 +82,7 @@ class PromptGenerationStepTest {
         // given
         val context = createContextWithQueryType(QueryClassifier.QueryType.MEETING_RECORDS)
         val meetingPromptTemplate = "Meeting Context: {context}\nQuery: {question}"
-        coEvery { dynamicPromptBuilder.buildPrompt(QueryClassifier.QueryType.MEETING_RECORDS) } returns meetingPromptTemplate
+        coEvery { dynamicPromptBuilderService.buildPrompt(QueryClassifier.QueryType.MEETING_RECORDS) } returns meetingPromptTemplate
 
         // when
         val result = step.execute(context)

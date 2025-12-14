@@ -63,4 +63,10 @@ interface PromptRepository : JpaRepository<Prompt, Long> {
         """
     )
     fun deactivatePrompt(@Param("id") id: Long): Int
+
+    /**
+     * Find all distinct prompt types
+     */
+    @Query("SELECT DISTINCT p.type FROM Prompt p WHERE p.active = true")
+    fun findDistinctTypes(): List<String>
 }

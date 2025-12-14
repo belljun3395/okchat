@@ -2,6 +2,7 @@ package com.okestro.okchat.prompt.controller
 
 import com.okestro.okchat.prompt.application.CreatePromptUseCase
 import com.okestro.okchat.prompt.application.DeactivatePromptUseCase
+import com.okestro.okchat.prompt.application.GetAllPromptTypesUseCase
 import com.okestro.okchat.prompt.application.GetAllPromptVersionsUseCase
 import com.okestro.okchat.prompt.application.GetLatestPromptVersionUseCase
 import com.okestro.okchat.prompt.application.GetPromptUseCase
@@ -46,7 +47,8 @@ class PromptController(
     private val getAllPromptVersionsUseCase: GetAllPromptVersionsUseCase,
     private val createPromptUseCase: CreatePromptUseCase,
     private val updatePromptUseCase: UpdatePromptUseCase,
-    private val deactivatePromptUseCase: DeactivatePromptUseCase
+    private val deactivatePromptUseCase: DeactivatePromptUseCase,
+    private val getAllPromptTypesUseCase: GetAllPromptTypesUseCase
 ) {
 
     data class CreatePromptRequest(
@@ -112,6 +114,17 @@ class PromptController(
             version = actualVersion,
             content = content
         )
+    }
+
+    @GetMapping("/types")
+    @Operation(
+        summary = "프롬프트 타입 목록 조회",
+        description = "등록된 모든 프롬프트 타입을 조회합니다."
+    )
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    suspend fun getTypes(): List<String> {
+        log.info { "Getting all prompt types" }
+        return getAllPromptTypesUseCase.execute().types
     }
 
     @GetMapping("/{type}/versions")

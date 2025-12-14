@@ -4,6 +4,7 @@ import com.okestro.okchat.ai.service.classifier.QueryClassifier
 import com.okestro.okchat.prompt.application.GetPromptUseCase
 import com.okestro.okchat.prompt.application.dto.GetPromptUseCaseIn
 import com.okestro.okchat.prompt.application.dto.GetPromptUseCaseOut
+import com.okestro.okchat.prompt.service.DynamicPromptBuilderService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.string.shouldContain
 import io.mockk.clearAllMocks
@@ -16,15 +17,15 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 
 @DisplayName("DynamicPromptBuilder 단위 테스트")
-class DynamicPromptBuilderTest {
+class DynamicPromptBuilderServiceTest {
 
     private lateinit var getPromptUseCase: GetPromptUseCase
-    private lateinit var builder: DynamicPromptBuilder
+    private lateinit var builder: DynamicPromptBuilderService
 
     @BeforeEach
     fun setUp() {
         getPromptUseCase = mockk()
-        builder = DynamicPromptBuilder(getPromptUseCase)
+        builder = DynamicPromptBuilderService(getPromptUseCase)
     }
 
     @AfterEach

@@ -160,12 +160,46 @@
 - `ai` 도메인(chat, prompt, classifier, extraction, chunking)을 독립 모듈로 분리
 - `docs` 도메인과의 컴파일 의존성 제거 (Internal API 사용)
 
-### 주요 작업
-1. `okchat-domain-ai` 모듈 생성
-2. 코드 이관: `chat`, `prompt` 등
-3. `DocsClient` (Feign/WebClient) 구현
-   - `SearchInternalController` 호출
-   - `PermissionInternalController` 호출
-4. Chat Pipeline 수정
-   - `DocumentSearchStep` -> uses `DocsClient`
-   - `PermissionFilterStep` -> uses `DocsClient`
+### 완료 (Completed/Verification)
+- `okchat-domain-ai` 모듈 생성 및 설정 완료
+  - `build.gradle.kts`에 필요 의존성(Spring AI, Coroutines, Reactor, Resilience4j, Kotlin Logging etc) 및 테스트 의존성 추가
+- 코드 이관 및 리팩토링
+  - `ChatController`는 Root 모듈로 이동 (`src/main/kotlin/com/okestro/okchat/chat/controller`)
+  - AI Pipeline Steps (`DocumentSearchStep`, `PermissionFilterStep`)가 `DocsClient`를 사용하여 `docs` 도메인과 통신하도록 변경
+  - `ChatContext.copy` -> `ChatContext.copyContext`로 리네이밍하여 충돌 방지
+  - `SearchResult` 로컬 모델 정의 및 `Double` 점수 체계 적용
+- 테스트 마이그레이션
+  - `okchat-domain-ai` 내 테스트 파일들이 `DocsClient` Mocking 및 로컬 모델을 사용하도록 수정
+  - `PermissionFilterStepTest`, `DocumentChatPipelineTest` 등 주요 로직 검증 완료
+  - `test` 태스크 및 `ktlintFormat` 통과
+- `okchat-domain-task` 모듈 `build.gradle.kts` 생성 (의존성 문제 해결)
+
+---
+
+## Phase 2-4 (okchat-domain-task) 계획 (Strategy Alignment)
+### 목표
+- **Docs, AI, User 도메인에 모두 의존**하는 `task` 도메인의 마이그레이션 (가장 마지막 순서)
+- 배치 작업(`ConfluenceSyncTask`, `EmailPollingTask` 등)의 완전한 모듈 분리
+- Root 모듈 의존성 제거
+
+### 주요 작업 예정
+1.  **코드 이관** (`src/main/kotlin/com/okestro/okchat/task` -> `okchat-domain/okchat-domain-task`)
+    - `ConfluenceSyncTask.kt`
+    - `EmailPollingTask.kt`
+    - `MetricsUpdateTask.kt`
+    - 관련 Repository 및 Entity
+2.  **Feign/WebClient 구현**
+    - `AiClient` (AI 도메인 호출)
+    - `DocsClient` (Search/Knowledge 호출)
+    - `UserClient` (Notification/EmailProvider 호출)
+3.  **의존성 정리**
+    - 컴파일 의존성(`implementation project(...)`) 제거 후 `Client`로 대체
+4.  **`okchat-domain-task` 빌드 및 테스트 구성**
+
+---
+
+## Phase 3 (마무리 및 안정화) 계획
+### 목표
+- 전체 모듈 통합 빌드 및 E2E 테스트 검증
+- **Legacy Cleaning**: Root 모듈에 남아있는 이관된 코드(빈 패키지, 미사용 유틸) 삭제
+- **External Server Split (Optional)**: `okchat-server` (API Gateway 역할)와 도메인 서비스의 물리적 분리 준비 (Strategy Phase 4)

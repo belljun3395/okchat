@@ -31,10 +31,12 @@ repositories {
 
 dependencies {
     implementation(project(":okchat-lib:okchat-lib-ai"))
-    implementation(project(":okchat-lib:okchat-lib-persistence"))
+    implementation(project(":okchat-lib:okchat-lib-persistence")) // Modules
     implementation(project(":okchat-lib:okchat-lib-web"))
     implementation(project(":okchat-domain:okchat-domain-user"))
     implementation(project(":okchat-domain:okchat-domain-docs"))
+    implementation(project(":okchat-domain:okchat-domain-ai"))
+    implementation(project(":okchat-domain:okchat-domain-task"))
 
     /** kotlin  &  reactor */
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")

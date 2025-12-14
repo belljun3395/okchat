@@ -24,6 +24,11 @@ import reactor.core.publisher.Mono
     description = "백그라운드 작업 실행 이력 조회 API. Spring Cloud Task 실행 정보를 확인할 수 있습니다."
 )
 @ConditionalOnProperty(
+    name = ["batch.api.enabled"],
+    havingValue = "true",
+    matchIfMissing = false
+)
+@ConditionalOnProperty(
     name = ["spring.cloud.task.initialize-enabled"],
     havingValue = "true",
     matchIfMissing = true

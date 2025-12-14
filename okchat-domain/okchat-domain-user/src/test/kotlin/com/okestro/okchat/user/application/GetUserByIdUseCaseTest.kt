@@ -36,9 +36,10 @@ class GetUserByIdUseCaseTest : BehaviorSpec({
             val result = useCase.execute(GetUserByIdUseCaseIn(userId = userId))
 
             then("활성화된 사용자 정보가 반환된다") {
-                result.user.shouldNotBeNull()
-                result.user.id shouldBe userId
-                result.user.active shouldBe true
+                val user = result.user
+                user.shouldNotBeNull()
+                user.id shouldBe userId
+                user.active shouldBe true
                 verify(exactly = 1) { userRepository.findByIdAndActive(userId, true) }
             }
         }

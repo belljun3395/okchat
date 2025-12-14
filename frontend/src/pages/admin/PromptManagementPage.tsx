@@ -307,7 +307,7 @@ const PromptManagementPage: React.FC = () => {
                                                 {v.isActive && (
                                                     <button 
                                                         onClick={() => handleDeactivate(v.version)}
-                                                        className="text-xs text-red-600 hover:text-red-800"
+                                                        className="btn btn-danger btn-sm"
                                                         title="Deactivate this version"
                                                     >
                                                         Deactivate
@@ -319,7 +319,7 @@ const PromptManagementPage: React.FC = () => {
                                             </div>
                                             <div className="mt-2 flex justify-between items-center text-xs text-gray-400">
                                                 <button 
-                                                    className="text-primary hover:text-primary-dark"
+                                                    className="btn btn-secondary btn-sm w-full"
                                                     onClick={() => setContent(v.content)}
                                                 >
                                                     Load this version

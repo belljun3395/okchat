@@ -1,13 +1,13 @@
 import java.io.File
 
 plugins {
-    kotlin("jvm") version "1.9.25"
-    kotlin("plugin.spring") version "1.9.25"
-    kotlin("plugin.jpa") version "1.9.25"
-    id("org.springframework.boot") version "3.5.6"
-    id("io.spring.dependency-management") version "1.1.7"
-    id("org.jlleitschuh.gradle.ktlint") version "11.6.1"
-    id("org.graalvm.buildtools.native") version "0.10.3"
+    kotlin("jvm")
+    kotlin("plugin.spring")
+    kotlin("plugin.jpa")
+    id("org.springframework.boot")
+    id("io.spring.dependency-management")
+    id("org.jlleitschuh.gradle.ktlint")
+    id("org.graalvm.buildtools.native")
     jacoco
 }
 
@@ -25,10 +25,11 @@ repositories {
     mavenCentral()
 }
 
-extra["springAiVersion"] = "1.1.0-M2"
-extra["springCloudVersion"] = "2025.0.0"
-
 dependencies {
+    implementation(project(":okchat-lib:okchat-lib-ai"))
+    implementation(project(":okchat-lib:okchat-lib-persistence"))
+    implementation(project(":okchat-lib:okchat-lib-web"))
+
     /** kotlin  &  reactor */
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")

@@ -1,6 +1,5 @@
 package com.okestro.okchat.prompt.service
 
-import com.okestro.okchat.prompt.config.PromptCacheConfig.Companion.PROMPT_LATEST_CACHE_PREFIX
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.data.redis.core.ReactiveRedisTemplate
@@ -14,6 +13,7 @@ class PromptCacheService(
     private val redisTemplate: ReactiveRedisTemplate<String, String>
 ) {
     companion object {
+        private const val PROMPT_LATEST_CACHE_PREFIX = "prompt:latest:"
         private val CACHE_TTL = Duration.ofHours(24)
     }
 

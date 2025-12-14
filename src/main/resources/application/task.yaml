@@ -1,0 +1,19 @@
+spring:
+  # Spring Cloud Task
+  cloud:
+    task:
+      enabled: ${SPRING_CLOUD_TASK_ENABLED:true}
+      initialize-enabled: ${SPRING_CLOUD_TASK_INITIALIZE_ENABLED:true}
+      table-prefix: ${SPRING_CLOUD_TASK_TABLE_PREFIX:TASK_}
+      single-instance-enabled: ${SPRING_CLOUD_TASK_SINGLE_INSTANCE_ENABLED:true}
+
+task:
+  confluence-sync:
+    enabled: ${TASK_CONFLUENCE_SYNC_ENABLED:false}
+  email-polling:
+    enabled: ${TASK_EMAIL_POLLING_ENABLED:false}
+  metrics-update:
+    enabled: ${TASK_METRICS_UPDATE_ENABLED:true} # Enabled by default
+    hourly-interval: ${TASK_METRICS_UPDATE_HOURLY_INTERVAL:60000} # 1 minute
+    daily-interval: ${TASK_METRICS_UPDATE_DAILY_INTERVAL:300000} # 5 minutes
+    initial-delay: ${TASK_METRICS_UPDATE_INITIAL_DELAY:10000} # 10 seconds

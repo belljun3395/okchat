@@ -1,0 +1,62 @@
+spring:
+  # Spring AI configuration
+  ai:
+    retry:
+      max-attempts: 5
+      backoff:
+        initial-interval: 2s
+        multiplier: 2
+        max-interval: 30s
+    vectorstore:
+      opensearch:
+        host: ${SPRING_AI_VECTORSTORE_OPENSEARCH_HOST:localhost}
+        port: ${SPRING_AI_VECTORSTORE_OPENSEARCH_PORT:9200}
+        scheme: ${SPRING_AI_VECTORSTORE_OPENSEARCH_SCHEME:http}
+        username: ${SPRING_AI_VECTORSTORE_OPENSEARCH_USERNAME:}
+        password: ${SPRING_AI_VECTORSTORE_OPENSEARCH_PASSWORD:}
+        index-name: ${SPRING_AI_VECTORSTORE_OPENSEARCH_INDEX_NAME:vector_store}
+        embedding-dimension: ${SPRING_AI_VECTORSTORE_OPENSEARCH_EMBEDDING_DIMENSION:1536}
+    openai:
+      api-key: ${SPRING_AI_OPENAI_API_KEY:${OPENAI_API_KEY:}}
+      embedding:
+        model: ${SPRING_AI_OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+      chat:
+        options:
+          model: ${SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL:gpt-4.1-mini}
+          stream-usage: true # Enable token usage in streaming responses
+    # MCP client disabled for Kubernetes deployment (requires Node.js/npx)
+    # mcp:
+    #   client:
+    #     stdio:
+    #       connections:
+    #         sequential-thinking:
+    #           command: npx
+    #           args:
+    #             - "-y"
+    #             - "@modelcontextprotocol/server-sequential-thinking"
+    #         memory:
+    #           command: npx
+    #           args:
+    #             - "-y"
+    #             - "@modelcontextprotocol/server-memory"
+
+# RAG configuration
+rag:
+  confluence:
+    chunking:
+      strategy: RECURSIVE_CHARACTER # Options: RECURSIVE_CHARACTER, SEMANTIC, SENTENCE_WINDOW
+      chunk-size: 512
+      chunk-overlap: 50
+      min-chunk-size-chars: 350
+      min-chunk-length-to-embed: 5
+      max-num-chunks: 10000
+      keep-separators: true
+      semantic-similarity-threshold: 0.5
+      sentence-window-size: 3
+  rrf:
+    k: 60.0
+    keyword-weight: 1.0
+    title-weight: 2.0 # Increased: Title matching (e.g., "250901") is most important for meeting records
+    content-weight: 1.0
+    date-boost-factor: 3.0 # Multiply RRF score when document title matches date keywords (e.g., "250804" in query date range)
+    path-boost-factor: 2.0 # Multiply RRF score when document path hierarchy matches query intent (e.g., "팀회의" path for meeting queries)

@@ -1,0 +1,24 @@
+search:
+  hybrid:
+    keyword:
+      text-weight: 0.7 # Favor text matching for keywords
+      vector-weight: 0.3
+    title:
+      text-weight: 0.7 # Favor text matching for titles
+      vector-weight: 0.3
+    content:
+      text-weight: 0.4 # Balance text and semantic for content
+      vector-weight: 0.6
+  fields:
+    keyword:
+      query-by: "metadata.keywords,metadata.title,content"
+      weights: "10,5,1" # Heavy weight on keywords field
+    title:
+      query-by: "metadata.title,content,metadata.keywords"
+      weights: "10,3,1" # Heavy weight on title field
+    content:
+      query-by: "content,metadata.title,metadata.keywords"
+      weights: "10,5,3" # Heavy weight on content field, title and keywords as supporting context
+    path:
+      query-by: "metadata.path,metadata.title,content"
+      weights: "10,5,1" # Heavy weight on path field

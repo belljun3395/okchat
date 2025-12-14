@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: okchat
+  docker:
+    compose:
+      enabled: false
+  output:
+    ansi:
+      enabled: ALWAYS # Enable colored output

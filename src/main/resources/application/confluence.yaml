@@ -1,0 +1,6 @@
+confluence:
+  base-url: ${CONFLUENCE_BASE_URL}
+  auth:
+    type: BASIC
+    email: ${CONFLUENCE_EMAIL:}
+    api-token: ${CONFLUENCE_API_TOKEN:}

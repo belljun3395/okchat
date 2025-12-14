@@ -160,6 +160,32 @@ tasks.withType<Test> {
     finalizedBy(tasks.jacocoTestReport)
 }
 
+// Ktlint should not trigger Spring AOT generation during formatting/checking.
+// These AOT source sets contain generated Java and make `ktlintCheck`/`ktlintFormat` slow and flaky.
+tasks.matching { it.name.contains("AotSourceSet", ignoreCase = false) }.configureEach {
+    enabled = false
+}
+
+tasks.named("ktlintCheck") {
+    setDependsOn(
+        listOf(
+            "ktlintKotlinScriptCheck",
+            "ktlintMainSourceSetCheck",
+            "ktlintTestSourceSetCheck"
+        )
+    )
+}
+
+tasks.named("ktlintFormat") {
+    setDependsOn(
+        listOf(
+            "ktlintKotlinScriptFormat",
+            "ktlintMainSourceSetFormat",
+            "ktlintTestSourceSetFormat"
+        )
+    )
+}
+
 private object JacocoCoverage {
     val generatedClasses = listOf(
         "**/*$\$serializer.class",

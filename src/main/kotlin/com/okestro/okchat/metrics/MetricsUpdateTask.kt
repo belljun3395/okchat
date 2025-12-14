@@ -1,4 +1,4 @@
-package com.okestro.okchat.task
+package com.okestro.okchat.metrics
 
 import com.okestro.okchat.chat.repository.ChatInteractionRepository
 import io.github.oshai.kotlinlogging.KotlinLogging

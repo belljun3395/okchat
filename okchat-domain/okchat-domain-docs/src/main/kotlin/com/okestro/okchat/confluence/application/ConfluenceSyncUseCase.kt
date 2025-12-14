@@ -1,4 +1,4 @@
-package com.okestro.okchat.task
+package com.okestro.okchat.confluence.application
 
 import com.github.f4b6a3.tsid.TsidCreator
 import com.okestro.okchat.ai.service.chunking.ChunkingStrategy
@@ -17,25 +17,18 @@ import com.okestro.okchat.knowledge.repository.KnowledgeBaseRepository
 import com.okestro.okchat.search.support.MetadataFields
 import com.okestro.okchat.search.support.metadata
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micrometer.core.instrument.MeterRegistry
-import io.micrometer.core.instrument.Tags
-import io.micrometer.core.instrument.Timer
-import io.micrometer.observation.Observation
-import io.micrometer.observation.ObservationRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.springframework.ai.document.Document
 import org.springframework.ai.vectorstore.VectorStore
-import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 import java.time.Instant
 
 /**
@@ -46,34 +39,27 @@ import java.time.Instant
  * 2. Kubernetes Job/CronJob
  * 3. 클라우드 환경의 예약된 작업 (Scheduled Task)
  */
-@Component
+@Service
 @ConditionalOnProperty(
     name = ["task.confluence-sync.enabled"],
     havingValue = "true",
     matchIfMissing = false
 )
-class ConfluenceSyncTask(
+class ConfluenceSyncUseCase(
     private val confluenceService: ConfluenceService,
     private val pdfAttachmentService: PdfAttachmentService,
     private val vectorStore: VectorStore,
     private val documentKeywordExtractionService: DocumentKeywordExtractionService,
     private val chunkingStrategy: ChunkingStrategy,
     private val confluenceProperties: ConfluenceProperties,
-    private val meterRegistry: MeterRegistry,
-    private val observationRegistry: ObservationRegistry,
     private val knowledgeBaseRepository: KnowledgeBaseRepository,
     private val documentRepository: DocumentRepository
-) : CommandLineRunner {
+) {
 
     private val log = KotlinLogging.logger {}
 
-    override fun run(vararg args: String?) {
-        val observation = Observation.createNotStarted("task.confluence-sync", observationRegistry)
-        observation.observe {
-            runBlocking(MDCContext()) {
-                executeTask()
-            }
-        }
+    suspend fun execute() {
+        executeTask()
     }
 
     private suspend fun executeTask() {
@@ -102,8 +88,6 @@ class ConfluenceSyncTask(
         }
 
         log.info { "Starting sync for KB: ${kb.name} (Space: $spaceKey)" }
-        val sample = Timer.start(meterRegistry)
-        val tags = Tags.of("task", "confluence-sync", "kb", kb.name)
 
         try {
             // 1. Fetch Confluence content hierarchy
@@ -176,11 +160,7 @@ class ConfluenceSyncTask(
             }
 
             log.info { "[ConfluenceSync] Stored/updated documents: total_chunks=$successCount" }
-
-            // Record metrics
-            sample.stop(meterRegistry.timer("task.execution.time", tags.and("status", "success")))
         } catch (e: Exception) {
-            sample.stop(meterRegistry.timer("task.execution.time", tags.and("status", "failure")))
             log.error(e) { "Error occurred during Confluence sync for KB ${kb.name}: ${e.message}" }
         }
     }

@@ -1,4 +1,4 @@
-package com.okestro.okchat.task.controller
+package com.okestro.okchat.batch.controller
 
 import com.okestro.okchat.task.dto.TaskExecutionDto
 import com.okestro.okchat.task.dto.TaskStatsDto

@@ -10,6 +10,7 @@ COPY gradle ./gradle
 COPY okchat-lib/okchat-lib-web/build.gradle.kts okchat-lib/okchat-lib-web/build.gradle.kts
 COPY okchat-lib/okchat-lib-persistence/build.gradle.kts okchat-lib/okchat-lib-persistence/build.gradle.kts
 COPY okchat-lib/okchat-lib-ai/build.gradle.kts okchat-lib/okchat-lib-ai/build.gradle.kts
+COPY okchat-domain/okchat-domain-user/build.gradle.kts okchat-domain/okchat-domain-user/build.gradle.kts
 
 # Download dependencies (cached layer)
 RUN gradle dependencies --no-daemon || true
@@ -19,6 +20,7 @@ COPY src ./src
 COPY okchat-lib/okchat-lib-web/src okchat-lib/okchat-lib-web/src
 COPY okchat-lib/okchat-lib-persistence/src okchat-lib/okchat-lib-persistence/src
 COPY okchat-lib/okchat-lib-ai/src okchat-lib/okchat-lib-ai/src
+COPY okchat-domain/okchat-domain-user/src okchat-domain/okchat-domain-user/src
 
 # Build the application
 RUN gradle bootJar --no-daemon

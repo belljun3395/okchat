@@ -29,6 +29,7 @@ dependencies {
     implementation(project(":okchat-lib:okchat-lib-ai"))
     implementation(project(":okchat-lib:okchat-lib-persistence"))
     implementation(project(":okchat-lib:okchat-lib-web"))
+    implementation(project(":okchat-domain:okchat-domain-user"))
 
     /** kotlin  &  reactor */
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")

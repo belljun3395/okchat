@@ -15,4 +15,9 @@ interface UserRepository : JpaRepository<User, Long> {
      * Find active users by email
      */
     fun findByEmailAndActive(email: String, active: Boolean = true): User?
+
+    /**
+     * Find active users by id
+     */
+    fun findByIdAndActive(id: Long, active: Boolean = true): User?
 }

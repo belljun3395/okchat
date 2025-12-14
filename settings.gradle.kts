@@ -25,3 +25,5 @@ dependencyResolutionManagement {
 include(":okchat-lib:okchat-lib-web")
 include(":okchat-lib:okchat-lib-persistence")
 include(":okchat-lib:okchat-lib-ai")
+
+include(":okchat-domain:okchat-domain-user")

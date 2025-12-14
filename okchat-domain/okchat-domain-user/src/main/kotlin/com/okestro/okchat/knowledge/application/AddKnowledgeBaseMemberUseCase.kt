@@ -28,13 +28,15 @@ class AddKnowledgeBaseMemberUseCase(
         val targetUser = userRepository.findByEmail(input.targetEmail)
             ?: throw NoSuchElementException("Target user not found")
 
-        val existing = knowledgeBaseUserRepository.findByUserIdAndKnowledgeBaseId(targetUser.id!!, input.kbId)
+        val targetUserId = requireNotNull(targetUser.id) { "Target user ID must not be null" }
+
+        val existing = knowledgeBaseUserRepository.findByUserIdAndKnowledgeBaseId(targetUserId, input.kbId)
         if (existing != null) {
             throw IllegalArgumentException("User is already a member")
         }
 
         val newMember = KnowledgeBaseUser(
-            userId = targetUser.id,
+            userId = targetUserId,
             knowledgeBaseId = input.kbId,
             role = input.role,
             approvedBy = caller.id,

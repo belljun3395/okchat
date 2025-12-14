@@ -52,19 +52,6 @@ interface PromptRepository : JpaRepository<Prompt, Long> {
     fun findLatestVersionByType(@Param("type") type: String): Int?
 
     /**
-     * Deactivate a prompt by id
-     */
-    @Modifying
-    @Query(
-        """
-        UPDATE Prompt p
-        SET p.active = false, p.updatedAt = CURRENT_TIMESTAMP
-        WHERE p.id = :id
-        """
-    )
-    fun deactivatePrompt(@Param("id") id: Long): Int
-
-    /**
      * Find all distinct prompt types
      */
     @Query("SELECT DISTINCT p.type FROM Prompt p WHERE p.active = true")

@@ -20,7 +20,6 @@ class DeactivatePromptUseCaseTest : BehaviorSpec({
         val version = 1
         val prompt = Prompt(id = 1, type = type, version = version, content = "test content", active = true)
         coEvery { promptRepository.findByTypeAndVersionAndActive(type, version) } returns prompt
-        coEvery { promptRepository.deactivatePrompt(prompt.id!!) } returns 1
         coEvery { promptRepository.findLatestByTypeAndActive(type) } returns null
         coEvery { promptCacheService.evictLatestPromptCache(type) } returns Unit
 

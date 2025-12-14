@@ -21,7 +21,6 @@ class UpdatePromptUseCaseTest : BehaviorSpec({
         val oldPrompt = Prompt(id = 1, type = type, version = 1, content = "old content", active = true)
         val newPrompt = Prompt(id = 2, type = type, version = 2, content = content, active = true)
         coEvery { promptRepository.findLatestByTypeAndActive(type) } returns oldPrompt
-        coEvery { promptRepository.deactivatePrompt(oldPrompt.id!!) } returns 1
         coEvery { promptRepository.save(any()) } returns newPrompt
         coEvery { promptCacheService.cacheLatestPrompt(type, content) } returns Unit
 

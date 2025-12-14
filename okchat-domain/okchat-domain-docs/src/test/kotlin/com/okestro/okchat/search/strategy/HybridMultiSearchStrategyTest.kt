@@ -67,7 +67,7 @@ class HybridMultiSearchStrategyTest : BehaviorSpec({
         )
 
         `when`("Search is executed") {
-            val result = strategy.search(criteriaList, topK = 5)
+            strategy.search(criteriaList, topK = 5)
 
             then("Embedding should be generated from Content criteria") {
                 requestSlot.captured.forEach { request ->
@@ -103,7 +103,7 @@ class HybridMultiSearchStrategyTest : BehaviorSpec({
         )
 
         `when`("Search is executed") {
-            val result = strategy.search(criteriaList, topK = 5)
+            strategy.search(criteriaList, topK = 5)
 
             then("Empty embedding should be used (BM25 only)") {
                 requestSlot.captured[0].vectorQuery shouldBe emptyList()
@@ -113,7 +113,7 @@ class HybridMultiSearchStrategyTest : BehaviorSpec({
 
     given("Empty criteria list") {
         `when`("Search is executed") {
-            val result = strategy.search(emptyList(), topK = 5)
+            strategy.search(emptyList(), topK = 5)
 
             then("Should not call client") {
                 coVerify(exactly = 0) { searchClient.multiHybridSearch(any()) }

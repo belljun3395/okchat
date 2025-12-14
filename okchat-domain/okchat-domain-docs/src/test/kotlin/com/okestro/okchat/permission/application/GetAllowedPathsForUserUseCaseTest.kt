@@ -59,7 +59,7 @@ class GetAllowedPathsForUserUseCaseTest : BehaviorSpec({
                     searchAllPathsUseCase.execute(
                         match {
                             it.allowedKbIds is AllowedKnowledgeBases.Subset &&
-                                (it.allowedKbIds as AllowedKnowledgeBases.Subset).ids.contains(requestKbId)
+                                it.allowedKbIds.ids.contains(requestKbId)
                         }
                     )
                 }

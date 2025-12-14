@@ -54,8 +54,7 @@ class SearchCriteriaTest {
     fun `should implement SearchCriteria correctly`(
         criteria: SearchCriteria,
         expectedType: SearchType,
-        expectedSize: Int,
-        description: String
+        expectedSize: Int
     ) {
         // when & then
         criteria.getSearchType() shouldBe expectedType
@@ -66,7 +65,7 @@ class SearchCriteriaTest {
     @ParameterizedTest(name = "{1} should report isEmpty as true")
     @MethodSource("emptyCriteriaTestCases")
     @DisplayName("should report isEmpty as true for empty criteria")
-    fun `should report isEmpty as true for empty criteria`(criteria: SearchCriteria, description: String) {
+    fun `should report isEmpty as true for empty criteria`(criteria: SearchCriteria) {
         // when & then
         criteria.isEmpty() shouldBe true
         criteria.size() shouldBe 0

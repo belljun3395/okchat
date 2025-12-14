@@ -5,7 +5,6 @@ import com.okestro.okchat.search.client.SearchHit
 import com.okestro.okchat.search.model.SearchResult
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.datatest.withData
-import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe

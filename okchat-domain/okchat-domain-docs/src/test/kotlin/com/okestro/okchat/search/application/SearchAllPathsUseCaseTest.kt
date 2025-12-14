@@ -10,7 +10,6 @@ import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.mockk
 import org.opensearch.client.opensearch.OpenSearchClient
-import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
 import org.opensearch.client.opensearch.core.search.Hit
 

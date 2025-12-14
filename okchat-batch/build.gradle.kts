@@ -1,3 +1,6 @@
+import org.gradle.api.JavaVersion
+import org.springframework.boot.gradle.tasks.bundling.BootJar
+
 plugins {
     kotlin("jvm")
     kotlin("plugin.spring")
@@ -18,6 +21,10 @@ dependencyManagement {
     }
 }
 
+springBoot {
+    mainClass.set("com.okestro.okchat.batch.OkchatBatchApplicationKt")
+}
+
 dependencies {
     implementation(project(":okchat-lib:okchat-lib-web"))
     implementation(project(":okchat-lib:okchat-lib-persistence"))
@@ -36,4 +43,28 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+tasks.named<BootJar>("bootJar") {
+    mainClass.set("com.okestro.okchat.batch.OkchatBatchApplicationKt")
+}
+
+tasks.register<BootJar>("bootJarEmailPolling") {
+    group = "build"
+    description = "Build Email Polling job executable jar"
+    archiveClassifier.set("email-polling")
+    mainClass.set("com.okestro.okchat.batch.job.OkchatEmailPollingJobApplicationKt")
+    targetJavaVersion.set(JavaVersion.VERSION_21)
+    classpath = sourceSets["main"].runtimeClasspath
+    from(sourceSets["main"].output)
+}
+
+tasks.register<BootJar>("bootJarConfluenceSync") {
+    group = "build"
+    description = "Build Confluence Sync job executable jar"
+    archiveClassifier.set("confluence-sync")
+    mainClass.set("com.okestro.okchat.batch.job.OkchatConfluenceSyncJobApplicationKt")
+    targetJavaVersion.set(JavaVersion.VERSION_21)
+    classpath = sourceSets["main"].runtimeClasspath
+    from(sourceSets["main"].output)
 }

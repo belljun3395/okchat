@@ -6,22 +6,16 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tags
 import io.micrometer.core.instrument.Timer
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.slf4j.MDCContext
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
 /**
- * Scheduled email polling task with Spring Cloud Task single instance support
+ * Email polling job.
  *
- * In multi-server environments, Spring Cloud Task's singleInstanceEnabled prevents
- * multiple instances from executing simultaneously using leader election.
- *
- * Features:
- * - Periodic execution via @Scheduled
- * - Single instance guarantee via Spring Cloud Task (enabled in TaskConfig)
- * - Automatic failover when primary instance fails
- * - Per-KnowledgeBase polling
+ * Intended to run as a one-shot batch job (e.g. Kubernetes CronJob) and exit.
  */
 @Component
 @ConditionalOnProperty(
@@ -38,14 +32,12 @@ class EmailPollingTask(
     private val log = KotlinLogging.logger {}
 
     override fun run(vararg args: String?) {
-        log.info { "EmailPollingTask initialized - scheduled polling enabled" }
+        runBlocking(MDCContext()) {
+            pollEmails()
+        }
     }
 
-    @Scheduled(
-        fixedDelayString = "\${email.polling.interval:60000}",
-        initialDelayString = "\${email.polling.initial-delay:10000}"
-    )
-    suspend fun pollEmails() {
+    private suspend fun pollEmails() {
         log.info { "========== Start Email Polling Task ==========" }
         val sample = Timer.start(meterRegistry)
         val tags = Tags.of("task", "email-polling")

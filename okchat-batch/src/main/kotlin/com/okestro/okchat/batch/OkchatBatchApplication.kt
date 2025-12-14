@@ -7,5 +7,11 @@ import org.springframework.boot.runApplication
 class OkchatBatchApplication
 
 fun main(args: Array<String>) {
-    runApplication<OkchatBatchApplication>(*args)
+    runApplication<OkchatBatchApplication>(*args) {
+        setDefaultProperties(
+            mapOf(
+                "batch.api.enabled" to "true"
+            )
+        )
+    }
 }

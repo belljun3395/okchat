@@ -328,7 +328,7 @@ class ConfluenceSyncTask(
                                 pdfRdbDocs.add(
                                     com.okestro.okchat.knowledge.model.entity.Document(
                                         id = pdfDocId,
-                                        knowledgeBaseId = kb.id,
+                                        knowledgeBaseId = requireNotNull(kb.id) { "Knowledge Base ID must not be null" },
                                         externalId = pdfDoc.id,
                                         title = pdfDoc.metadata["title"] as? String ?: "PDF Attachment",
                                         path = pdfDoc.metadata["path"] as? String ?: path,

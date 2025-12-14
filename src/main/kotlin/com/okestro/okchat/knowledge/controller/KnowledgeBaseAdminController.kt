@@ -46,7 +46,7 @@ class KnowledgeBaseAdminController(
 
     @GetMapping("/{kbId}")
     @Operation(summary = "Knowledge Base 상세 조회")
-    fun getKnowledgeBaseDetail(
+    suspend fun getKnowledgeBaseDetail(
         @PathVariable kbId: Long,
         @RequestParam callerEmail: String
     ): ResponseEntity<Any> {
@@ -99,7 +99,7 @@ class KnowledgeBaseAdminController(
 
     @PostMapping
     @Operation(summary = "Knowledge Base 생성")
-    fun createKnowledgeBase(
+    suspend fun createKnowledgeBase(
         @RequestParam callerEmail: String,
         @RequestBody request: CreateKnowledgeBaseRequest
     ): ResponseEntity<Any> {
@@ -208,7 +208,7 @@ class KnowledgeBaseAdminController(
 
     @PutMapping("/{kbId}")
     @Operation(summary = "Knowledge Base 수정")
-    fun updateKnowledgeBase(
+    suspend fun updateKnowledgeBase(
         @PathVariable kbId: Long,
         @RequestParam callerEmail: String,
         @RequestBody request: UpdateKnowledgeBaseRequest

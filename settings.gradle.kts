@@ -27,3 +27,4 @@ include(":okchat-lib:okchat-lib-persistence")
 include(":okchat-lib:okchat-lib-ai")
 
 include(":okchat-domain:okchat-domain-user")
+include(":okchat-domain:okchat-domain-docs")

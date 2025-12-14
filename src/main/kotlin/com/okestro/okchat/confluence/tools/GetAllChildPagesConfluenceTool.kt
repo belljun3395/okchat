@@ -101,10 +101,11 @@ class GetAllChildPagesConfluenceTool(
             fun calculateDepth(pageId: String): Int {
                 if (depthMap.containsKey(pageId)) return depthMap[pageId]!!
                 val page = pageMap[pageId]
-                val depth = if (page?.parentId == null || page.parentId !in pageMap) {
+                val parentId = page?.parentId
+                val depth = if (parentId == null || parentId !in pageMap) {
                     0
                 } else {
-                    calculateDepth(page.parentId) + 1
+                    calculateDepth(parentId) + 1
                 }
                 depthMap[pageId] = depth
                 return depth
@@ -132,13 +133,15 @@ class GetAllChildPagesConfluenceTool(
                     append("## ${index + 1}. ${indent}${"└─ ".repeat(minOf(depth, 1))}${page.title}\n")
                     append("$indent- **Page ID**: ${page.id}\n")
                     append("$indent- **Depth Level**: Level $depth\n")
-                    if (page.parentId != null) {
-                        val parentTitle = pageMap[page.parentId]?.title ?: "Unknown"
-                        append("$indent- **Parent Page**: $parentTitle (ID: ${page.parentId})\n")
+                    val parentId = page.parentId
+                    if (parentId != null) {
+                        val parentTitle = pageMap[parentId]?.title ?: "Unknown"
+                        append("$indent- **Parent Page**: $parentTitle (ID: $parentId)\n")
                     }
                     append("$indent- **Status**: ${page.status ?: "N/A"}\n")
-                    if (page.version != null) {
-                        append("$indent- **Version**: ${page.version.number}\n")
+                    val version = page.version
+                    if (version != null) {
+                        append("$indent- **Version**: ${version.number}\n")
                     }
 
                     append("\n$indent### Page Content:\n")

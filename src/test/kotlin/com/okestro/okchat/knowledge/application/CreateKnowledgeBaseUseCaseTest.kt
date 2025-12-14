@@ -1,41 +1,38 @@
 package com.okestro.okchat.knowledge.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.okestro.okchat.docs.client.user.KnowledgeBaseEmailClient
+import com.okestro.okchat.docs.client.user.KnowledgeMemberClient
+import com.okestro.okchat.docs.client.user.UserClient
+import com.okestro.okchat.docs.client.user.UserSummaryDto
 import com.okestro.okchat.knowledge.application.dto.CreateKnowledgeBaseUseCaseIn
 import com.okestro.okchat.knowledge.model.entity.KnowledgeBase
 import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseType
-import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseUser
-import com.okestro.okchat.knowledge.repository.KnowledgeBaseEmailRepository
 import com.okestro.okchat.knowledge.repository.KnowledgeBaseRepository
-import com.okestro.okchat.knowledge.repository.KnowledgeBaseUserRepository
-import com.okestro.okchat.user.model.entity.User
-import com.okestro.okchat.user.model.entity.UserRole
-import com.okestro.okchat.user.repository.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.clearAllMocks
-import io.mockk.every
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
-import io.mockk.verify
-import org.springframework.test.util.ReflectionTestUtils
 import java.time.Instant
 
 class CreateKnowledgeBaseUseCaseTest : BehaviorSpec({
 
-    val userRepository = mockk<UserRepository>()
     val knowledgeBaseRepository = mockk<KnowledgeBaseRepository>()
-    val knowledgeBaseUserRepository = mockk<KnowledgeBaseUserRepository>()
-    val knowledgeBaseEmailRepository = mockk<KnowledgeBaseEmailRepository>()
     val objectMapper = mockk<ObjectMapper>(relaxed = true)
+    val userClient = mockk<UserClient>()
+    val knowledgeMemberClient = mockk<KnowledgeMemberClient>()
+    val knowledgeBaseEmailClient = mockk<KnowledgeBaseEmailClient>()
 
     val useCase = CreateKnowledgeBaseUseCase(
-        userRepository,
         knowledgeBaseRepository,
-        knowledgeBaseUserRepository,
-        knowledgeBaseEmailRepository,
-        objectMapper
+        objectMapper,
+        userClient,
+        knowledgeMemberClient,
+        knowledgeBaseEmailClient
     )
 
     afterEach {
@@ -52,14 +49,15 @@ class CreateKnowledgeBaseUseCaseTest : BehaviorSpec({
             config = mapOf("someKey" to "someValue")
         )
 
-        val adminUser = User(
+        val adminUser = UserSummaryDto(
             id = 1L,
             email = callerEmail,
             name = "Admin",
-            role = UserRole.SYSTEM_ADMIN
+            role = "SYSTEM_ADMIN"
         )
 
         val savedKb = KnowledgeBase(
+            id = 100L,
             name = input.name,
             description = input.description,
             type = input.type,
@@ -67,14 +65,13 @@ class CreateKnowledgeBaseUseCaseTest : BehaviorSpec({
             createdBy = 1L,
             createdAt = Instant.now(),
             updatedAt = Instant.now()
-        ).apply {
-            ReflectionTestUtils.setField(this, "id", 100L)
-        }
+        )
 
         `when`("SYSTEM_ADMIN requests creation") {
-            every { userRepository.findByEmail(callerEmail) } returns adminUser
-            every { knowledgeBaseRepository.save(any()) } returns savedKb
-            every { knowledgeBaseUserRepository.save(any()) } returns mockk<KnowledgeBaseUser>()
+            coEvery { userClient.getByEmail(callerEmail) } returns adminUser
+            coEvery { knowledgeBaseEmailClient.replaceEmailProviders(100L, any()) } returns Unit
+            coEvery { knowledgeMemberClient.addMember(100L, callerEmail, callerEmail, "ADMIN") } returns Unit
+            coEvery { knowledgeBaseRepository.save(any()) } returns savedKb
 
             val result = useCase.execute(input)
 
@@ -83,14 +80,15 @@ class CreateKnowledgeBaseUseCaseTest : BehaviorSpec({
                 result.id shouldBe 100L
                 result.name shouldBe input.name
 
-                verify(exactly = 1) { knowledgeBaseRepository.save(any()) }
-                verify(exactly = 1) { knowledgeBaseUserRepository.save(any()) }
+                coVerify(exactly = 1) { knowledgeBaseRepository.save(any()) }
+                coVerify(exactly = 1) { knowledgeBaseEmailClient.replaceEmailProviders(100L, any()) }
+                coVerify(exactly = 1) { knowledgeMemberClient.addMember(100L, callerEmail, callerEmail, "ADMIN") }
             }
         }
 
         `when`("Non-admin user (USER role) requests creation") {
-            val normalUser = adminUser.copy(role = UserRole.USER)
-            every { userRepository.findByEmail(callerEmail) } returns normalUser
+            val normalUser = adminUser.copy(role = "USER")
+            coEvery { userClient.getByEmail(callerEmail) } returns normalUser
 
             then("IllegalAccessException is thrown") {
                 shouldThrow<IllegalAccessException> {
@@ -100,7 +98,7 @@ class CreateKnowledgeBaseUseCaseTest : BehaviorSpec({
         }
 
         `when`("Caller user is not found") {
-            every { userRepository.findByEmail(callerEmail) } returns null
+            coEvery { userClient.getByEmail(callerEmail) } returns null
 
             then("IllegalArgumentException is thrown") {
                 shouldThrow<IllegalArgumentException> {

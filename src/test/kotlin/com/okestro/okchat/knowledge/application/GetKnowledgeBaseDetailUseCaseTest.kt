@@ -1,39 +1,37 @@
 package com.okestro.okchat.knowledge.application
 
+import com.okestro.okchat.docs.client.user.KnowledgeBaseEmailClient
+import com.okestro.okchat.docs.client.user.KnowledgeBaseMembershipDto
+import com.okestro.okchat.docs.client.user.KnowledgeMemberClient
+import com.okestro.okchat.docs.client.user.UserClient
+import com.okestro.okchat.docs.client.user.UserSummaryDto
 import com.okestro.okchat.knowledge.application.dto.GetKnowledgeBaseDetailUseCaseIn
 import com.okestro.okchat.knowledge.model.entity.KnowledgeBase
 import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseType
-import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseUser
-import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseUserRole
-import com.okestro.okchat.knowledge.repository.KnowledgeBaseEmailRepository
 import com.okestro.okchat.knowledge.repository.KnowledgeBaseRepository
-import com.okestro.okchat.knowledge.repository.KnowledgeBaseUserRepository
-import com.okestro.okchat.user.model.entity.User
-import com.okestro.okchat.user.model.entity.UserRole
-import com.okestro.okchat.user.repository.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.clearAllMocks
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import org.springframework.test.util.ReflectionTestUtils
 import java.time.Instant
 import java.util.Optional
 
 class GetKnowledgeBaseDetailUseCaseTest : BehaviorSpec({
 
     val knowledgeBaseRepository = mockk<KnowledgeBaseRepository>()
-    val knowledgeBaseEmailRepository = mockk<KnowledgeBaseEmailRepository>()
-    val userRepository = mockk<UserRepository>()
-    val knowledgeBaseUserRepository = mockk<KnowledgeBaseUserRepository>()
+    val userClient = mockk<UserClient>()
+    val knowledgeMemberClient = mockk<KnowledgeMemberClient>()
+    val knowledgeBaseEmailClient = mockk<KnowledgeBaseEmailClient>()
 
     val useCase = GetKnowledgeBaseDetailUseCase(
         knowledgeBaseRepository,
-        knowledgeBaseEmailRepository,
-        userRepository,
-        knowledgeBaseUserRepository
+        userClient,
+        knowledgeMemberClient,
+        knowledgeBaseEmailClient
     )
 
     afterEach {
@@ -45,34 +43,35 @@ class GetKnowledgeBaseDetailUseCaseTest : BehaviorSpec({
         val callerEmail = "user@example.com"
         val input = GetKnowledgeBaseDetailUseCaseIn(kbId, callerEmail)
 
-        val caller = User(
+        val caller = UserSummaryDto(
             id = 1L,
             email = callerEmail,
             name = "Test User",
-            role = UserRole.USER
+            role = "USER"
         )
 
         val kb = KnowledgeBase(
+            id = kbId,
             name = "Test KB",
+            description = null,
             type = KnowledgeBaseType.CONFLUENCE,
-            config = mutableMapOf(),
             createdBy = 1L,
             createdAt = Instant.now(),
-            updatedAt = Instant.now()
-        ).apply {
-            ReflectionTestUtils.setField(this, "id", kbId)
-        }
+            updatedAt = Instant.now(),
+            config = emptyMap<String, Any>()
+        )
 
         `when`("KB member (ADMIN) requests") {
-            every { userRepository.findByEmail(callerEmail) } returns caller
-            every { knowledgeBaseUserRepository.findByUserIdAndKnowledgeBaseId(caller.id!!, kbId) } returns KnowledgeBaseUser(
-                userId = caller.id!!,
+            coEvery { userClient.getByEmail(callerEmail) } returns caller
+            coEvery { knowledgeMemberClient.getMembership(kbId = kbId, userId = caller.id) } returns KnowledgeBaseMembershipDto(
                 knowledgeBaseId = kbId,
-                role = KnowledgeBaseUserRole.ADMIN,
+                userId = caller.id,
+                role = "ADMIN",
+                approvedBy = null,
                 createdAt = Instant.now()
             )
             every { knowledgeBaseRepository.findById(kbId) } returns Optional.of(kb)
-            every { knowledgeBaseEmailRepository.findAllByKnowledgeBaseId(kbId) } returns emptyList()
+            coEvery { knowledgeBaseEmailClient.getEmailProviders(kbId) } returns emptyList()
 
             val result = useCase.execute(input)
 
@@ -84,11 +83,10 @@ class GetKnowledgeBaseDetailUseCaseTest : BehaviorSpec({
         }
 
         `when`("SYSTEM_ADMIN requests") {
-            val systemAdmin = caller.copy(role = UserRole.SYSTEM_ADMIN)
-            every { userRepository.findByEmail(callerEmail) } returns systemAdmin
-            // System Admin doesn't need explicit membership check logic in canManageKb, but let's assume implementation
+            val systemAdmin = caller.copy(role = "SYSTEM_ADMIN")
+            coEvery { userClient.getByEmail(callerEmail) } returns systemAdmin
             every { knowledgeBaseRepository.findById(kbId) } returns Optional.of(kb)
-            every { knowledgeBaseEmailRepository.findAllByKnowledgeBaseId(kbId) } returns emptyList()
+            coEvery { knowledgeBaseEmailClient.getEmailProviders(kbId) } returns emptyList()
 
             val result = useCase.execute(input)
 
@@ -99,11 +97,12 @@ class GetKnowledgeBaseDetailUseCaseTest : BehaviorSpec({
         }
 
         `when`("User without permission requests (MEMBER role)") {
-            every { userRepository.findByEmail(callerEmail) } returns caller
-            every { knowledgeBaseUserRepository.findByUserIdAndKnowledgeBaseId(caller.id!!, kbId) } returns KnowledgeBaseUser(
-                userId = caller.id!!,
+            coEvery { userClient.getByEmail(callerEmail) } returns caller
+            coEvery { knowledgeMemberClient.getMembership(kbId = kbId, userId = caller.id) } returns KnowledgeBaseMembershipDto(
                 knowledgeBaseId = kbId,
-                role = KnowledgeBaseUserRole.MEMBER, // Not ADMIN
+                userId = caller.id,
+                role = "MEMBER",
+                approvedBy = null,
                 createdAt = Instant.now()
             )
 
@@ -115,7 +114,7 @@ class GetKnowledgeBaseDetailUseCaseTest : BehaviorSpec({
         }
 
         `when`("KB does not exist") {
-            every { userRepository.findByEmail(callerEmail) } returns caller.copy(role = UserRole.SYSTEM_ADMIN)
+            coEvery { userClient.getByEmail(callerEmail) } returns caller.copy(role = "SYSTEM_ADMIN")
             every { knowledgeBaseRepository.findById(kbId) } returns Optional.empty()
 
             then("NoSuchElementException is thrown") {

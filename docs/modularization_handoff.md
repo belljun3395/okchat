@@ -107,15 +107,43 @@
 
 ## Phase2-2 (okchat-domain-docs) TODO
 
-- `okchat-domain-docs` 모듈 생성
-- 이관 대상(예상):
-  - `search`
-  - `permission` (controller는 루트 유지 가능)
-  - `confluence`
-  - `knowledge` (KB/Document 관리; member/email-config는 user 도메인 경계 고려)
-- 도메인 간 통신:
-  - `docs` → `user`: Internal API 기반 Client(WebClient/Feign)로 전환(컴파일 의존 제거)
-- 검증:
-  - `./gradlew test`
-  - `./gradlew ktlintMainSourceSetCheck`
+> 아래 내용은 Phase2-2 진행 후 업데이트됨.
 
+### 완료(구현/이관)
+
+- `okchat-domain/okchat-domain-docs` 모듈 생성 및 wiring
+  - `settings.gradle.kts` include
+  - 루트 `build.gradle.kts` 의존성 추가
+  - `Dockerfile`, `Dockerfile.native`에 멀티모듈 COPY 반영
+- 공용 AI chunking 유틸을 `okchat-lib-ai`로 이동
+  - `com.okestro.okchat.ai.service.chunking.*`
+  - `com.okestro.okchat.ai.support.MathUtils`
+- docs 도메인 코드 이관
+  - `search`, `confluence`, `permission(application/model/repository/service)`, `knowledge(application/model/repository)`
+  - External controller는 루트 유지:
+    - `src/main/kotlin/com/okestro/okchat/permission/controller/PermissionController.kt`
+    - `src/main/kotlin/com/okestro/okchat/knowledge/controller/KnowledgeBaseAdminController.kt`
+  - Tool 계층은 root `ai.tools` 의존 때문에 루트 유지:
+    - `src/main/kotlin/com/okestro/okchat/search/tools`
+    - `src/main/kotlin/com/okestro/okchat/confluence/tools`
+- docs → user 컴파일 의존 제거
+  - docs 모듈에 Internal API 호출용 Client(WebClient) 추가:
+    - `UserClient`, `KnowledgeMemberClient`, `KnowledgeBaseEmailClient`
+    - 위치/패키지: `okchat-domain/okchat-domain-docs/src/main/kotlin/com/okestro/okchat/docs/client/user/*` (`com.okestro.okchat.docs.client.user`)
+  - permission/knowledge usecase들이 repository/usecase 의존을 client 기반으로 전환
+  - KB create/update/detail usecase는 `suspend fun execute(...)`로 변경
+- user 도메인 Internal API 보강
+  - `POST /internal/api/v1/knowledge-bases/{kbId}/members`
+  - `GET/PUT /internal/api/v1/knowledge-bases/{kbId}/email-providers`
+- 모듈 경계 smart cast 컴파일 오류 일부 수정
+  - confluence tool 일부, `ConfluenceSyncTask` 등에서 local val/`requireNotNull` 패턴 적용
+
+### 테스트/검증
+
+- 테스트 수정(새 ctor/client/suspend 반영) 후 `./gradlew test` 통과
+- `./gradlew ktlintMainSourceSetCheck` 통과
+
+### 남은 TODO(Phase2-2 후속)
+
+- runtime 설정 정리: `internal.services.user.url`을 `application/*.yaml`에 명시해 운영/로컬 프로파일 정리
+- docs 모듈로 옮긴 영역에 대해 “External API는 root, Internal API는 domain” 원칙 재점검(필요 시 internal controller 보강)

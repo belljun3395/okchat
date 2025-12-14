@@ -68,8 +68,9 @@ class GetPageByIdConfluenceTool(
                     append("Parent: ${page.parentType}/${page.parentId}\n")
                 }
 
-                if (page.version != null) {
-                    append("Version: ${page.version.number}\n")
+                val version = page.version
+                if (version != null) {
+                    append("Version: ${version.number}\n")
                 }
 
                 append("\n=== Page Content ===\n\n")

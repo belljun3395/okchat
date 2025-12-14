@@ -1,9 +1,9 @@
 package com.okestro.okchat.permission.service
 
+import com.okestro.okchat.docs.client.user.UserClient
 import com.okestro.okchat.permission.application.FilterSearchResultsUseCase
 import com.okestro.okchat.permission.application.dto.FilterSearchResultsUseCaseIn
 import com.okestro.okchat.search.model.SearchResult
-import com.okestro.okchat.docs.client.user.UserClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 

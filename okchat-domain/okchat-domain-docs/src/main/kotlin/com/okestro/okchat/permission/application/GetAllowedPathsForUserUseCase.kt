@@ -1,12 +1,12 @@
 package com.okestro.okchat.permission.application
 
+import com.okestro.okchat.docs.client.user.KnowledgeMemberClient
+import com.okestro.okchat.docs.client.user.UserClient
 import com.okestro.okchat.permission.application.dto.GetAllowedPathsForUserUseCaseIn
 import com.okestro.okchat.permission.application.dto.GetAllowedPathsForUserUseCaseOut
 import com.okestro.okchat.search.application.SearchAllPathsUseCase
 import com.okestro.okchat.search.application.dto.SearchAllPathsUseCaseIn
 import com.okestro.okchat.search.model.AllowedKnowledgeBases
-import com.okestro.okchat.docs.client.user.KnowledgeMemberClient
-import com.okestro.okchat.docs.client.user.UserClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 

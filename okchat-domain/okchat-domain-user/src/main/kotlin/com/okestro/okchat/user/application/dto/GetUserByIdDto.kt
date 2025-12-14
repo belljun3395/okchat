@@ -9,4 +9,3 @@ data class GetUserByIdUseCaseIn(
 data class GetUserByIdUseCaseOut(
     val user: User?
 )
-

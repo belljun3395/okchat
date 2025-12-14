@@ -1,12 +1,12 @@
 package com.okestro.okchat.knowledge.application
 
-import com.okestro.okchat.knowledge.application.dto.GetKnowledgeBaseDetailUseCaseIn
-import com.okestro.okchat.knowledge.application.dto.KnowledgeBaseDetailDto
-import com.okestro.okchat.knowledge.repository.KnowledgeBaseRepository
-import com.okestro.okchat.email.config.EmailProperties
 import com.okestro.okchat.docs.client.user.KnowledgeBaseEmailClient
 import com.okestro.okchat.docs.client.user.KnowledgeMemberClient
 import com.okestro.okchat.docs.client.user.UserClient
+import com.okestro.okchat.email.config.EmailProperties
+import com.okestro.okchat.knowledge.application.dto.GetKnowledgeBaseDetailUseCaseIn
+import com.okestro.okchat.knowledge.application.dto.KnowledgeBaseDetailDto
+import com.okestro.okchat.knowledge.repository.KnowledgeBaseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext

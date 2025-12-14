@@ -26,4 +26,3 @@ class GetUserByIdUseCase(
             GetUserByIdUseCaseOut(user = user)
         }
 }
-

@@ -2,17 +2,20 @@ package com.okestro.okchat.email.event.handler
 
 import com.okestro.okchat.email.application.SavePendingReplyUseCase
 import com.okestro.okchat.email.application.dto.SavePendingReplyUseCaseIn
+import com.okestro.okchat.email.client.ai.AiEmailChatClient
 import com.okestro.okchat.email.event.EmailEventBus
 import com.okestro.okchat.email.event.EmailReceivedEvent
-import com.okestro.okchat.email.service.EmailChatService
 import com.okestro.okchat.email.service.EmailReplyService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
+import jakarta.annotation.PreDestroy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.springframework.stereotype.Component
-import reactor.core.scheduler.Schedulers
+import reactor.core.Disposable
 
 private val logger = KotlinLogging.logger {}
 
@@ -24,24 +27,36 @@ private val logger = KotlinLogging.logger {}
 @Component
 class EmailReceivedEventHandler(
     private val emailEventBus: EmailEventBus,
-    private val emailChatService: EmailChatService,
+    private val aiEmailChatClient: AiEmailChatClient,
     private val emailReplyService: EmailReplyService,
     private val savePendingReplyUseCase: SavePendingReplyUseCase
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var subscription: Disposable? = null
+
     @PostConstruct
     fun subscribeToEvents() {
-        emailEventBus.subscribe()
-            .publishOn(Schedulers.boundedElastic())
-            .doOnNext { event -> handleEmailReceived(event) }
-            .doOnError { e -> logger.error(e) { "Error processing email event" } }
-            .retry(Long.MAX_VALUE) // Continue retrying indefinitely
-            .doOnError { e -> logger.warn { "Retrying email event processing after error: ${e.message}" } }
-            .subscribe()
+        subscription = emailEventBus.subscribe()
+            .subscribe { event ->
+                scope.launch {
+                    try {
+                        handleEmailReceived(event)
+                    } catch (e: Exception) {
+                        logger.error(e) { "Failed to process and reply to email: ${event.message.subject}" }
+                    }
+                }
+            }
 
         logger.info { "Email event handler subscribed to event bus" }
     }
 
-    private fun handleEmailReceived(event: EmailReceivedEvent) {
+    @PreDestroy
+    fun cleanup() {
+        subscription?.dispose()
+        scope.cancel()
+    }
+
+    private suspend fun handleEmailReceived(event: EmailReceivedEvent) {
         logger.info {
             """
             ===== New Email Received =====
@@ -56,14 +71,7 @@ class EmailReceivedEventHandler(
             """.trimIndent()
         }
 
-        // Process email asynchronously
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                processAndReply(event)
-            } catch (e: Exception) {
-                logger.error(e) { "Failed to process and reply to email: ${event.message.subject}" }
-            }
-        }
+        processAndReply(event)
     }
 
     /**
@@ -109,24 +117,16 @@ class EmailReceivedEventHandler(
 
         logger.info { "Effective subject: $effectiveSubject, has content: $hasContent" }
 
-        // Use EmailChatService to process email question
-        val aiResponse = StringBuilder()
-        emailChatService.processEmailQuestion(effectiveSubject, effectiveContent)
-            .doOnNext { chunk ->
-                aiResponse.append(chunk)
-            }
-            .doOnComplete {
-                logger.info { "Email-optimized AI response generated successfully for: ${message.subject}" }
-            }
-            .doOnError { error ->
-                logger.error(error) { "Error generating AI response for email: ${message.subject}" }
-            }
-            .blockLast() // Wait for completion
+        val aiResponse = aiEmailChatClient.processEmailQuestion(
+            subject = effectiveSubject,
+            content = effectiveContent
+        )
+        logger.info { "Email-optimized AI response generated successfully for: ${message.subject}" }
 
-        if (aiResponse.isNotEmpty()) {
+        if (aiResponse.isNotBlank()) {
             // Build reply content
             val replyContent = emailReplyService.buildReplyContent(
-                answer = aiResponse.toString(),
+                answer = aiResponse,
                 originalContent = message.content.ifBlank { "(No content)" }
             )
 

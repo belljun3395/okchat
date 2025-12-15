@@ -185,7 +185,7 @@
   - `EmailInternalController` 생성 (`POST /internal/api/v1/emails/poll/{kbId}`)
 - **Task Orchestration**:
   - `EmailPollingTask` (Root) -> `PollEmailUseCase` 위임 방식으로 변경
-  - `EmailReceivedEventHandler`, `EmailReplyService`는 Orchestrator 역할로 Root에 잔류 (Circular Dependency 방지)
+  - `EmailReceivedEventHandler`는 `okchat-domain-user`로 이동, AI 연동은 `okchat-domain-ai` internal API(`/internal/api/v1/ai/email-chat`) 호출로 처리 (도메인 간 컴파일 의존성 제거)
 - **테스트 및 검증**:
   - Email 관련 테스트 코드(`src/test/.../email`) -> `okchat-domain-user/src/test/...` 이동
   - `ktlintFormat` 및 빌드 검증 완료

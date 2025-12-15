@@ -11,3 +11,5 @@ internal:
   services:
     user:
       url: http://localhost:8080
+    ai:
+      url: http://localhost:8080

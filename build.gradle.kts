@@ -59,11 +59,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     runtimeOnly("com.mysql:mysql-connector-j")
 
-    /** spring cloud task */
-    implementation("org.springframework.cloud:spring-cloud-starter-task")
-    implementation("org.springframework.integration:spring-integration-core")
-    implementation("org.springframework.integration:spring-integration-jdbc")
-
     /** spring ai */
     implementation("org.springframework.ai:spring-ai-advisors-vector-store")
     implementation("org.springframework.ai:spring-ai-pdf-document-reader")

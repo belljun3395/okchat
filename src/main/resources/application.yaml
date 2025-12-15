@@ -3,7 +3,6 @@ spring:
     import:
       - classpath:application/core.yaml
       - classpath:application/persistence.yaml
-      - classpath:application/task.yaml
       - classpath:application/ai.yaml
       - classpath:application/search.yaml
       - classpath:application/confluence.yaml

@@ -31,7 +31,7 @@
 
 - `src/main/resources/application.yaml`은 `spring.config.import` 중심으로 단순화
 - 실제 설정은 `src/main/resources/application/*.yaml`로 분리
-  - `core.yaml`, `persistence.yaml`, `task.yaml`, `ai.yaml`, `search.yaml`, `confluence.yaml`, `email.yaml`, `management.yaml`, `resilience.yaml`
+  - `core.yaml`, `persistence.yaml`, `ai.yaml`, `search.yaml`, `confluence.yaml`, `email.yaml`, `management.yaml`, `resilience.yaml`
 
 ### 3) Prompt 설정 도메인 노출 개선
 
@@ -94,8 +94,9 @@
 ### 이유
 
 - `docs`는 이후 `ai(chat/pipeline)` 도메인 모듈화의 선행조건이라 “크리티컬 패스”를 앞당김
-- `email/notification`은 `EmailChatService → DocumentBaseChatService`로 이미 chat 의존이 강함
-  - 지금 당장 분리하려면 포트/클라이언트 추상화 설계가 선행되어야 해서 비용이 큼
+- `email/notification`의 AI 연동은 internal API 기반으로 분리 가능
+  - `EmailChatService`를 `okchat-domain-ai`로 이동
+  - user 도메인에서 `/internal/api/v1/ai/email-chat` 호출로 답변 생성 (컴파일 의존성 제거)
 
 ### email/notification 분리(후순위) 방향 메모
 
@@ -187,25 +188,24 @@
   - `EmailPollingTask` (Root) -> `PollEmailUseCase` 위임 방식으로 변경
   - `EmailReceivedEventHandler`는 `okchat-domain-user`로 이동, AI 연동은 `okchat-domain-ai` internal API(`/internal/api/v1/ai/email-chat`) 호출로 처리 (도메인 간 컴파일 의존성 제거)
 - **테스트 및 검증**:
-  - Email 관련 테스트 코드(`src/test/.../email`) -> `okchat-domain-user/src/test/...` 이동
+  - Email 관련 테스트 코드(`src/test/.../email`) -> 도메인 모듈(`okchat-domain-user`/`okchat-domain-ai`)로 이동
   - `ktlintFormat` 및 빌드 검증 완료
 
-### Step 2: Batch Execution Module (`okchat-batch`) [NEW]
-- **목표**: 실제 배치 실행(Runner)을 담당하는 독립 애플리케이션 모듈 생성.
-- **계획**:
-  1. `okchat-batch` 모듈 생성 (`settings.gradle.kts` 포함).
-  2. `EmailPollingTask` (Root) -> `okchat-batch` 이동.
-  3. `ConfluenceSyncTask` (Root) -> `okchat-batch` 이동 및 `DocsClient` 적용.
-  4. `User, Docs, AI` 각 도메인과 통신하기 위한 Client(Feign/WebClient) 구현.
+### Step 2: Batch Execution Module (`okchat-batch`) (Completed)
+- `okchat-batch` 모듈 생성 및 배치 Runner 분리
+- `EmailPollingTask`, `ConfluenceSyncTask`를 `okchat-batch`로 이관
+- 내부 서비스 호출용 Client(WebClient) 구성:
+  - docs: enabled KB 조회, confluence sync 트리거
+  - user: email polling 트리거
 
-### Step 3: Task Domain (`okchat-domain-task`)
-- **목표**: 작업 이력(`TaskExecutionEntity`) 및 메타데이터 관리 전담.
-- **계획**:
-  1. `TaskExecutionEntity` 등 Spring Cloud Task 관련 엔티티/Repository 유지.
-  2. `okchat-batch` 실행 시 이력 저장을 위해 `okchat-domain-task` 의존(또는 DB 공유).
+### Step 3: Task Domain (`okchat-domain-task`) (Completed)
+- Spring Cloud Task 테이블 조회용 Entity/Repository 및 조회 UseCase 구성
+- `okchat-batch`에서 실행 이력 조회 API 제공(UseCase 주입)
 
 ### Final: Root Cleaning
-- Root 모듈에서 `task` 패키지 완전 제거.
+- Root 모듈에서 Spring Cloud Task 관련 설정/의존성 제거:
+  - `TaskConfig`, `application/task.yaml` 제거
+  - Root `build.gradle.kts`의 task 관련 의존성 제거
 
 
 ---

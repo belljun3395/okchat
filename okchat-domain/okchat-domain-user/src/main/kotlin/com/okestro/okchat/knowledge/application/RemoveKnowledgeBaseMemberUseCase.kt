@@ -14,7 +14,7 @@ class RemoveKnowledgeBaseMemberUseCase(
     private val knowledgeBaseUserRepository: KnowledgeBaseUserRepository
 ) {
 
-    @Transactional
+    @Transactional("transactionManager")
     fun execute(input: RemoveKnowledgeBaseMemberUseCaseIn) {
         val caller = userRepository.findByEmail(input.callerEmail)
             ?: throw IllegalArgumentException("Caller not found")

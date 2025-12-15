@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional
 class GetAllKnowledgeBasesUseCase(
     private val knowledgeBaseRepository: KnowledgeBaseRepository
 ) {
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, transactionManager = "transactionManager")
     fun execute(input: GetAllKnowledgeBasesUseCaseIn): List<KnowledgeBaseDetailDto> {
         // Current implementation returns all KBs without permission check for listing?
         // Original controller: getAllKnowledgeBases() just does findAll(). method logic preserved.

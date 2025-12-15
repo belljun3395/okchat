@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.slf4j.MDCContext
 import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 
 private val log = KotlinLogging.logger {}
@@ -26,7 +27,7 @@ class UpdateKnowledgeBaseUseCase(
     private val knowledgeMemberClient: KnowledgeMemberClient,
     private val knowledgeBaseEmailClient: KnowledgeBaseEmailClient
 ) {
-
+    @Transactional(transactionManager = "transactionManager")
     suspend fun execute(input: UpdateKnowledgeBaseUseCaseIn): KnowledgeBase = withContext(Dispatchers.IO + MDCContext()) {
         val caller = userClient.getByEmail(input.callerEmail)
             ?: throw IllegalArgumentException("Caller not found: ${input.callerEmail}")

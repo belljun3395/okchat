@@ -16,7 +16,7 @@ class PollEmailUseCase(
 ) {
     private val log = KotlinLogging.logger {}
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, transactionManager = "transactionManager")
     suspend fun execute(knowledgeBaseId: Long): PollEmailResult {
         log.info { "Polling emails for Knowledge Base ID: $knowledgeBaseId" }
 

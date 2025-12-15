@@ -16,7 +16,7 @@ class AddKnowledgeBaseMemberUseCase(
     private val knowledgeBaseUserRepository: KnowledgeBaseUserRepository
 ) {
 
-    @Transactional
+    @Transactional("transactionManager")
     fun execute(input: AddKnowledgeBaseMemberUseCaseIn) {
         val caller = userRepository.findByEmail(input.callerEmail)
             ?: throw IllegalArgumentException("Caller not found")

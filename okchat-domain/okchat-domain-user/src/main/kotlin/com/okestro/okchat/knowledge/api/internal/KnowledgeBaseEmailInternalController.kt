@@ -30,7 +30,7 @@ class KnowledgeBaseEmailInternalController(
     }
 
     @PutMapping
-    @Transactional
+    @Transactional("transactionManager") // TODO: check why tx need at controller level
     fun replaceEmailProviders(
         @PathVariable kbId: Long,
         @RequestBody request: ReplaceKnowledgeBaseEmailProvidersRequest

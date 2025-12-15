@@ -30,7 +30,7 @@ interface DocumentPathPermissionRepository : JpaRepository<DocumentPathPermissio
      * Delete all permissions for a user
      */
     @Modifying
-    @Transactional
+    @Transactional(transactionManager = "transactionManager")
     @Query("DELETE FROM DocumentPathPermission d WHERE d.userId = :userId")
     fun deleteByUserId(@Param("userId") userId: Long)
 
@@ -38,7 +38,7 @@ interface DocumentPathPermissionRepository : JpaRepository<DocumentPathPermissio
      * Delete multiple path permissions
      */
     @Modifying
-    @Transactional
+    @Transactional(transactionManager = "transactionManager")
     @Query("DELETE FROM DocumentPathPermission d WHERE d.userId = :userId AND d.documentPath IN :documentPaths")
     fun deleteByUserIdAndDocumentPathIn(
         @Param("userId") userId: Long,

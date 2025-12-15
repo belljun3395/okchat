@@ -1,0 +1,32 @@
+spring:
+  # SQL initialization
+  sql:
+    init:
+      mode: always
+      continue-on-error: false
+
+  # JPA configuration
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+
+  # Database configuration (overridable by environment variables)
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:13306/okchat?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:root}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # Redis configuration (overridable by environment variables)
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:16379}

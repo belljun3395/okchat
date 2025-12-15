@@ -18,6 +18,7 @@ dependencyManagement {
     imports {
         mavenBom("org.springframework.boot:spring-boot-dependencies:${property("springBootVersion")}")
         mavenBom("org.springframework.cloud:spring-cloud-dependencies:${property("springCloudVersion")}")
+        mavenBom("org.springframework.ai:spring-ai-bom:${property("springAiVersion")}")
     }
 }
 
@@ -29,9 +30,14 @@ dependencies {
     implementation(project(":okchat-lib:okchat-lib-web"))
     implementation(project(":okchat-lib:okchat-lib-persistence"))
     implementation(project(":okchat-domain:okchat-domain-task"))
+    implementation(project(":okchat-domain:okchat-domain-docs"))
+    implementation(project(":okchat-domain:okchat-domain-user"))
 
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.cloud:spring-cloud-starter-task")
+
+    // Database driver
+    runtimeOnly("com.mysql:mysql-connector-j")
 
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")

@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: okchat-batch
+
+  # Server configuration - different port to avoid conflicts
+  main:
+    web-application-type: none
+
+  # Import configuration files
+  config:
+    import:
+      - classpath:application/persistence.yaml
+      - classpath:application/ai.yaml
+      - classpath:application/confluence.yaml
+
+  # Cloud Task configuration
+  cloud:
+    task:
+      closecontext-enabled: true
+      single-instance-enabled: false
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.okestro.okchat: DEBUG
+    org.springframework.cloud.task: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p --- [%15.15t] %-40.40logger{39} : %m%n"
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

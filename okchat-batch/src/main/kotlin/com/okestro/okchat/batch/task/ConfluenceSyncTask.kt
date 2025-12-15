@@ -1,6 +1,6 @@
 package com.okestro.okchat.batch.task
 
-import com.okestro.okchat.batch.client.docs.DocsClient
+import com.okestro.okchat.confluence.application.ConfluenceSyncUseCase
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.slf4j.MDCContext
@@ -15,18 +15,19 @@ import org.springframework.stereotype.Component
     matchIfMissing = false
 )
 class ConfluenceSyncTask(
-    private val docsClient: DocsClient
+    private val confluenceSyncUseCase: ConfluenceSyncUseCase
 ) : CommandLineRunner {
     private val log = KotlinLogging.logger {}
 
     override fun run(vararg args: String?) {
         runBlocking(MDCContext()) {
             try {
-                log.info { "[ConfluenceSync] Triggering sync via docs internal API" }
-                val response = docsClient.syncConfluence()
-                log.info { "[ConfluenceSync] Completed: status=${response.status} message=${response.message}" }
+                log.info { "[ConfluenceSync] Starting Confluence sync task" }
+                confluenceSyncUseCase.execute()
+                log.info { "[ConfluenceSync] Completed successfully" }
             } catch (e: Exception) {
                 log.error(e) { "[ConfluenceSync] Failed: ${e.message}" }
+                throw e // Re-throw to mark task as failed
             }
         }
     }

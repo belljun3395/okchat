@@ -189,7 +189,7 @@ class ConfluenceSyncUseCase(
 
                     val documentContent = pageContent.ifBlank { pageTitle }
                     val wikiBaseUrl = confluenceProperties.baseUrl.removeSuffix("/api/v2").removeSuffix("/")
-                    val pageUrl = "$wikiBaseUrl/wiki/spaces/$spaceKey/pages/${node.id}"
+                    val pageUrl = "$wikiBaseUrl/spaces/$spaceKey/pages/${node.id}"
 
                     // RDB Entity (Page)
                     val pageDocId = existingDocMap[node.id]?.id ?: TsidCreator.getTsid().toString()

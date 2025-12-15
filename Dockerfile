@@ -7,25 +7,31 @@ WORKDIR /app
 # Copy gradle configuration files
 COPY build.gradle.kts settings.gradle.kts gradle.properties ./
 COPY gradle ./gradle
+COPY okchat-server/okchat-api-server/build.gradle.kts okchat-server/okchat-api-server/build.gradle.kts
 COPY okchat-lib/okchat-lib-web/build.gradle.kts okchat-lib/okchat-lib-web/build.gradle.kts
 COPY okchat-lib/okchat-lib-persistence/build.gradle.kts okchat-lib/okchat-lib-persistence/build.gradle.kts
 COPY okchat-lib/okchat-lib-ai/build.gradle.kts okchat-lib/okchat-lib-ai/build.gradle.kts
+COPY okchat-batch/build.gradle.kts okchat-batch/build.gradle.kts
 COPY okchat-domain/okchat-domain-user/build.gradle.kts okchat-domain/okchat-domain-user/build.gradle.kts
 COPY okchat-domain/okchat-domain-docs/build.gradle.kts okchat-domain/okchat-domain-docs/build.gradle.kts
+COPY okchat-domain/okchat-domain-ai/build.gradle.kts okchat-domain/okchat-domain-ai/build.gradle.kts
+COPY okchat-domain/okchat-domain-task/build.gradle.kts okchat-domain/okchat-domain-task/build.gradle.kts
 
 # Download dependencies (cached layer)
-RUN gradle dependencies --no-daemon || true
+RUN gradle :okchat-server:okchat-api-server:dependencies --no-daemon || true
 
 # Copy source code
-COPY src ./src
+COPY okchat-server/okchat-api-server/src okchat-server/okchat-api-server/src
 COPY okchat-lib/okchat-lib-web/src okchat-lib/okchat-lib-web/src
 COPY okchat-lib/okchat-lib-persistence/src okchat-lib/okchat-lib-persistence/src
 COPY okchat-lib/okchat-lib-ai/src okchat-lib/okchat-lib-ai/src
 COPY okchat-domain/okchat-domain-user/src okchat-domain/okchat-domain-user/src
 COPY okchat-domain/okchat-domain-docs/src okchat-domain/okchat-domain-docs/src
+COPY okchat-domain/okchat-domain-ai/src okchat-domain/okchat-domain-ai/src
+COPY okchat-domain/okchat-domain-task/src okchat-domain/okchat-domain-task/src
 
 # Build the application
-RUN gradle bootJar --no-daemon
+RUN gradle :okchat-server:okchat-api-server:bootJar --no-daemon
 
 # Stage 2: Create the runtime image
 FROM eclipse-temurin:21-jre-alpine
@@ -40,7 +46,7 @@ RUN addgroup -g 1000 appuser && \
 RUN apk add --no-cache curl
 
 # Copy the built jar from builder stage
-COPY --from=builder /app/build/libs/*.jar app.jar
+COPY --from=builder /app/okchat-server/okchat-api-server/build/libs/*.jar app.jar
 
 # Create logs directory
 RUN mkdir -p /app/logs && \

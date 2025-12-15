@@ -29,8 +29,8 @@
 
 ### 2) 설정 파일 분리 (모듈별 구성)
 
-- `src/main/resources/application.yaml`은 `spring.config.import` 중심으로 단순화
-- 실제 설정은 `src/main/resources/application/*.yaml`로 분리
+- `okchat-server/okchat-api-server/src/main/resources/application.yaml`은 `spring.config.import` 중심으로 단순화
+- 실제 설정은 `okchat-server/okchat-api-server/src/main/resources/application/*.yaml`로 분리
   - `core.yaml`, `persistence.yaml`, `ai.yaml`, `search.yaml`, `confluence.yaml`, `email.yaml`, `management.yaml`, `resilience.yaml`
 
 ### 3) Prompt 설정 도메인 노출 개선
@@ -212,6 +212,27 @@
 
 ## Phase 3 (마무리 및 안정화) 계획
 ### 목표
-- 전체 모듈 통합 빌드 및 E2E 테스트 검증
+- 전체 모듈 통합 빌드 및 E2E 테스트 검증 (Deferred)
 - **Legacy Cleaning**: Root 모듈에 남아있는 이관된 코드(빈 패키지, 미사용 유틸) 삭제
-- **External Server Split (Optional)**: `okchat-server` (API Gateway 역할)와 도메인 서비스의 물리적 분리 준비 (Strategy Phase 4)
+- **External Server Split**: `okchat-server` (API Gateway 역할)와 도메인 서비스의 물리적 분리 (Strategy Phase 4)
+
+---
+
+## Phase 4 (okchat-server) 진행 상황
+
+### Step 1: API Server 분리 (Completed)
+- 루트 Spring Boot 앱을 `okchat-server:okchat-api-server`로 분리 (기존 루트 `src` 이동)
+- 기존 외부 컨트롤러/설정은 그대로 유지 (API path 버저닝(`/api/v1/*`)은 별도 단계로 진행)
+
+### Step 2: Batch Server 경로 정리 (Completed)
+- 기존 `okchat-batch` 모듈을 `okchat-server:okchat-batch-server`로 모듈 경로 정리 (projectDir 매핑)
+
+### Step 3: Docker 빌드 경로 정리 (Completed)
+- `Dockerfile`/`Dockerfile.native`가 `okchat-server:okchat-api-server`를 빌드하도록 갱신
+
+### Step 4: Lint(ktlint) 복구 (Completed)
+- Root `build.gradle.kts`에서 Kotlin 모듈에만 ktlint가 적용되도록 복구
+- 루트에서 실행:
+  - `./gradlew ktlintCheck`
+  - `./gradlew ktlintFormat`
+- ktlint 실행 시 Spring Boot AOT 관련 태스크는 제외되도록 설정 (lint/format 속도 및 안정성 개선)

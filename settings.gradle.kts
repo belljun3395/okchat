@@ -26,8 +26,10 @@ include(":okchat-lib:okchat-lib-web")
 include(":okchat-lib:okchat-lib-persistence")
 include(":okchat-lib:okchat-lib-ai")
 
-// Batch runner
-include(":okchat-batch")
+// Servers
+include(":okchat-server:okchat-api-server")
+include(":okchat-server:okchat-batch-server")
+project(":okchat-server:okchat-batch-server").projectDir = file("okchat-batch")
 
 // Domains
 include(":okchat-domain:okchat-domain-user")

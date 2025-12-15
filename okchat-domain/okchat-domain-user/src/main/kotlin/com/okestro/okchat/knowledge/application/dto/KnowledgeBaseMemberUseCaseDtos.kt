@@ -29,3 +29,10 @@ data class RemoveKnowledgeBaseMemberUseCaseIn(
     val callerEmail: String,
     val targetUserId: Long
 )
+
+data class UpdateKnowledgeBaseMemberRoleUseCaseIn(
+    val kbId: Long,
+    val callerEmail: String,
+    val targetUserId: Long,
+    val newRole: KnowledgeBaseUserRole
+)

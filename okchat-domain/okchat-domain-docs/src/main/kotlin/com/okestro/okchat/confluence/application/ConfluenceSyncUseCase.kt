@@ -13,7 +13,6 @@ import com.okestro.okchat.knowledge.model.entity.KnowledgeBase
 import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseType
 import com.okestro.okchat.knowledge.model.value.ContentPath
 import com.okestro.okchat.knowledge.repository.DocumentRepository
-import com.okestro.okchat.knowledge.repository.KnowledgeBaseRepository
 import com.okestro.okchat.search.support.MetadataFields
 import com.okestro.okchat.search.support.metadata
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -52,36 +51,16 @@ class ConfluenceSyncUseCase(
     private val documentKeywordExtractionService: DocumentKeywordExtractionService,
     private val chunkingStrategy: ChunkingStrategy,
     private val confluenceProperties: ConfluenceProperties,
-    private val knowledgeBaseRepository: KnowledgeBaseRepository,
     private val documentRepository: DocumentRepository
 ) {
 
     private val log = KotlinLogging.logger {}
 
-    suspend fun execute() {
-        executeTask()
-    }
-
-    private suspend fun executeTask() {
-        log.info { "[ConfluenceSync] Starting Confluence sync task" }
-        // Find enabled Confluence KBs
-        val knowledgeBases: List<KnowledgeBase> = withContext(Dispatchers.IO + MDCContext()) {
-            knowledgeBaseRepository.findAllByEnabledTrueAndType(KnowledgeBaseType.CONFLUENCE)
-        }
-
-        if (knowledgeBases.isEmpty()) {
-            log.warn { "No enabled Confluence Knowledge Bases found." }
-            return
-        }
-
-        log.info { "Found ${knowledgeBases.size} knowledge bases to sync" }
-
-        knowledgeBases.forEach { kb ->
-            syncKnowledgeBase(kb)
-        }
-    }
-
-    private suspend fun syncKnowledgeBase(kb: KnowledgeBase) {
+    /**
+     * Sync a single Knowledge Base.
+     * Called by ConfluenceSyncTask for each enabled Confluence KB.
+     */
+    suspend fun syncKnowledgeBase(kb: KnowledgeBase) {
         val spaceKey = kb.config["spaceKey"] as? String ?: run {
             log.error { "Knowledge Base ${kb.name} (ID: ${kb.id}) has no spaceKey in config" }
             return

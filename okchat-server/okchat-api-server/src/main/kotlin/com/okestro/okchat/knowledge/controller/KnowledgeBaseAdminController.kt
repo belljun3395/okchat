@@ -6,6 +6,7 @@ import com.okestro.okchat.knowledge.application.GetAllKnowledgeBasesUseCase
 import com.okestro.okchat.knowledge.application.GetKnowledgeBaseDetailUseCase
 import com.okestro.okchat.knowledge.application.GetKnowledgeBaseMembersUseCase
 import com.okestro.okchat.knowledge.application.RemoveKnowledgeBaseMemberUseCase
+import com.okestro.okchat.knowledge.application.UpdateKnowledgeBaseMemberRoleUseCase
 import com.okestro.okchat.knowledge.application.UpdateKnowledgeBaseUseCase
 import com.okestro.okchat.knowledge.application.dto.AddKnowledgeBaseMemberUseCaseIn
 import com.okestro.okchat.knowledge.application.dto.CreateKnowledgeBaseUseCaseIn
@@ -13,6 +14,7 @@ import com.okestro.okchat.knowledge.application.dto.GetAllKnowledgeBasesUseCaseI
 import com.okestro.okchat.knowledge.application.dto.GetKnowledgeBaseDetailUseCaseIn
 import com.okestro.okchat.knowledge.application.dto.GetKnowledgeBaseMembersUseCaseIn
 import com.okestro.okchat.knowledge.application.dto.RemoveKnowledgeBaseMemberUseCaseIn
+import com.okestro.okchat.knowledge.application.dto.UpdateKnowledgeBaseMemberRoleUseCaseIn
 import com.okestro.okchat.knowledge.application.dto.UpdateKnowledgeBaseUseCaseIn
 import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseType
 import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseUserRole
@@ -41,7 +43,8 @@ class KnowledgeBaseAdminController(
     private val updateKnowledgeBaseUseCase: UpdateKnowledgeBaseUseCase,
     private val getKnowledgeBaseMembersUseCase: GetKnowledgeBaseMembersUseCase,
     private val addKnowledgeBaseMemberUseCase: AddKnowledgeBaseMemberUseCase,
-    private val removeKnowledgeBaseMemberUseCase: RemoveKnowledgeBaseMemberUseCase
+    private val removeKnowledgeBaseMemberUseCase: RemoveKnowledgeBaseMemberUseCase,
+    private val updateKnowledgeBaseMemberRoleUseCase: UpdateKnowledgeBaseMemberRoleUseCase
 ) {
 
     @GetMapping("/{kbId}")
@@ -206,6 +209,33 @@ class KnowledgeBaseAdminController(
         }
     }
 
+    @PutMapping("/{kbId}/members/{userId}")
+    @Operation(summary = "KB 멤버 역할 변경")
+    fun updateMemberRole(
+        @PathVariable kbId: Long,
+        @PathVariable userId: Long,
+        @RequestParam callerEmail: String,
+        @RequestBody request: UpdateMemberRoleRequest
+    ): ResponseEntity<Any> {
+        return try {
+            updateKnowledgeBaseMemberRoleUseCase.execute(
+                UpdateKnowledgeBaseMemberRoleUseCaseIn(
+                    kbId = kbId,
+                    callerEmail = callerEmail,
+                    targetUserId = userId,
+                    newRole = request.role
+                )
+            )
+            ResponseEntity.ok("Member role updated")
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(e.message)
+        } catch (e: IllegalAccessException) {
+            ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.message)
+        } catch (e: NoSuchElementException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.message)
+        }
+    }
+
     @PutMapping("/{kbId}")
     @Operation(summary = "Knowledge Base 수정")
     suspend fun updateKnowledgeBase(
@@ -238,6 +268,10 @@ class KnowledgeBaseAdminController(
 data class AddMemberRequest(
     val email: String,
     val role: KnowledgeBaseUserRole = KnowledgeBaseUserRole.MEMBER
+)
+
+data class UpdateMemberRoleRequest(
+    val role: KnowledgeBaseUserRole
 )
 
 data class CreateKnowledgeBaseRequest(

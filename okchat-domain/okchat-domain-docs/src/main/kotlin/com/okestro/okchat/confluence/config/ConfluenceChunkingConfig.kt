@@ -7,6 +7,7 @@ import com.okestro.okchat.ai.service.chunking.SemanticChunkingStrategy
 import com.okestro.okchat.ai.service.chunking.SentenceWindowStrategy
 import com.okestro.okchat.config.RagProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.ai.embedding.EmbeddingModel
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -24,7 +25,7 @@ class ConfluenceChunkingConfig {
 
     @Bean
     fun chunkingStrategy(
-        embeddingModel: EmbeddingModel,
+        embeddingModelProvider: ObjectProvider<EmbeddingModel>,
         ragProperties: RagProperties
     ): ChunkingStrategy {
         val config = ragProperties.confluence.chunking
@@ -46,6 +47,9 @@ class ConfluenceChunkingConfig {
         return when (strategyType) {
             ChunkingStrategyType.SEMANTIC -> {
                 log.info { "Using Semantic Chunking Strategy" }
+                val embeddingModel = requireNotNull(embeddingModelProvider.getIfAvailable()) {
+                    "EmbeddingModel bean is required for SEMANTIC chunking. Configure spring.ai.openai.api-key or provide an EmbeddingModel."
+                }
                 SemanticChunkingStrategy(
                     embeddingModel = embeddingModel,
                     similarityThreshold = config.semanticSimilarityThreshold,

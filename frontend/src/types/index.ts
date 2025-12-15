@@ -28,6 +28,7 @@ export interface DocumentSearchResult {
     path: string;
     spaceKey: string;
     url: string;
+    webUrl?: string;  // Original document URL (e.g. Confluence page link)
 }
 
 export interface PathDetailResponse {

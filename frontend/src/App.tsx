@@ -38,22 +38,23 @@ const App: React.FC = () => {
           {/* User Management */}
           <Route path="users" element={<UserManagementPage />} />
           <Route path="permissions/user/:email" element={<UserDetailPage />} />
+          <Route path="permissions/path/detail" element={<PathDetailPage />} />
           <Route path="prompts" element={<PromptManagementPage />} />
-          
+
           {/* Legacy Redirects */}
           <Route path="knowledge-bases" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
         {/* Knowledge Base Context Routes */}
         <Route path="/admin/knowledge-bases/:id" element={<KnowledgeBaseLayout />}>
-           <Route index element={<Navigate to="members" replace />} />
-           <Route path="members" element={<KnowledgeBaseMembersPage />} />
-           <Route path="paths" element={<PathManagementPage />} />
-           <Route path="permissions" element={<PermissionManagementPage />} />
-           <Route path="email" element={<EmailReviewPage />} />
-           
-           {/* Detailed pages might need adjustment or nested routes */}
-           <Route path="path/detail" element={<PathDetailPage />} />
+          <Route index element={<Navigate to="members" replace />} />
+          <Route path="members" element={<KnowledgeBaseMembersPage />} />
+          <Route path="paths" element={<PathManagementPage />} />
+          <Route path="permissions" element={<PermissionManagementPage />} />
+          <Route path="email" element={<EmailReviewPage />} />
+
+          {/* Detailed pages might need adjustment or nested routes */}
+          <Route path="path/detail" element={<PathDetailPage />} />
         </Route>
       </Routes>
     </Router>

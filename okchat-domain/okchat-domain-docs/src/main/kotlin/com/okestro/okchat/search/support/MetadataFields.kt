@@ -45,7 +45,7 @@ object MetadataFields {
     }
 
     // All flat field names as a list
-    val ALL_FLAT = listOf(TITLE, PATH, SPACE_KEY, KEYWORDS, ID, TYPE)
+    val ALL_FLAT = listOf(TITLE, PATH, SPACE_KEY, KEYWORDS, ID, TYPE, KNOWLEDGE_BASE_ID, WEB_URL, IS_EMPTY)
 
     // All nested field names as a list
     val ALL_NESTED = listOf(
@@ -54,6 +54,9 @@ object MetadataFields {
         Nested.SPACE_KEY,
         Nested.KEYWORDS,
         Nested.ID,
-        Nested.TYPE
+        Nested.TYPE,
+        Nested.KNOWLEDGE_BASE_ID,
+        Nested.WEB_URL,
+        Nested.IS_EMPTY
     )
 }

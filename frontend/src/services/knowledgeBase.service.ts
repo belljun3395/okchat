@@ -38,7 +38,7 @@ export const knowledgeBaseService = {
     /**
      * Add member to Knowledge Base
      */
-    addMember: (kbId: number, email: string, role: KnowledgeBaseUserRole) => 
+    addMember: (kbId: number, email: string, role: KnowledgeBaseUserRole) =>
         apiClient.post<void>(`/api/admin/knowledge-bases/${kbId}/members?callerEmail=admin@okchat.com`, { email, role }),
 
     /**
@@ -52,7 +52,7 @@ export const knowledgeBaseService = {
     /**
      * Create a new Knowledge Base
      */
-    create: (data: CreateKnowledgeBasePayload) => 
+    create: (data: CreateKnowledgeBasePayload) =>
         apiClient.post<KnowledgeBase>('/api/admin/knowledge-bases?callerEmail=admin@okchat.com', data),
 
     /**
@@ -62,9 +62,15 @@ export const knowledgeBaseService = {
         apiClient.put<KnowledgeBase>(`/api/admin/knowledge-bases/${id}?callerEmail=admin@okchat.com`, data),
 
     /**
+     * Update member role in Knowledge Base
+     */
+    updateMemberRole: (kbId: number, userId: number, role: KnowledgeBaseUserRole) =>
+        apiClient.put<void>(`/api/admin/knowledge-bases/${kbId}/members/${userId}?callerEmail=admin@okchat.com`, { role }),
+
+    /**
      * Remove member from Knowledge Base
      */
-    removeMember: (kbId: number, userId: number) => 
+    removeMember: (kbId: number, userId: number) =>
         apiClient.delete<void>(`/api/admin/knowledge-bases/${kbId}/members/${userId}?callerEmail=admin@okchat.com`)
 };
 

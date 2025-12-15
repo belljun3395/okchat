@@ -160,7 +160,7 @@ class OpenSearchSchemaInitializer(
                 p.keyword { k -> k }
             },
             MetadataFields.PATH to Property.of { p ->
-                p.text { text -> text.analyzer("keyword") }
+                p.text { text -> text }
             },
             MetadataFields.KNOWLEDGE_BASE_ID to Property.of { p ->
                 p.keyword { k -> k }

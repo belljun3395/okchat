@@ -2,11 +2,17 @@ package com.okestro.okchat.batch.job
 
 import org.springframework.boot.WebApplicationType
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.autoconfigure.domain.EntityScan
 import org.springframework.boot.runApplication
 import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories
 
+@ConditionalOnProperty(
+    name = ["spring.cloud.task.name"],
+    havingValue = "confluence-sync",
+    matchIfMissing = false
+)
 @SpringBootApplication(
     scanBasePackages = [
         "com.okestro.okchat.batch",

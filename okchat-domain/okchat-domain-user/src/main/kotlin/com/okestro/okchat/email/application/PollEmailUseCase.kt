@@ -1,4 +1,4 @@
-package com.okestro.okchat.email.application.usecase
+package com.okestro.okchat.email.application
 
 import com.okestro.okchat.email.event.EmailEventBus
 import com.okestro.okchat.email.event.EmailReceivedEvent

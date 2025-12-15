@@ -1,6 +1,6 @@
-package com.okestro.okchat.user.api.internal
+package com.okestro.okchat.email.api.internal
 
-import com.okestro.okchat.email.application.usecase.PollEmailUseCase
+import com.okestro.okchat.email.application.PollEmailUseCase
 import com.okestro.okchat.user.api.internal.dto.InternalPollEmailResponse
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping

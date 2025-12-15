@@ -33,6 +33,8 @@ class DocumentMetadataBuilder {
     var id: String? = null
     var type: String? = null
     var knowledgeBaseId: Long? = null
+    var isEmpty: Boolean? = null
+    var webUrl: String? = null
 
     private val additionalProperties = mutableMapOf<String, Any?>()
 

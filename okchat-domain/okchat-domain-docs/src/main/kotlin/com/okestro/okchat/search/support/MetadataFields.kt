@@ -13,6 +13,8 @@ object MetadataFields {
     const val ID = "metadata.id"
     const val TYPE = "metadata.type"
     const val KNOWLEDGE_BASE_ID = "metadata.knowledgeBaseId"
+    const val WEB_URL = "metadata.webUrl"
+    const val IS_EMPTY = "metadata.isEmpty"
 
     // Nested field names (without metadata prefix)
     object Nested {
@@ -23,14 +25,12 @@ object MetadataFields {
         const val ID = "id"
         const val TYPE = "type"
         const val KNOWLEDGE_BASE_ID = "knowledgeBaseId"
+        const val WEB_URL = "webUrl"
+        const val IS_EMPTY = "isEmpty"
     }
 
     // Additional property field names (for dynamic metadata)
     object Additional {
-        // Common properties
-        const val WEB_URL = "webUrl"
-        const val IS_EMPTY = "isEmpty"
-
         // PDF attachment properties
         const val PAGE_ID = "pageId"
         const val ATTACHMENT_TITLE = "attachmentTitle"

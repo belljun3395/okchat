@@ -164,6 +164,12 @@ class OpenSearchSchemaInitializer(
             },
             MetadataFields.KNOWLEDGE_BASE_ID to Property.of { p ->
                 p.keyword { k -> k }
+            },
+            MetadataFields.WEB_URL to Property.of { p ->
+                p.keyword { k -> k }
+            },
+            MetadataFields.IS_EMPTY to Property.of { p ->
+                p.boolean_ { b -> b }
             }
         )
     }

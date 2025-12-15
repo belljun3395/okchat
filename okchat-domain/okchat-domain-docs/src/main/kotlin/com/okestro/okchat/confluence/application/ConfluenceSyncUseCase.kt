@@ -217,8 +217,8 @@ class ConfluenceSyncUseCase(
                         this.path = path
                         this.keywords = allKeywords
                         this.knowledgeBaseId = kb.id
-                        property(MetadataFields.Additional.IS_EMPTY, pageContent.isBlank())
-                        property(MetadataFields.Additional.WEB_URL, pageUrl)
+                        this.isEmpty = pageContent.isBlank()
+                        this.webUrl = pageUrl
                     }
 
                     val baseDocument = Document(
@@ -291,7 +291,7 @@ class ConfluenceSyncUseCase(
                                         externalId = pdfDoc.id,
                                         title = pdfDoc.metadata["title"] as? String ?: "PDF Attachment",
                                         path = pdfDoc.metadata["path"] as? String ?: path,
-                                        webUrl = pdfDoc.metadata[MetadataFields.Additional.WEB_URL] as? String,
+                                        webUrl = pdfDoc.metadata[MetadataFields.Nested.WEB_URL] as? String,
                                         metadata = pdfDoc.metadata,
                                         lastSyncedAt = Instant.now()
                                     )

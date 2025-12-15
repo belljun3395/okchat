@@ -1,5 +1,6 @@
 package com.okestro.okchat.search.application
 
+import com.okestro.okchat.confluence.config.ConfluenceProperties
 import com.okestro.okchat.knowledge.model.value.ContentPath
 import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseIn
 import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseOut
@@ -20,7 +21,8 @@ private val log = KotlinLogging.logger {}
 @Service
 class SearchAllByPathUseCase(
     private val openSearchClient: OpenSearchClient,
-    @Value("\${spring.ai.vectorstore.opensearch.index-name}") private val indexName: String
+    @Value("\${spring.ai.vectorstore.opensearch.index-name}") private val indexName: String,
+    private val confluenceProperties: ConfluenceProperties?
 ) {
     suspend fun execute(useCaseIn: SearchAllByPathUseCaseIn): SearchAllByPathUseCaseOut = withContext(Dispatchers.IO + MDCContext()) {
         val documents = mutableMapOf<String, Document>() // Use map to handle chunks and keep unique docs
@@ -94,7 +96,8 @@ class SearchAllByPathUseCase(
                                     title = title,
                                     path = path,
                                     spaceKey = spaceKey,
-                                    knowledgeBaseId = kbId
+                                    knowledgeBaseId = kbId,
+                                    webUrl = buildWebUrl(spaceKey, baseId)
                                 )
                             }
                         }
@@ -111,5 +114,19 @@ class SearchAllByPathUseCase(
         }
 
         SearchAllByPathUseCaseOut(documents.values.toList().sortedBy { it.title })
+    }
+
+    /**
+     * Build Confluence page URL from spaceKey and documentId.
+     * Returns null if Confluence is not configured or required parameters are missing.
+     */
+    private fun buildWebUrl(spaceKey: String?, documentId: String?): String? {
+        if (confluenceProperties == null || spaceKey.isNullOrBlank() || documentId.isNullOrBlank()) {
+            return null
+        }
+        val baseUrl = confluenceProperties.baseUrl
+            .removeSuffix("/api/v2")
+            .removeSuffix("/")
+        return "$baseUrl/spaces/$spaceKey/pages/$documentId"
     }
 }

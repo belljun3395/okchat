@@ -86,7 +86,8 @@ class PermissionController(
                     id = doc.id,
                     title = doc.title ?: "Untitled",
                     url = doc.path ?: "",
-                    spaceKey = doc.spaceKey ?: ""
+                    spaceKey = doc.spaceKey ?: "",
+                    webUrl = doc.webUrl
                 )
             }
         val permissions = getPathPermissionsUseCase.execute(com.okestro.okchat.permission.application.dto.GetPathPermissionsUseCaseIn(path)).permissions

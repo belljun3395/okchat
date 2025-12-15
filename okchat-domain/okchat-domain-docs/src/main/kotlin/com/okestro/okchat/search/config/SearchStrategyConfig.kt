@@ -45,7 +45,11 @@ class SearchStrategyConfig {
         weightConfig: SearchWeightConfig,
         fieldConfig: SearchFieldWeightConfig
     ): ContentSearchStrategy {
-        return ContentSearchStrategy(searchClient.getIfAvailable()!!,
-            embeddingModel.getIfAvailable()!!, weightConfig, fieldConfig)
+        return ContentSearchStrategy(
+            searchClient.getIfAvailable()!!,
+            embeddingModel.getIfAvailable()!!,
+            weightConfig,
+            fieldConfig
+        )
     }
 }

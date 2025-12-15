@@ -26,7 +26,8 @@ class TracingConfig {
                     value.makeCurrent()
                 }
 
-                @Deprecated("Deprecated in Java",
+                @Deprecated(
+                    "Deprecated in Java",
                     ReplaceWith("Context.current().makeCurrent()", "io.opentelemetry.context.Context")
                 )
                 override fun reset() {

@@ -151,7 +151,7 @@ class OpenSearchSchemaInitializer(
                 p.text { text -> text } // Use default standard analyzer
             },
             MetadataFields.KEYWORDS to Property.of { p ->
-                p.text { text -> text } // Use default standard analyzer
+                p.keyword { k -> k }
             },
             MetadataFields.TYPE to Property.of { p ->
                 p.keyword { k -> k }
@@ -161,6 +161,9 @@ class OpenSearchSchemaInitializer(
             },
             MetadataFields.PATH to Property.of { p ->
                 p.text { text -> text.analyzer("keyword") }
+            },
+            MetadataFields.KNOWLEDGE_BASE_ID to Property.of { p ->
+                p.keyword { k -> k }
             }
         )
     }

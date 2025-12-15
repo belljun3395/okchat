@@ -22,6 +22,7 @@ object MetadataFields {
         const val KEYWORDS = "keywords"
         const val ID = "id"
         const val TYPE = "type"
+        const val KNOWLEDGE_BASE_ID = "knowledgeBaseId"
     }
 
     // Additional property field names (for dynamic metadata)
@@ -29,7 +30,6 @@ object MetadataFields {
         // Common properties
         const val WEB_URL = "webUrl"
         const val IS_EMPTY = "isEmpty"
-        const val KNOWLEDGE_BASE_ID = "knowledgeBaseId"
 
         // PDF attachment properties
         const val PAGE_ID = "pageId"

@@ -216,9 +216,9 @@ class ConfluenceSyncUseCase(
                         this.spaceKey = spaceKey
                         this.path = path
                         this.keywords = allKeywords
+                        this.knowledgeBaseId = kb.id
                         property(MetadataFields.Additional.IS_EMPTY, pageContent.isBlank())
                         property(MetadataFields.Additional.WEB_URL, pageUrl)
-                        property(MetadataFields.Additional.KNOWLEDGE_BASE_ID, kb.id)
                     }
 
                     val baseDocument = Document(

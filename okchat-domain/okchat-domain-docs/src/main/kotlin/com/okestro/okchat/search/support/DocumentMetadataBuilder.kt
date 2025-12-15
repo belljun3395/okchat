@@ -32,6 +32,7 @@ class DocumentMetadataBuilder {
     private val keywordsList = mutableListOf<String>()
     var id: String? = null
     var type: String? = null
+    var knowledgeBaseId: Long? = null
 
     private val additionalProperties = mutableMapOf<String, Any?>()
 

@@ -1,5 +1,6 @@
 package com.okestro.okchat.search.client.opensearch
 
+import com.okestro.okchat.search.index.DocumentIndex
 import com.okestro.okchat.search.model.SearchDocument
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
@@ -29,7 +30,7 @@ private val log = KotlinLogging.logger {}
 class OpenSearchVectorStoreClient(
     private val client: OpenSearchClient,
     private val embeddingModel: EmbeddingModel,
-    @Value("\${spring.ai.vectorstore.opensearch.index-name:vector_store}") private val indexName: String
+    @Value("\${spring.ai.vectorstore.opensearch.index-name:${DocumentIndex.INDEX_NAME}}") private val indexName: String
 ) : VectorStore {
 
     override fun add(documents: List<Document>) {
@@ -52,9 +53,9 @@ class OpenSearchVectorStoreClient(
 
                 // Create document with embedding (flatten metadata for better search)
                 val docMap = buildMap<String, Any> {
-                    put("id", document.id)
-                    put("content", docText)
-                    put("embedding", embedding)
+                    put(DocumentIndex.Fields.ID, document.id)
+                    put(DocumentIndex.Fields.CONTENT, docText)
+                    put(DocumentIndex.Fields.EMBEDDING, embedding)
 
                     // Flatten metadata fields with dot notation for easier querying
                     document.metadata.forEach { (key, value) ->
@@ -122,7 +123,7 @@ class OpenSearchVectorStoreClient(
                     .size(request.topK)
                     .query { q ->
                         q.match { m ->
-                            m.field("content")
+                            m.field(DocumentIndex.Fields.CONTENT)
                                 .query(FieldValue.of(request.query))
                         }
                     }

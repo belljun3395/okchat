@@ -1,6 +1,6 @@
 package com.okestro.okchat.confluence.service
 
-import com.okestro.okchat.search.support.MetadataFields
+import com.okestro.okchat.search.index.DocumentIndex
 import com.okestro.okchat.search.support.metadata
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -46,12 +46,12 @@ class PdfAttachmentServiceTest {
         assertEquals("$path > $attachmentTitle", pdfMetadata.path)
 
         // Check additional properties
-        assertEquals(pageId, pdfMetadata.additionalProperties["pageId"])
-        assertEquals(attachmentTitle, pdfMetadata.additionalProperties["attachmentTitle"])
-        assertEquals(1, pdfMetadata.additionalProperties["pdfPageNumber"])
-        assertEquals(totalPages, pdfMetadata.additionalProperties["totalPdfPages"])
-        assertEquals(1024000L, pdfMetadata.additionalProperties["fileSize"])
-        assertEquals("application/pdf", pdfMetadata.additionalProperties["mediaType"])
+        assertEquals(pageId, pdfMetadata.pageId)
+        assertEquals(attachmentTitle, pdfMetadata.attachmentTitle)
+        assertEquals(1, pdfMetadata.pdfPageNumber)
+        assertEquals(totalPages, pdfMetadata.totalPdfPages)
+        assertEquals(1024000L, pdfMetadata.fileSize)
+        assertEquals("application/pdf", pdfMetadata.mediaType)
     }
 
     @Test
@@ -76,11 +76,11 @@ class PdfAttachmentServiceTest {
         val flatMap = pdfMetadata.toFlatMap()
 
         // Then
-        assertEquals("att123", flatMap[MetadataFields.ID])
-        assertEquals("Test PDF Page 1", flatMap[MetadataFields.TITLE])
-        assertEquals("confluence-pdf-attachment", flatMap[MetadataFields.TYPE])
-        assertEquals("TEST", flatMap[MetadataFields.SPACE_KEY])
-        assertEquals("Test > PDF", flatMap[MetadataFields.PATH])
+        assertEquals("att123", flatMap[DocumentIndex.DocumentCommonMetadata.ID.fullKey])
+        assertEquals("Test PDF Page 1", flatMap[DocumentIndex.DocumentCommonMetadata.TITLE.fullKey])
+        assertEquals("confluence-pdf-attachment", flatMap[DocumentIndex.DocumentCommonMetadata.TYPE.fullKey])
+        assertEquals("TEST", flatMap[DocumentIndex.DocumentCommonMetadata.SPACE_KEY.fullKey])
+        assertEquals("Test > PDF", flatMap[DocumentIndex.DocumentCommonMetadata.PATH.fullKey])
 
         // Check flattened additional properties
         assertEquals("page456", flatMap["metadata.pageId"])
@@ -115,8 +115,8 @@ class PdfAttachmentServiceTest {
         assertEquals(10, metadataList.size)
         metadataList.forEachIndexed { index, meta ->
             assertEquals("$pageTitle - $attachmentTitle (Page ${index + 1})", meta.title)
-            assertEquals(index + 1, meta.additionalProperties["pdfPageNumber"])
-            assertEquals(totalPages, meta.additionalProperties["totalPdfPages"])
+            assertEquals(index + 1, meta.pdfPageNumber)
+            assertEquals(totalPages, meta.totalPdfPages)
         }
     }
 
@@ -136,7 +136,7 @@ class PdfAttachmentServiceTest {
         }
 
         // Then
-        assertEquals(largeFileSize, pdfMetadata.additionalProperties["fileSize"])
+        assertEquals(largeFileSize, pdfMetadata.fileSize)
     }
 
     @Test
@@ -155,8 +155,8 @@ class PdfAttachmentServiceTest {
         }
 
         // Then
-        assertEquals("", pdfMetadata.additionalProperties["pageId"])
-        assertNotNull(pdfMetadata.additionalProperties["attachmentTitle"])
+        assertEquals("", pdfMetadata.pageId)
+        assertNotNull(pdfMetadata.attachmentTitle)
     }
 
     @Test
@@ -238,12 +238,10 @@ class PdfAttachmentServiceTest {
             this.type = "confluence-pdf-attachment"
 
             "pdfPageNumber" to calculatePageNumber(index)
-            "computedValue" to (index * 100)
         }
 
         // Then
         assertEquals("Documentation - guide.pdf (Page 3)", pdfMetadata.title)
-        assertEquals(3, pdfMetadata.additionalProperties["pdfPageNumber"])
-        assertEquals(200, pdfMetadata.additionalProperties["computedValue"])
+        assertEquals(3, pdfMetadata.pdfPageNumber)
     }
 }

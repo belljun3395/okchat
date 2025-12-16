@@ -3,8 +3,8 @@ package com.okestro.okchat.search.tools
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.dto.ToolOutput
 import com.okestro.okchat.ai.tools.ToolExecutor
+import com.okestro.okchat.search.index.DocumentIndex
 import com.okestro.okchat.search.model.SearchDocument
-import com.okestro.okchat.search.support.MetadataFields
 import com.okestro.okchat.search.tools.dto.SearchDocumentsInput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
@@ -84,12 +84,12 @@ class SearchDocumentsTool(
                                 b.must { m ->
                                     m.multiMatch { mm ->
                                         mm.query(query)
-                                            .fields(listOf("content", MetadataFields.TITLE))
+                                            .fields(listOf(DocumentIndex.Fields.CONTENT, DocumentIndex.AttachmentMetadata.MEDIA_TYPE.fullKey))
                                     }
                                 }
                                     .filter { f ->
                                         f.term { t ->
-                                            t.field(MetadataFields.SPACE_KEY)
+                                            t.field(DocumentIndex.DocumentCommonMetadata.SPACE_KEY.fullKey)
                                                 .value(FieldValue.of(filterBySpace))
                                         }
                                     }
@@ -98,7 +98,7 @@ class SearchDocumentsTool(
                             // No filter
                             q.multiMatch { mm ->
                                 mm.query(query)
-                                    .fields(listOf("content", MetadataFields.TITLE))
+                                    .fields(listOf("content", DocumentIndex.DocumentCommonMetadata.TITLE.fullKey))
                             }
                         }
                     }

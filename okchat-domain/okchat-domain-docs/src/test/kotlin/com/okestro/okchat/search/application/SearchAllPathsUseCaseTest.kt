@@ -1,8 +1,8 @@
 package com.okestro.okchat.search.application
 
 import com.okestro.okchat.search.application.dto.SearchAllPathsUseCaseIn
+import com.okestro.okchat.search.index.DocumentIndex
 import com.okestro.okchat.search.model.AllowedKnowledgeBases
-import com.okestro.okchat.search.support.MetadataFields
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
@@ -24,10 +24,10 @@ class SearchAllPathsUseCaseTest : BehaviorSpec({
         val path2 = "path/to/document2"
 
         val hit1 = mockk<Hit<Map<String, Any>>>() {
-            coEvery { source() } returns mapOf(MetadataFields.PATH to path1)
+            coEvery { source() } returns mapOf(DocumentIndex.DocumentCommonMetadata.PATH.fullKey to path1)
         }
         val hit2 = mockk<Hit<Map<String, Any>>>() {
-            coEvery { source() } returns mapOf(MetadataFields.PATH to path2)
+            coEvery { source() } returns mapOf(DocumentIndex.DocumentCommonMetadata.PATH.fullKey to path2)
         }
 
         val searchResponse1 = mockk<SearchResponse<Map<String, Any>>>() {

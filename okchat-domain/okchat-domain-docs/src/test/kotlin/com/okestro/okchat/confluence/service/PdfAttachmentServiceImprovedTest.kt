@@ -1,6 +1,6 @@
 package com.okestro.okchat.confluence.service
 
-import com.okestro.okchat.search.support.MetadataFields
+import com.okestro.okchat.search.index.DocumentIndex
 import com.okestro.okchat.search.support.metadata
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.datatest.withData
@@ -55,12 +55,12 @@ class PdfAttachmentServiceImprovedTest : DescribeSpec({
                 pdfMetadata.path shouldBe "$path > $attachmentTitle"
 
                 // Check additional properties
-                pdfMetadata.additionalProperties["pageId"] shouldBe pageId
-                pdfMetadata.additionalProperties["attachmentTitle"] shouldBe attachmentTitle
-                pdfMetadata.additionalProperties["pdfPageNumber"] shouldBe 1
-                pdfMetadata.additionalProperties["totalPdfPages"] shouldBe totalPages
-                pdfMetadata.additionalProperties["fileSize"] shouldBe PdfMetadata.FILE_SIZE
-                pdfMetadata.additionalProperties["mediaType"] shouldBe PdfMetadata.MEDIA_TYPE
+                pdfMetadata.pageId shouldBe pageId
+                pdfMetadata.attachmentTitle shouldBe attachmentTitle
+                pdfMetadata.pdfPageNumber shouldBe 1
+                pdfMetadata.totalPdfPages shouldBe totalPages
+                pdfMetadata.fileSize shouldBe PdfMetadata.FILE_SIZE
+                pdfMetadata.mediaType shouldBe PdfMetadata.MEDIA_TYPE
             }
         }
 
@@ -87,11 +87,11 @@ class PdfAttachmentServiceImprovedTest : DescribeSpec({
                 val flatMap = pdfMetadata.toFlatMap()
 
                 // Then
-                flatMap[MetadataFields.ID] shouldBe "att123"
-                flatMap[MetadataFields.TITLE] shouldBe "Test PDF Page 1"
-                flatMap[MetadataFields.TYPE] shouldBe "confluence-pdf-attachment"
-                flatMap[MetadataFields.SPACE_KEY] shouldBe "TEST"
-                flatMap[MetadataFields.PATH] shouldBe "Test > PDF"
+                flatMap[DocumentIndex.DocumentCommonMetadata.ID.fullKey] shouldBe "att123"
+                flatMap[DocumentIndex.DocumentCommonMetadata.TITLE.fullKey] shouldBe "Test PDF Page 1"
+                flatMap[DocumentIndex.DocumentCommonMetadata.TYPE.fullKey] shouldBe "confluence-pdf-attachment"
+                flatMap[DocumentIndex.DocumentCommonMetadata.SPACE_KEY.fullKey] shouldBe "TEST"
+                flatMap[DocumentIndex.DocumentCommonMetadata.PATH.fullKey] shouldBe "Test > PDF"
 
                 // Check flattened additional properties
                 flatMap["metadata.pageId"] shouldBe "page456"
@@ -128,8 +128,8 @@ class PdfAttachmentServiceImprovedTest : DescribeSpec({
                 metadataList shouldHaveSize 10
                 metadataList.forEachIndexed { index, meta ->
                     meta.title shouldBe "$pageTitle - $attachmentTitle (Page ${index + 1})"
-                    meta.additionalProperties["pdfPageNumber"] shouldBe (index + 1)
-                    meta.additionalProperties["totalPdfPages"] shouldBe totalPages
+                    meta.pdfPageNumber shouldBe (index + 1)
+                    meta.totalPdfPages shouldBe totalPages
                 }
             }
 
@@ -157,8 +157,8 @@ class PdfAttachmentServiceImprovedTest : DescribeSpec({
 
                 // Then
                 metadataList shouldHaveSize totalPages
-                metadataList.first().additionalProperties["pdfPageNumber"] shouldBe 1
-                metadataList.last().additionalProperties["pdfPageNumber"] shouldBe totalPages
+                metadataList.first().pdfPageNumber shouldBe 1
+                metadataList.last().pdfPageNumber shouldBe totalPages
             }
         }
 
@@ -188,7 +188,7 @@ class PdfAttachmentServiceImprovedTest : DescribeSpec({
                 }
 
                 // Then
-                pdfMetadata.additionalProperties["fileSize"] shouldBe expectedSize
+                pdfMetadata.fileSize shouldBe expectedSize
             }
         }
 
@@ -209,8 +209,8 @@ class PdfAttachmentServiceImprovedTest : DescribeSpec({
                 }
 
                 // Then
-                pdfMetadata.additionalProperties["pageId"] shouldBe ""
-                pdfMetadata.additionalProperties["attachmentTitle"].shouldNotBeNull()
+                pdfMetadata.pageId shouldBe ""
+                pdfMetadata.attachmentTitle.shouldNotBeNull()
             }
 
             it("should support path hierarchies") {
@@ -293,13 +293,11 @@ class PdfAttachmentServiceImprovedTest : DescribeSpec({
                     this.type = "confluence-pdf-attachment"
 
                     "pdfPageNumber" to calculatePageNumber(index)
-                    "computedValue" to (index * 100)
                 }
 
                 // Then
                 pdfMetadata.title shouldBe "Documentation - guide.pdf (Page 3)"
-                pdfMetadata.additionalProperties["pdfPageNumber"] shouldBe 3
-                pdfMetadata.additionalProperties["computedValue"] shouldBe 200
+                pdfMetadata.pdfPageNumber shouldBe 3
             }
         }
     }

@@ -2,8 +2,8 @@ package com.okestro.okchat.search.application
 
 import com.okestro.okchat.search.application.dto.SearchAllPathsUseCaseIn
 import com.okestro.okchat.search.application.dto.SearchAllPathsUseCaseOut
+import com.okestro.okchat.search.index.DocumentIndex
 import com.okestro.okchat.search.model.AllowedKnowledgeBases
-import com.okestro.okchat.search.support.MetadataFields
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.opensearch.client.opensearch._types.FieldValue
@@ -39,7 +39,7 @@ class SearchAllPathsUseCase(
                             when (scope) {
                                 is AllowedKnowledgeBases.Subset -> {
                                     q.terms { t ->
-                                        t.field(MetadataFields.KNOWLEDGE_BASE_ID)
+                                        t.field(DocumentIndex.DocumentCommonMetadata.KNOWLEDGE_BASE_ID.fullKey)
                                             .terms { v ->
                                                 v.value(scope.ids.map { FieldValue.of(it) })
                                             }
@@ -52,7 +52,7 @@ class SearchAllPathsUseCase(
                         }
                         .source { src ->
                             src.filter { f ->
-                                f.includes(listOf(MetadataFields.PATH))
+                                f.includes(listOf(DocumentIndex.DocumentCommonMetadata.PATH.fullKey))
                             }
                         }
                 }, Map::class.java)
@@ -63,7 +63,7 @@ class SearchAllPathsUseCase(
                 // Extract paths
                 hits.forEach { hit ->
                     val source = hit.source()
-                    val path = source?.get(MetadataFields.PATH)?.toString()
+                    val path = source?.get(DocumentIndex.DocumentCommonMetadata.PATH.fullKey)?.toString()
                     path?.let {
                         if (it.isNotBlank()) paths.add(it)
                     }

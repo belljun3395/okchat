@@ -17,56 +17,41 @@ class SearchDocumentTest {
     }
 
     @Test
-    fun `getTitle should prefer flattened metadata over nested`() {
+    fun `getTitle should return title from metadata`() {
         // Given
-        val docWithFlattenedTitle = SearchDocument(
-            metadataTitle = "Flattened Title",
-            metadata = DocumentMetadata(title = "Nested Title")
-        )
-        val docWithNestedTitle = SearchDocument(
-            metadata = DocumentMetadata(title = "Nested Title")
+        val doc = SearchDocument(
+            metadata = DocumentMetadata(title = "Test Title")
         )
         val docWithoutTitle = SearchDocument()
 
         // Then
-        assertEquals("Flattened Title", docWithFlattenedTitle.getTitle())
-        assertEquals("Nested Title", docWithNestedTitle.getTitle())
+        assertEquals("Test Title", doc.getTitle())
         assertEquals("Untitled", docWithoutTitle.getTitle())
     }
 
     @Test
-    fun `getPath should prefer flattened metadata over nested`() {
+    fun `getPath should return path from metadata`() {
         // Given
-        val docWithFlattenedPath = SearchDocument(
-            metadataPath = "/flattened/path",
-            metadata = DocumentMetadata(path = "/nested/path")
-        )
-        val docWithNestedPath = SearchDocument(
-            metadata = DocumentMetadata(path = "/nested/path")
+        val doc = SearchDocument(
+            metadata = DocumentMetadata(path = "/test/path")
         )
         val docWithoutPath = SearchDocument()
 
         // Then
-        assertEquals("/flattened/path", docWithFlattenedPath.getPath())
-        assertEquals("/nested/path", docWithNestedPath.getPath())
+        assertEquals("/test/path", doc.getPath())
         assertEquals("", docWithoutPath.getPath())
     }
 
     @Test
-    fun `getSpaceKey should prefer flattened metadata over nested`() {
+    fun `getSpaceKey should return spaceKey from metadata`() {
         // Given
-        val docWithFlattenedKey = SearchDocument(
-            metadataSpaceKey = "FLAT",
-            metadata = DocumentMetadata(spaceKey = "NEST")
-        )
-        val docWithNestedKey = SearchDocument(
-            metadata = DocumentMetadata(spaceKey = "NEST")
+        val doc = SearchDocument(
+            metadata = DocumentMetadata(spaceKey = "TEST")
         )
         val docWithoutKey = SearchDocument()
 
         // Then
-        assertEquals("FLAT", docWithFlattenedKey.getSpaceKey())
-        assertEquals("NEST", docWithNestedKey.getSpaceKey())
+        assertEquals("TEST", doc.getSpaceKey())
         assertEquals("", docWithoutKey.getSpaceKey())
     }
 

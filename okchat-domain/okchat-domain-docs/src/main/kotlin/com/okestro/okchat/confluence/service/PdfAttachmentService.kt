@@ -3,7 +3,6 @@ package com.okestro.okchat.confluence.service
 import com.okestro.okchat.confluence.client.ConfluenceClient
 import com.okestro.okchat.confluence.client.dto.Attachment
 import com.okestro.okchat.confluence.config.ConfluenceProperties
-import com.okestro.okchat.search.support.MetadataFields
 import com.okestro.okchat.search.support.metadata
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
@@ -206,15 +205,15 @@ class PdfAttachmentService(
                     this.path = "$path > ${attachment.title}"
 
                     // Additional PDF-specific properties
-                    property(MetadataFields.Additional.PAGE_ID, attachment.pageId ?: "")
-                    property(MetadataFields.Additional.ATTACHMENT_TITLE, attachment.title)
-                    property(MetadataFields.Additional.TOTAL_PDF_PAGES, extractedDocuments.size)
-                    property(MetadataFields.Additional.FILE_SIZE, attachment.fileSize ?: 0)
-                    property(MetadataFields.Additional.MEDIA_TYPE, attachment.mediaType)
+                    this.pageId = attachment.pageId ?: ""
+                    this.attachmentTitle = attachment.title
+                    this.totalPdfPages = extractedDocuments.size
+                    this.fileSize = attachment.fileSize ?: 0
+                    this.mediaType = attachment.mediaType
 
                     // Links for user access
-                    property(MetadataFields.Additional.DOWNLOAD_URL, attachment.downloadLink?.let { "$wikiBaseUrl$it" } ?: "")
-                    property(MetadataFields.Additional.WEB_URL, attachment.webuiLink?.let { "$wikiBaseUrl$it" } ?: "")
+                    this.downloadUrl = attachment.downloadLink?.let { "$wikiBaseUrl$it" } ?: ""
+                    this.webUrl = attachment.webuiLink?.let { "$wikiBaseUrl$it" } ?: ""
                 }
 
                 listOf(

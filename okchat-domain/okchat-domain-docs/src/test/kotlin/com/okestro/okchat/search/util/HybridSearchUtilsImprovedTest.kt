@@ -199,10 +199,15 @@ class HybridSearchUtilsImprovedTest : DescribeSpec({
                             document = mapOf(
                                 "id" to "doc1",
                                 "content" to "Content",
-                                "metadata.title" to "Title",
-                                "metadata.path" to "/path",
-                                "metadata.spaceKey" to "TEST",
-                                "metadata.knowledgeBaseId" to 0L
+                                "metadata" to mapOf(
+                                    "title" to "Title 1",
+                                    "path" to "/path1",
+                                    "spaceKey" to "TEST",
+                                    "keywords" to "keyword1",
+                                    "knowledgeBaseId" to 1L,
+                                    "webUrl" to "http://example.com/doc1",
+                                    "downloadUrl" to "http://example.com/download/doc1"
+                                )
                                 // keywords missing
                             ),
                             textScore = 0.8,
@@ -457,10 +462,15 @@ private fun createSearchHitDocument(
     val doc = mutableMapOf<String, Any>(
         "id" to id,
         "content" to content,
-        "metadata.title" to title,
-        "metadata.path" to path,
-        "metadata.spaceKey" to spaceKey,
-        "metadata.knowledgeBaseId" to knowledgeBaseId
+        "metadata" to mapOf(
+            "title" to title,
+            "path" to path,
+            "spaceKey" to spaceKey,
+            "keywords" to keywords,
+            "knowledgeBaseId" to knowledgeBaseId,
+            "webUrl" to "http://example.com/doc1",
+            "downloadUrl" to "http://example.com/download/doc1"
+        )
     )
     keywords?.let { doc["metadata.keywords"] = it }
     return doc

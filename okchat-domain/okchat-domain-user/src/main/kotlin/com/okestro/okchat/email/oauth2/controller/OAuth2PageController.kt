@@ -1,5 +1,7 @@
 package com.okestro.okchat.email.oauth2.controller
 
+import com.okestro.okchat.email.oauth2.application.ExchangeOAuth2CodeUseCase
+import com.okestro.okchat.email.oauth2.application.dto.ExchangeOAuth2CodeUseCaseIn
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.reactor.mono
 import org.springframework.stereotype.Controller
@@ -14,7 +16,7 @@ private val logger = KotlinLogging.logger {}
 @Controller
 @RequestMapping("/oauth2")
 class OAuth2PageController(
-    private val exchangeOAuth2CodeUseCase: com.okestro.okchat.email.oauth2.application.ExchangeOAuth2CodeUseCase
+    private val exchangeOAuth2CodeUseCase: ExchangeOAuth2CodeUseCase
 ) {
 
     @GetMapping("/login")
@@ -46,7 +48,7 @@ class OAuth2PageController(
         return mono {
             try {
                 exchangeOAuth2CodeUseCase.execute(
-                    com.okestro.okchat.email.oauth2.application.dto.ExchangeOAuth2CodeUseCaseIn(state, code)
+                    ExchangeOAuth2CodeUseCaseIn(state, code)
                 )
                 model.addAttribute("status", "success")
                 model.addAttribute("message", "Successfully authenticated $state")

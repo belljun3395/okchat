@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.dto.ToolOutput
 import com.okestro.okchat.ai.tools.ToolExecutor
 import com.okestro.okchat.search.index.DocumentIndex
+import com.okestro.okchat.search.model.SearchDocument
 import com.okestro.okchat.search.tools.dto.SearchPagePdfAttachmentsInput
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.opensearch.client.opensearch._types.FieldValue
@@ -144,7 +145,7 @@ class SearchPagePdfAttachmentsTool(
                 val source = hit.source() ?: return@forEach
 
                 // Use SearchDocument for safe parsing
-                val doc = com.okestro.okchat.search.model.SearchDocument.fromMap(source)
+                val doc = SearchDocument.fromMap(source)
                 val metadata = doc.metadata
 
                 val content = doc.content

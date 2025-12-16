@@ -1,6 +1,8 @@
 
 package com.okestro.okchat.chat.controller
 
+import com.okestro.okchat.chat.application.StreamChatUseCase
+import com.okestro.okchat.chat.application.dto.StreamChatUseCaseIn
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -27,7 +29,7 @@ import java.util.UUID
     description = "AI 기반 채팅 및 문서 검색 API. RAG(Retrieval-Augmented Generation)를 활용하여 문서 기반 답변을 제공합니다."
 )
 class ChatController(
-    private val streamChatUseCase: com.okestro.okchat.chat.application.StreamChatUseCase
+    private val streamChatUseCase: StreamChatUseCase
 ) {
 
     @PostMapping(produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
@@ -102,7 +104,7 @@ class ChatController(
             emit("__REQUEST_ID__:$requestId\n")
 
             streamChatUseCase.execute(
-                com.okestro.okchat.chat.application.dto.StreamChatUseCaseIn(
+                StreamChatUseCaseIn(
                     message = chatRequest.message,
                     isDeepThink = chatRequest.isDeepThink,
                     keywords = chatRequest.keywords ?: emptyList(),

@@ -8,6 +8,7 @@ import com.okestro.okchat.permission.application.GrantPathPermissionUseCase
 import com.okestro.okchat.permission.application.RevokeAllUserPermissionsUseCase
 import com.okestro.okchat.permission.application.RevokePathPermissionUseCase
 import com.okestro.okchat.permission.application.dto.GetAllowedPathsForUserUseCaseIn
+import com.okestro.okchat.permission.application.dto.GetPathPermissionsUseCaseIn
 import com.okestro.okchat.permission.application.dto.GetUserPermissionsUseCaseIn
 import com.okestro.okchat.permission.application.dto.GrantDenyPathPermissionUseCaseIn
 import com.okestro.okchat.permission.application.dto.GrantPathPermissionUseCaseIn
@@ -20,6 +21,7 @@ import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseIn
 import com.okestro.okchat.user.application.FindUserByEmailUseCase
 import com.okestro.okchat.user.application.GetAllActiveUsersUseCase
 import com.okestro.okchat.user.application.dto.FindUserByEmailUseCaseIn
+import com.okestro.okchat.user.application.dto.GetAllActiveUsersUseCaseIn
 import com.okestro.okchat.user.model.entity.User
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.swagger.v3.oas.annotations.Operation
@@ -90,9 +92,9 @@ class PermissionController(
                     webUrl = doc.webUrl
                 )
             }
-        val permissions = getPathPermissionsUseCase.execute(com.okestro.okchat.permission.application.dto.GetPathPermissionsUseCaseIn(path)).permissions
+        val permissions = getPathPermissionsUseCase.execute(GetPathPermissionsUseCaseIn(path)).permissions
 
-        val allUsers = getAllActiveUsersUseCase.execute(com.okestro.okchat.user.application.dto.GetAllActiveUsersUseCaseIn()).users
+        val allUsers = getAllActiveUsersUseCase.execute(GetAllActiveUsersUseCaseIn()).users
         val usersWithAccess = permissions.mapNotNull { perm ->
             allUsers.find { it.id == perm.userId }
         }
@@ -113,7 +115,7 @@ class PermissionController(
     suspend fun getAllUsersWithPermissions(): ResponseEntity<List<UserPermissionStat>> {
         log.info { "Get all users with permissions request" }
 
-        val users = getAllActiveUsersUseCase.execute(com.okestro.okchat.user.application.dto.GetAllActiveUsersUseCaseIn()).users
+        val users = getAllActiveUsersUseCase.execute(GetAllActiveUsersUseCaseIn()).users
 
         val userStats = users.map { user ->
             val permissions = getUserPermissionsUseCase.execute(GetUserPermissionsUseCaseIn(user.id!!)).permissions

@@ -3,6 +3,7 @@ package com.okestro.okchat.search.util
 import com.okestro.okchat.search.client.HybridSearchResponse
 import com.okestro.okchat.search.client.SearchHit
 import com.okestro.okchat.search.model.SearchResult
+import com.okestro.okchat.search.model.SearchScore
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -137,7 +138,7 @@ class HybridSearchUtilsTest {
                 content = "Chunk 1",
                 path = "/path",
                 spaceKey = "TEST",
-                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.8),
+                similarity = SearchScore.SimilarityScore(0.8),
                 knowledgeBaseId = 0L
             ),
             SearchResult.withSimilarity(
@@ -146,7 +147,7 @@ class HybridSearchUtilsTest {
                 content = "Chunk 2",
                 path = "/path",
                 spaceKey = "TEST",
-                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.6),
+                similarity = SearchScore.SimilarityScore(0.6),
                 knowledgeBaseId = 0L
             ),
             SearchResult.withSimilarity(
@@ -155,7 +156,7 @@ class HybridSearchUtilsTest {
                 content = "Different content",
                 path = "/path2",
                 spaceKey = "TEST",
-                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.5),
+                similarity = SearchScore.SimilarityScore(0.5),
                 knowledgeBaseId = 0L
             )
         )
@@ -183,7 +184,7 @@ class HybridSearchUtilsTest {
                 content = "Content",
                 path = "/path",
                 spaceKey = "TEST",
-                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.8),
+                similarity = SearchScore.SimilarityScore(0.8),
                 knowledgeBaseId = 0L
             )
         )
@@ -206,7 +207,7 @@ class HybridSearchUtilsTest {
                 content = "Content 1",
                 path = "/path1",
                 spaceKey = "TEST",
-                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.5),
+                similarity = SearchScore.SimilarityScore(0.5),
                 knowledgeBaseId = 0L
             ),
             SearchResult.withSimilarity(
@@ -215,7 +216,7 @@ class HybridSearchUtilsTest {
                 content = "Content 2",
                 path = "/path2",
                 spaceKey = "TEST",
-                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.9),
+                similarity = SearchScore.SimilarityScore(0.9),
                 knowledgeBaseId = 0L
             ),
             SearchResult.withSimilarity(
@@ -224,7 +225,7 @@ class HybridSearchUtilsTest {
                 content = "Content 3",
                 path = "/path3",
                 spaceKey = "TEST",
-                similarity = com.okestro.okchat.search.model.SearchScore.SimilarityScore(0.7),
+                similarity = SearchScore.SimilarityScore(0.7),
                 knowledgeBaseId = 0L
             )
         )

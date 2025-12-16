@@ -1,5 +1,6 @@
 package com.okestro.okchat.search.strategy
 
+import com.okestro.okchat.search.model.SearchCriteria
 import com.okestro.okchat.search.model.SearchKeywords
 import com.okestro.okchat.search.model.SearchResult
 import io.kotest.matchers.shouldBe
@@ -15,7 +16,7 @@ class SearchStrategyTest {
     fun `should define required interface methods`() = runTest {
         // given
         val testStrategy = object : SearchStrategy {
-            override suspend fun search(criteria: com.okestro.okchat.search.model.SearchCriteria, topK: Int): List<SearchResult> {
+            override suspend fun search(criteria: SearchCriteria, topK: Int): List<SearchResult> {
                 return emptyList()
             }
 

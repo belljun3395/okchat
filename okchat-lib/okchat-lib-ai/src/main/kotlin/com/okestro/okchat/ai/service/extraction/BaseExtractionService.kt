@@ -6,6 +6,7 @@ import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.ai.converter.BeanOutputConverter
 import org.springframework.ai.openai.OpenAiChatOptions
+import com.okestro.okchat.ai.model.Prompt as OkChatPrompt
 
 /**
  * Base service for LLM-based keyword extraction.
@@ -54,7 +55,7 @@ abstract class BaseExtractionService(
      * Build the extraction prompt for the specific type.
      * Must be implemented by subclasses.
      */
-    protected abstract fun buildPrompt(message: String): com.okestro.okchat.ai.model.Prompt
+    protected abstract fun buildPrompt(message: String): OkChatPrompt
 
     /**
      * Get LLM options for extraction.

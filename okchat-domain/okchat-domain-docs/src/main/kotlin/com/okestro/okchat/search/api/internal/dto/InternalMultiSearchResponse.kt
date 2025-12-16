@@ -1,6 +1,7 @@
 package com.okestro.okchat.search.api.internal.dto
 
 import com.okestro.okchat.search.model.MultiSearchResult
+import com.okestro.okchat.search.model.SearchResult
 import com.okestro.okchat.search.model.SearchType
 import com.okestro.okchat.search.model.TypedSearchResults
 
@@ -72,7 +73,7 @@ data class InternalSearchResultDto(
     val downloadUrl: String
 ) {
     companion object {
-        fun from(searchResult: com.okestro.okchat.search.model.SearchResult): InternalSearchResultDto {
+        fun from(searchResult: SearchResult): InternalSearchResultDto {
             return InternalSearchResultDto(
                 id = searchResult.id,
                 title = searchResult.title,

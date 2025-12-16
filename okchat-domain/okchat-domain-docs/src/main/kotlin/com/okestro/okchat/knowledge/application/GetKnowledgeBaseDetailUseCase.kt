@@ -1,6 +1,7 @@
 package com.okestro.okchat.knowledge.application
 
 import com.okestro.okchat.docs.client.user.KnowledgeBaseEmailClient
+import com.okestro.okchat.docs.client.user.KnowledgeBaseEmailProviderDto
 import com.okestro.okchat.docs.client.user.KnowledgeMemberClient
 import com.okestro.okchat.docs.client.user.UserClient
 import com.okestro.okchat.email.config.EmailProperties
@@ -63,7 +64,7 @@ class GetKnowledgeBaseDetailUseCase(
         return membership?.role == "ADMIN"
     }
 
-    private fun com.okestro.okchat.docs.client.user.KnowledgeBaseEmailProviderDto.toEmailProviderConfig(): EmailProperties.EmailProviderConfig {
+    private fun KnowledgeBaseEmailProviderDto.toEmailProviderConfig(): EmailProperties.EmailProviderConfig {
         val providerType = runCatching { EmailProperties.EmailProviderType.valueOf(this.providerType) }.getOrNull()
             ?: throw IllegalArgumentException("Unsupported email provider type: ${this.providerType}")
 

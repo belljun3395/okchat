@@ -29,6 +29,7 @@ import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import java.time.Instant
+import com.okestro.okchat.knowledge.model.entity.Document as RdbDocument
 
 /**
  * Spring Cloud Task for syncing Confluence content to OpenSearch vector store and RDB
@@ -81,7 +82,7 @@ class ConfluenceSyncUseCase(
 
             // 2. Get existing document IDs for this space (from RDB for reliability)
             log.info { "2. Fetching existing documents for KB ${kb.name}..." }
-            val existingDocs: List<com.okestro.okchat.knowledge.model.entity.Document> = withContext(Dispatchers.IO + MDCContext()) {
+            val existingDocs: List<RdbDocument> = withContext(Dispatchers.IO + MDCContext()) {
                 documentRepository.findAllByKnowledgeBaseId(kb.id!!)
             }
             val existingExternalIds = existingDocs.map { it.externalId }.toSet()
@@ -151,10 +152,10 @@ class ConfluenceSyncUseCase(
         hierarchy: ContentHierarchy,
         spaceKey: String,
         kb: KnowledgeBase,
-        existingDocMap: Map<String, com.okestro.okchat.knowledge.model.entity.Document>
-    ): Pair<List<Document>, List<com.okestro.okchat.knowledge.model.entity.Document>> {
+        existingDocMap: Map<String, RdbDocument>
+    ): Pair<List<Document>, List<RdbDocument>> {
         val vectorDocuments = mutableListOf<Document>()
-        val rdbDocuments = mutableListOf<com.okestro.okchat.knowledge.model.entity.Document>()
+        val rdbDocuments = mutableListOf<RdbDocument>()
 
         val allPages = hierarchy.getAllPages()
         val totalPages = allPages.size
@@ -193,7 +194,7 @@ class ConfluenceSyncUseCase(
 
                     // RDB Entity (Page)
                     val pageDocId = existingDocMap[node.id]?.id ?: TsidCreator.getTsid().toString()
-                    val rdbDoc = com.okestro.okchat.knowledge.model.entity.Document(
+                    val rdbDoc = RdbDocument(
                         id = pageDocId,
                         knowledgeBaseId = kb.id!!,
                         externalId = node.id,
@@ -254,7 +255,7 @@ class ConfluenceSyncUseCase(
                     }.toMutableList()
 
                     // PDF Processing
-                    val pdfRdbDocs = mutableListOf<com.okestro.okchat.knowledge.model.entity.Document>()
+                    val pdfRdbDocs = mutableListOf<RdbDocument>()
                     try {
                         val pdfDocuments = pdfAttachmentService.processPdfAttachments(node.id, pageTitle, spaceKey, path)
                         if (pdfDocuments.isNotEmpty()) {
@@ -285,7 +286,7 @@ class ConfluenceSyncUseCase(
                                 val pdfDocId = existingDocMap[pdfDoc.id]?.id ?: TsidCreator.getTsid().toString()
 
                                 pdfRdbDocs.add(
-                                    com.okestro.okchat.knowledge.model.entity.Document(
+                                    RdbDocument(
                                         id = pdfDocId,
                                         knowledgeBaseId = requireNotNull(kb.id) { "Knowledge Base ID must not be null" },
                                         externalId = pdfDoc.id,

@@ -3,6 +3,7 @@ package com.okestro.okchat.knowledge.application
 import com.okestro.okchat.knowledge.application.dto.UpdateKnowledgeBaseMemberRoleUseCaseIn
 import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseUserRole
 import com.okestro.okchat.knowledge.repository.KnowledgeBaseUserRepository
+import com.okestro.okchat.user.model.entity.User
 import com.okestro.okchat.user.model.entity.UserRole
 import com.okestro.okchat.user.repository.UserRepository
 import org.springframework.stereotype.Service
@@ -39,7 +40,7 @@ class UpdateKnowledgeBaseMemberRoleUseCase(
         )
     }
 
-    private fun canManageKb(caller: com.okestro.okchat.user.model.entity.User, kbId: Long): Boolean {
+    private fun canManageKb(caller: User, kbId: Long): Boolean {
         // 1. System Admin
         if (caller.role == UserRole.SYSTEM_ADMIN) return true
 

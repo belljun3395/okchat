@@ -24,10 +24,10 @@ class SearchAllPathsUseCaseTest : BehaviorSpec({
         val path2 = "path/to/document2"
 
         val hit1 = mockk<Hit<Map<String, Any>>>() {
-            coEvery { source() } returns mapOf(DocumentIndex.DocumentCommonMetadata.PATH.fullKey to path1)
+            coEvery { source() } returns mapOf(DocumentIndex.Fields.METADATA_OBJECT to mapOf(DocumentIndex.DocumentCommonMetadata.PATH.key to path1))
         }
         val hit2 = mockk<Hit<Map<String, Any>>>() {
-            coEvery { source() } returns mapOf(DocumentIndex.DocumentCommonMetadata.PATH.fullKey to path2)
+            coEvery { source() } returns mapOf(DocumentIndex.Fields.METADATA_OBJECT to mapOf(DocumentIndex.DocumentCommonMetadata.PATH.key to path2))
         }
 
         val searchResponse1 = mockk<SearchResponse<Map<String, Any>>>() {

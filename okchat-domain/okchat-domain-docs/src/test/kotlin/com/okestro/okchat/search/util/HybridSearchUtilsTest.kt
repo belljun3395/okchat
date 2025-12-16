@@ -239,4 +239,32 @@ class HybridSearchUtilsTest {
         assertEquals("page3", deduplicated[1].id)
         assertEquals("page1", deduplicated[2].id) // lowest score
     }
+    @Test
+    fun `parseSearchResults should handle missing optional fields safely`() {
+        // Given
+        val response = HybridSearchResponse(
+            hits = listOf(
+                SearchHit(
+                    document = mapOf(
+                        "id" to "doc1",
+                        "content" to "Content 1",
+                        "metadata" to mapOf(
+                            "title" to "Title 1"
+                            // webUrl and downloadUrl missing
+                        )
+                    ),
+                    textScore = 0.8,
+                    vectorScore = 0.6
+                )
+            )
+        )
+
+        // When
+        val results = HybridSearchUtils.parseSearchResults(response)
+
+        // Then
+        assertEquals(1, results.size)
+        assertEquals("", results[0].webUrl)
+        assertEquals("", results[0].downloadUrl)
+    }
 }

@@ -28,18 +28,22 @@ class SearchAllByPathUseCaseTest : BehaviorSpec({
 
         val hit1 = mockk<Hit<Map<String, Any>>>() {
             coEvery { source() } returns mapOf(
-                DocumentIndex.DocumentCommonMetadata.ID.fullKey to docId1,
-                DocumentIndex.DocumentCommonMetadata.TITLE.fullKey to docTitle1,
-                DocumentIndex.DocumentCommonMetadata.PATH.fullKey to documentPath,
-                DocumentIndex.DocumentCommonMetadata.KNOWLEDGE_BASE_ID.fullKey to 0L
+                DocumentIndex.Fields.METADATA_OBJECT to mapOf(
+                    DocumentIndex.DocumentCommonMetadata.ID.key to docId1,
+                    DocumentIndex.DocumentCommonMetadata.TITLE.key to docTitle1,
+                    DocumentIndex.DocumentCommonMetadata.PATH.key to documentPath,
+                    DocumentIndex.DocumentCommonMetadata.KNOWLEDGE_BASE_ID.key to 0L
+                )
             )
         }
         val hit2 = mockk<Hit<Map<String, Any>>>() {
             coEvery { source() } returns mapOf(
-                DocumentIndex.DocumentCommonMetadata.ID.fullKey to docId2,
-                DocumentIndex.DocumentCommonMetadata.TITLE.fullKey to docTitle2,
-                DocumentIndex.DocumentCommonMetadata.PATH.fullKey to documentPath,
-                DocumentIndex.DocumentCommonMetadata.KNOWLEDGE_BASE_ID.fullKey to 0L
+                DocumentIndex.Fields.METADATA_OBJECT to mapOf(
+                    DocumentIndex.DocumentCommonMetadata.ID.key to docId2,
+                    DocumentIndex.DocumentCommonMetadata.TITLE.key to docTitle2,
+                    DocumentIndex.DocumentCommonMetadata.PATH.key to documentPath,
+                    DocumentIndex.DocumentCommonMetadata.KNOWLEDGE_BASE_ID.key to 0L
+                )
             )
         }
 

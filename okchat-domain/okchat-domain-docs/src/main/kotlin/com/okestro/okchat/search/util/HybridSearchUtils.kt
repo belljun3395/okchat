@@ -33,8 +33,8 @@ object HybridSearchUtils {
             val knowledgeBaseId = document.getKnowledgeBaseId()
 
             // Extract link information from metadata
-            val webUrl = document.metadata.webUrl!!
-            val downloadUrl = document.metadata.downloadUrl!!
+            val webUrl = document.metadata.webUrl ?: ""
+            val downloadUrl = document.metadata.downloadUrl ?: ""
 
             val combinedScore = scoresCombiner(hit.textScore, hit.vectorScore)
 

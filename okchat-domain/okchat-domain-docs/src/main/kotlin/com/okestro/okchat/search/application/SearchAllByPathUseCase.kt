@@ -6,6 +6,7 @@ import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseIn
 import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseOut
 import com.okestro.okchat.search.index.DocumentIndex
 import com.okestro.okchat.search.model.Document
+import com.okestro.okchat.search.model.SearchDocument
 import com.okestro.okchat.search.util.extractChunk
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
@@ -80,17 +81,20 @@ class SearchAllByPathUseCase(
                 hits.forEach { hit ->
                     val source = hit.source()
                     if (source != null) {
-                        // Get Confluence ID from metadata.id field
-                        val confluenceId = source[DocumentIndex.DocumentCommonMetadata.ID.fullKey]?.toString()
+                        // Use SearchDocument for safe parsing of nested/flat structures
+                        val searchDoc = SearchDocument.fromMap(source)
+                        
+                        // Get Confluence ID from metadata
+                        val confluenceId = searchDoc.metadata.id
 
-                        if (confluenceId != null) {
+                        if (!confluenceId.isNullOrBlank()) {
                             val baseId = confluenceId.extractChunk()
 
                             if (!documents.containsKey(baseId)) {
-                                val title = source[DocumentIndex.DocumentCommonMetadata.TITLE.fullKey]?.toString() ?: "Untitled"
-                                val path = source[DocumentIndex.DocumentCommonMetadata.PATH.fullKey]?.toString() ?: ""
-                                val spaceKey = source[DocumentIndex.DocumentCommonMetadata.SPACE_KEY.fullKey]?.toString()
-                                val kbId = source[DocumentIndex.DocumentCommonMetadata.KNOWLEDGE_BASE_ID.fullKey]?.toString()?.toLongOrNull()
+                                val title = searchDoc.metadata.title ?: "Untitled"
+                                val path = searchDoc.metadata.path ?: ""
+                                val spaceKey = searchDoc.metadata.spaceKey
+                                val kbId = searchDoc.metadata.knowledgeBaseId
 
                                 documents[baseId] = Document(
                                     id = baseId,

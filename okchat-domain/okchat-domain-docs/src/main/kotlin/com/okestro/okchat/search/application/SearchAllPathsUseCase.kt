@@ -63,9 +63,12 @@ class SearchAllPathsUseCase(
                 // Extract paths
                 hits.forEach { hit ->
                     val source = hit.source()
-                    val path = source?.get(DocumentIndex.DocumentCommonMetadata.PATH.fullKey)?.toString()
-                    path?.let {
-                        if (it.isNotBlank()) paths.add(it)
+                    if (source != null) {
+                        val searchDoc = com.okestro.okchat.search.model.SearchDocument.fromMap(source)
+                        val path = searchDoc.metadata.path
+                        if (!path.isNullOrBlank()) {
+                            paths.add(path)
+                        }
                     }
                 }
 

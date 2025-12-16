@@ -3,7 +3,7 @@ package com.okestro.okchat.search.tools
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.okestro.okchat.ai.model.dto.ToolOutput
 import com.okestro.okchat.ai.tools.ToolExecutor
-import com.okestro.okchat.search.support.MetadataFields
+import com.okestro.okchat.search.index.DocumentIndex
 import com.okestro.okchat.search.tools.dto.SearchPagePdfAttachmentsInput
 import org.opensearch.client.opensearch.OpenSearchClient
 import org.opensearch.client.opensearch._types.FieldValue
@@ -122,13 +122,13 @@ class SearchPagePdfAttachmentsTool(
                         q.bool { b ->
                             b.must { m ->
                                 m.term { t ->
-                                    t.field("metadata.${MetadataFields.Additional.PAGE_ID}")
+                                    t.field(DocumentIndex.AttachmentMetadata.PAGE_ID.fullKey) // Use full path constant
                                         .value(FieldValue.of(pageId))
                                 }
                             }
                                 .must { m ->
                                     m.term { t ->
-                                        t.field(MetadataFields.TYPE)
+                                        t.field(DocumentIndex.AttachmentMetadata.MEDIA_TYPE.fullKey)
                                             .value(FieldValue.of("confluence-pdf-attachment"))
                                     }
                                 }
@@ -143,12 +143,16 @@ class SearchPagePdfAttachmentsTool(
             searchResponse.hits().hits().forEach { hit ->
                 val source = hit.source() ?: return@forEach
 
-                val content = source["content"]?.toString() ?: ""
-                val attachmentTitle = (source["metadata.${MetadataFields.Additional.ATTACHMENT_TITLE}"] as? String) ?: "Unknown"
-                val totalPages = (source["metadata.${MetadataFields.Additional.TOTAL_PDF_PAGES}"] as? Number)?.toInt() ?: 0
-                val fileSize = (source["metadata.${MetadataFields.Additional.FILE_SIZE}"] as? Number)?.toLong() ?: 0L
-                val downloadUrl = (source["metadata.${MetadataFields.Additional.DOWNLOAD_URL}"] as? String) ?: ""
-                val webUrl = (source["metadata.${MetadataFields.Additional.WEB_URL}"] as? String) ?: ""
+                // Use SearchDocument for safe parsing
+                val doc = com.okestro.okchat.search.model.SearchDocument.fromMap(source)
+                val metadata = doc.metadata
+
+                val content = doc.content
+                val attachmentTitle = metadata.attachmentTitle ?: "Unknown"
+                val totalPages = metadata.totalPdfPages ?: 0
+                val fileSize = metadata.fileSize ?: 0L
+                val downloadUrl = metadata.downloadUrl ?: ""
+                val webUrl = metadata.webUrl ?: ""
 
                 results.add(
                     PdfAttachment(

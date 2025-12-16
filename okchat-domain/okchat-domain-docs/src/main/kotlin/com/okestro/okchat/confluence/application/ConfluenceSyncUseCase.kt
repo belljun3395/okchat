@@ -13,7 +13,7 @@ import com.okestro.okchat.knowledge.model.entity.KnowledgeBase
 import com.okestro.okchat.knowledge.model.entity.KnowledgeBaseType
 import com.okestro.okchat.knowledge.model.value.ContentPath
 import com.okestro.okchat.knowledge.repository.DocumentRepository
-import com.okestro.okchat.search.support.MetadataFields
+import com.okestro.okchat.search.index.DocumentIndex
 import com.okestro.okchat.search.support.metadata
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
@@ -201,9 +201,9 @@ class ConfluenceSyncUseCase(
                         path = path,
                         webUrl = pageUrl,
                         metadata = mapOf(
-                            MetadataFields.Nested.TYPE to KnowledgeBaseType.CONFLUENCE.name,
-                            MetadataFields.Nested.KEYWORDS to allKeywords,
-                            MetadataFields.Nested.SPACE_KEY to spaceKey
+                            DocumentIndex.DocumentCommonMetadata.TYPE.fullKey to KnowledgeBaseType.CONFLUENCE.name,
+                            DocumentIndex.DocumentCommonMetadata.KEYWORDS.fullKey to allKeywords,
+                            DocumentIndex.DocumentCommonMetadata.SPACE_KEY.fullKey to spaceKey
                         ),
                         lastSyncedAt = Instant.now()
                     )
@@ -216,9 +216,9 @@ class ConfluenceSyncUseCase(
                         this.spaceKey = spaceKey
                         this.path = path
                         this.keywords = allKeywords
-                        property(MetadataFields.Additional.IS_EMPTY, pageContent.isBlank())
-                        property(MetadataFields.Additional.WEB_URL, pageUrl)
-                        property(MetadataFields.Additional.KNOWLEDGE_BASE_ID, kb.id)
+                        this.isEmpty = pageContent.isBlank()
+                        this.webUrl = pageUrl
+                        this.knowledgeBaseId = kb.id
                     }
 
                     val baseDocument = Document(
@@ -241,9 +241,9 @@ class ConfluenceSyncUseCase(
                             val chunkMetadata = metadata {
                                 this.id = node.id
                                 this.keywords = allKeywords
-                                property(MetadataFields.Additional.CHUNK_INDEX, chunkIndex)
-                                property(MetadataFields.Additional.TOTAL_CHUNKS, chunks.size)
-                                property("knowledgeBaseId", kb.id)
+                                this.chunkIndex = chunkIndex
+                                this.totalChunks = chunks.size
+                                this.knowledgeBaseId = kb.id
                             }
                             Document(
                                 "${node.id}_chunk_$chunkIndex",
@@ -273,8 +273,8 @@ class ConfluenceSyncUseCase(
                                             "${pdfDoc.id}_chunk_$i",
                                             chunk.text ?: "",
                                             chunk.metadata + mapOf(
-                                                MetadataFields.Additional.CHUNK_INDEX to i,
-                                                MetadataFields.Additional.TOTAL_CHUNKS to pdfChunks.size
+                                                DocumentIndex.AttachmentMetadata.CHUNK_INDEX.fullKey to i,
+                                                DocumentIndex.AttachmentMetadata.TOTAL_CHUNKS.fullKey to pdfChunks.size
                                             )
                                         )
                                     }
@@ -289,9 +289,9 @@ class ConfluenceSyncUseCase(
                                         id = pdfDocId,
                                         knowledgeBaseId = requireNotNull(kb.id) { "Knowledge Base ID must not be null" },
                                         externalId = pdfDoc.id,
-                                        title = pdfDoc.metadata["title"] as? String ?: "PDF Attachment",
-                                        path = pdfDoc.metadata["path"] as? String ?: path,
-                                        webUrl = pdfDoc.metadata[MetadataFields.Additional.WEB_URL] as? String,
+                                        title = pdfDoc.metadata[DocumentIndex.DocumentCommonMetadata.TITLE.fullKey] as? String ?: "PDF Attachment",
+                                        path = pdfDoc.metadata[DocumentIndex.DocumentCommonMetadata.PATH.fullKey] as? String ?: path,
+                                        webUrl = pdfDoc.metadata[DocumentIndex.DocumentCommonMetadata.WEB_URL.fullKey] as? String,
                                         metadata = pdfDoc.metadata,
                                         lastSyncedAt = Instant.now()
                                     )

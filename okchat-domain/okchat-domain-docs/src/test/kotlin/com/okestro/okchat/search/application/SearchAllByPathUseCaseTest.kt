@@ -1,8 +1,8 @@
 package com.okestro.okchat.search.application
 
 import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseIn
+import com.okestro.okchat.search.index.DocumentIndex
 import com.okestro.okchat.search.model.Document
-import com.okestro.okchat.search.support.MetadataFields
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
@@ -17,7 +17,7 @@ class SearchAllByPathUseCaseTest : BehaviorSpec({
 
     val openSearchClient: OpenSearchClient = mockk()
     val indexName = "test-index"
-    val searchAllByPathUseCase = SearchAllByPathUseCase(openSearchClient, indexName)
+    val searchAllByPathUseCase = SearchAllByPathUseCase(openSearchClient, indexName, null)
 
     given("documents exist for a given path") {
         val documentPath = "path/to/document"
@@ -28,18 +28,18 @@ class SearchAllByPathUseCaseTest : BehaviorSpec({
 
         val hit1 = mockk<Hit<Map<String, Any>>>() {
             coEvery { source() } returns mapOf(
-                MetadataFields.ID to docId1,
-                MetadataFields.TITLE to docTitle1,
-                MetadataFields.PATH to documentPath,
-                "knowledgeBaseId" to 0L
+                DocumentIndex.DocumentCommonMetadata.ID.fullKey to docId1,
+                DocumentIndex.DocumentCommonMetadata.TITLE.fullKey to docTitle1,
+                DocumentIndex.DocumentCommonMetadata.PATH.fullKey to documentPath,
+                DocumentIndex.DocumentCommonMetadata.KNOWLEDGE_BASE_ID.fullKey to 0L
             )
         }
         val hit2 = mockk<Hit<Map<String, Any>>>() {
             coEvery { source() } returns mapOf(
-                MetadataFields.ID to docId2,
-                MetadataFields.TITLE to docTitle2,
-                MetadataFields.PATH to documentPath,
-                "knowledgeBaseId" to 0L
+                DocumentIndex.DocumentCommonMetadata.ID.fullKey to docId2,
+                DocumentIndex.DocumentCommonMetadata.TITLE.fullKey to docTitle2,
+                DocumentIndex.DocumentCommonMetadata.PATH.fullKey to documentPath,
+                DocumentIndex.DocumentCommonMetadata.KNOWLEDGE_BASE_ID.fullKey to 0L
             )
         }
 

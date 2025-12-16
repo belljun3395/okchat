@@ -1,6 +1,6 @@
 package com.okestro.okchat.search.config
 
-import com.okestro.okchat.search.support.MetadataFields
+import com.okestro.okchat.search.index.DocumentIndex
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "search.hybrid")
@@ -31,19 +31,19 @@ data class SearchWeightConfig(
 @ConfigurationProperties(prefix = "search.fields")
 data class SearchFieldWeightConfig(
     var keyword: FieldWeights = FieldWeights(
-        queryBy = "${MetadataFields.KEYWORDS},${MetadataFields.TITLE},content",
+        queryBy = "${DocumentIndex.DocumentCommonMetadata.KEYWORDS.fullKey},${DocumentIndex.DocumentCommonMetadata.TITLE.fullKey},content",
         weights = "10,5,1"
     ),
     var title: FieldWeights = FieldWeights(
-        queryBy = "${MetadataFields.TITLE},content,${MetadataFields.KEYWORDS}",
+        queryBy = "${DocumentIndex.DocumentCommonMetadata.TITLE.fullKey},content,${DocumentIndex.DocumentCommonMetadata.KEYWORDS.fullKey}",
         weights = "10,3,1"
     ),
     var content: FieldWeights = FieldWeights(
-        queryBy = "content,${MetadataFields.TITLE},${MetadataFields.KEYWORDS}",
+        queryBy = "content,${DocumentIndex.DocumentCommonMetadata.TITLE.fullKey},${DocumentIndex.DocumentCommonMetadata.KEYWORDS.fullKey}",
         weights = "10,5,3"
     ),
     var path: FieldWeights = FieldWeights(
-        queryBy = MetadataFields.PATH,
+        queryBy = DocumentIndex.DocumentCommonMetadata.PATH.fullKey,
         weights = "10"
     )
 ) {

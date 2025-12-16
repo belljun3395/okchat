@@ -1,9 +1,11 @@
 package com.okestro.okchat.search.config
 
-import com.okestro.okchat.search.support.MetadataFields
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.okestro.okchat.search.index.DocumentIndex
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.opensearch.client.json.jackson.JacksonJsonpMapper
 import org.opensearch.client.opensearch.OpenSearchClient
-import org.opensearch.client.opensearch._types.mapping.Property
+import org.opensearch.client.opensearch._types.mapping.TypeMapping
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.event.ApplicationStartedEvent
 import org.springframework.context.event.EventListener
@@ -103,9 +105,7 @@ class OpenSearchSchemaInitializer(
                                 .numberOfShards("1")
                                 .numberOfReplicas("0")
                         }
-                        .mappings { mappings ->
-                            mappings.properties(buildIndexMappings())
-                        }
+                        .mappings(buildIndexMappings())
                 }
 
                 log.info { "Successfully created index '$indexName' with standard analyzer" }
@@ -123,45 +123,21 @@ class OpenSearchSchemaInitializer(
     }
 
     /**
-     * Build index mappings with proper field types and analyzers.
+     * Build index mappings from DocumentIndex.getMapping().
+     * This ensures consistency between the defined structure and the created index.
      */
-    private fun buildIndexMappings(): Map<String, Property> {
-        return mapOf(
-            // ID field
-            "id" to Property.of { p ->
-                p.keyword { k -> k }
-            },
+    private fun buildIndexMappings(): TypeMapping {
+        val mappingMap = DocumentIndex.getMapping()
 
-            // Content field with standard analyzer
-            "content" to Property.of { p ->
-                p.text { text ->
-                    text.fielddata(true) // Enable for aggregations if needed
-                }
-            },
+        // Convert Map to JSON Input Stream
+        val objectMapper = ObjectMapper()
+        val jsonString = objectMapper.writeValueAsString(mappingMap)
+        val inputStream = java.io.ByteArrayInputStream(jsonString.toByteArray())
 
-            // Embedding vector field for k-NN search
-            "embedding" to Property.of { p ->
-                p.knnVector { vector ->
-                    vector.dimension(embeddingDimension)
-                }
-            },
+        // Use JacksonJsonpMapper to deserialize
+        val mapper = JacksonJsonpMapper(objectMapper)
+        val parser = mapper.jsonProvider().createParser(inputStream)
 
-            // Metadata fields (using dot notation for nested fields)
-            MetadataFields.TITLE to Property.of { p ->
-                p.text { text -> text } // Use default standard analyzer
-            },
-            MetadataFields.KEYWORDS to Property.of { p ->
-                p.text { text -> text } // Use default standard analyzer
-            },
-            MetadataFields.TYPE to Property.of { p ->
-                p.keyword { k -> k }
-            },
-            MetadataFields.SPACE_KEY to Property.of { p ->
-                p.keyword { k -> k }
-            },
-            MetadataFields.PATH to Property.of { p ->
-                p.text { text -> text.analyzer("keyword") }
-            }
-        )
+        return TypeMapping._DESERIALIZER.deserialize(parser, mapper)
     }
 }

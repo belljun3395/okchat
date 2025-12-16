@@ -4,8 +4,8 @@ import com.okestro.okchat.confluence.config.ConfluenceProperties
 import com.okestro.okchat.knowledge.model.value.ContentPath
 import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseIn
 import com.okestro.okchat.search.application.dto.SearchAllByPathUseCaseOut
+import com.okestro.okchat.search.index.DocumentIndex
 import com.okestro.okchat.search.model.Document
-import com.okestro.okchat.search.support.MetadataFields
 import com.okestro.okchat.search.util.extractChunk
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +21,7 @@ private val log = KotlinLogging.logger {}
 @Service
 class SearchAllByPathUseCase(
     private val openSearchClient: OpenSearchClient,
-    @Value("\${spring.ai.vectorstore.opensearch.index-name}") private val indexName: String,
+    @Value("\${spring.ai.vectorstore.opensearch.index-name:${DocumentIndex.INDEX_NAME}}") private val indexName: String,
     private val confluenceProperties: ConfluenceProperties?
 ) {
     suspend fun execute(useCaseIn: SearchAllByPathUseCaseIn): SearchAllByPathUseCaseOut = withContext(Dispatchers.IO + MDCContext()) {
@@ -43,14 +43,14 @@ class SearchAllByPathUseCase(
                                 b.should { sh ->
                                     // Exact match for the path itself
                                     sh.term { t ->
-                                        t.field(MetadataFields.PATH)
+                                        t.field(DocumentIndex.DocumentCommonMetadata.PATH.fullKey)
                                             .value(FieldValue.of(documentPath))
                                     }
                                 }
                                     .should { sh ->
                                         // Prefix match for sub-paths (path starts with documentPath + " > ")
                                         sh.prefix { p ->
-                                            p.field(MetadataFields.PATH)
+                                            p.field(DocumentIndex.DocumentCommonMetadata.PATH.fullKey)
                                                 .value(documentPath + ContentPath.SEPARATOR)
                                         }
                                     }
@@ -61,12 +61,13 @@ class SearchAllByPathUseCase(
                             src.filter { f ->
                                 f.includes(
                                     listOf(
-                                        "id",
-                                        MetadataFields.ID,
-                                        MetadataFields.TITLE,
-                                        MetadataFields.PATH,
-                                        MetadataFields.SPACE_KEY,
-                                        "knowledgeBaseId"
+                                        DocumentIndex.Fields.ID,
+                                        DocumentIndex.DocumentCommonMetadata.ID.fullKey,
+                                        DocumentIndex.DocumentCommonMetadata.TITLE.fullKey,
+                                        DocumentIndex.DocumentCommonMetadata.PATH.fullKey,
+                                        DocumentIndex.DocumentCommonMetadata.PATH.fullKey,
+                                        DocumentIndex.DocumentCommonMetadata.SPACE_KEY.fullKey,
+                                        DocumentIndex.DocumentCommonMetadata.KNOWLEDGE_BASE_ID.fullKey
                                     )
                                 )
                             }
@@ -80,16 +81,16 @@ class SearchAllByPathUseCase(
                     val source = hit.source()
                     if (source != null) {
                         // Get Confluence ID from metadata.id field
-                        val confluenceId = source[MetadataFields.ID]?.toString()
+                        val confluenceId = source[DocumentIndex.DocumentCommonMetadata.ID.fullKey]?.toString()
 
                         if (confluenceId != null) {
                             val baseId = confluenceId.extractChunk()
 
                             if (!documents.containsKey(baseId)) {
-                                val title = source[MetadataFields.TITLE]?.toString() ?: "Untitled"
-                                val path = source[MetadataFields.PATH]?.toString() ?: ""
-                                val spaceKey = source[MetadataFields.SPACE_KEY]?.toString()
-                                val kbId = source["knowledgeBaseId"]?.toString()?.toLongOrNull()
+                                val title = source[DocumentIndex.DocumentCommonMetadata.TITLE.fullKey]?.toString() ?: "Untitled"
+                                val path = source[DocumentIndex.DocumentCommonMetadata.PATH.fullKey]?.toString() ?: ""
+                                val spaceKey = source[DocumentIndex.DocumentCommonMetadata.SPACE_KEY.fullKey]?.toString()
+                                val kbId = source[DocumentIndex.DocumentCommonMetadata.KNOWLEDGE_BASE_ID.fullKey]?.toString()?.toLongOrNull()
 
                                 documents[baseId] = Document(
                                     id = baseId,

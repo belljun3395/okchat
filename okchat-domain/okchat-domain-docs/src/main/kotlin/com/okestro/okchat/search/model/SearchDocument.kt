@@ -3,7 +3,7 @@ package com.okestro.okchat.search.model
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.okestro.okchat.search.support.MetadataFields
+import com.okestro.okchat.search.index.DocumentIndex
 
 /**
  * Type-safe representation of a search document from OpenSearch.
@@ -11,39 +11,17 @@ import com.okestro.okchat.search.support.MetadataFields
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SearchDocument(
-    @JsonProperty("id")
+    @JsonProperty(DocumentIndex.Fields.ID)
     val id: String = "",
 
-    @JsonProperty("content")
+    @JsonProperty(DocumentIndex.Fields.CONTENT)
     val content: String = "",
 
-    @JsonProperty("embedding")
+    @JsonProperty(DocumentIndex.Fields.EMBEDDING)
     val embedding: List<Float>? = null,
 
-    @JsonProperty("metadata")
-    val metadata: DocumentMetadata = DocumentMetadata(),
-
-    // Flattened metadata fields (for backward compatibility with flat structure)
-    @JsonProperty(MetadataFields.TITLE)
-    val metadataTitle: String? = null,
-
-    @JsonProperty(MetadataFields.PATH)
-    val metadataPath: String? = null,
-
-    @JsonProperty(MetadataFields.SPACE_KEY)
-    val metadataSpaceKey: String? = null,
-
-    @JsonProperty(MetadataFields.KEYWORDS)
-    val metadataKeywords: String? = null,
-
-    @JsonProperty(MetadataFields.ID)
-    val metadataId: String? = null,
-
-    @JsonProperty(MetadataFields.TYPE)
-    val metadataType: String? = null,
-
-    @JsonProperty("knowledgeBaseId")
-    val metadataKnowledgeBaseId: Long? = null
+    @JsonProperty(DocumentIndex.Fields.METADATA_OBJECT)
+    val metadata: DocumentMetadata = DocumentMetadata()
 ) {
     /**
      * Get the actual page ID, handling chunked document IDs
@@ -57,52 +35,52 @@ data class SearchDocument(
     }
 
     /**
-     * Get title from either nested metadata or flattened field
+     * Get title from metadata
      */
     fun getTitle(): String {
-        return metadataTitle ?: metadata.title ?: "Untitled"
+        return metadata.title ?: "Untitled"
     }
 
     /**
-     * Get path from either nested metadata or flattened field
+     * Get path from metadata
      */
     fun getPath(): String {
-        return metadataPath ?: metadata.path ?: ""
+        return metadata.path ?: ""
     }
 
     /**
-     * Get space key from either nested metadata or flattened field
+     * Get space key from metadata
      */
     fun getSpaceKey(): String {
-        return metadataSpaceKey ?: metadata.spaceKey ?: ""
+        return metadata.spaceKey ?: ""
     }
 
     /**
-     * Get keywords from either nested metadata or flattened field
+     * Get keywords from metadata
      */
     fun getKeywords(): String {
-        return metadataKeywords ?: metadata.keywords ?: ""
+        return metadata.keywords ?: ""
     }
 
     /**
-     * Get metadata ID from either nested metadata or flattened field
+     * Get metadata ID
      */
     fun resolveMetadataId(): String {
-        return metadataId ?: metadata.id ?: id
+        return metadata.id ?: id
     }
 
     /**
-     * Get document type from either nested metadata or flattened field
+     * Get document type from metadata
      */
     fun getType(): String {
-        return metadataType ?: metadata.type ?: "confluence-page"
+        return metadata.type ?: "confluence-page"
     }
 
     /**
-     * Get knowledgeBaseId from either nested metadata or flattened field
+     * Get knowledgeBaseId from metadata
      */
     fun getKnowledgeBaseId(): Long {
-        return metadataKnowledgeBaseId ?: metadata.getStringValue("knowledgeBaseId").toLongOrNull() ?: 0L
+        return metadata.knowledgeBaseId ?: -1L
     }
 
     /**
@@ -112,7 +90,7 @@ data class SearchDocument(
      */
     fun getPageId(): String {
         // For PDF attachments, use the pageId from metadata (the page it's attached to)
-        val pageId = metadata.getStringValue("pageId")
+        val pageId = metadata.pageId ?: ""
         return pageId.ifBlank {
             getActualPageId()
         }
@@ -132,6 +110,7 @@ data class SearchDocument(
                     @Suppress("UNCHECKED_CAST")
                     source as Map<String, Any?>
                 }
+
                 else -> {
                     // Try to parse as JSON if not a map
                     try {
@@ -144,35 +123,27 @@ data class SearchDocument(
                 }
             }
 
-            // Try to parse as JSON for proper deserialization
+            // Handle flat metadata structure for backward compatibility during deserialization
+            val processedMap = if (map.containsKey(DocumentIndex.Fields.METADATA_OBJECT)) {
+                map
+            } else {
+                // If no metadata object, check for flat fields and build metadata map
+                val flatMetadata = map.filterKeys { it.startsWith("metadata.") }
+                if (flatMetadata.isNotEmpty()) {
+                    val metadata = DocumentMetadata.fromFlatMap(map)
+                    val newMap = map.toMutableMap()
+                    newMap[DocumentIndex.Fields.METADATA_OBJECT] = metadata
+                    newMap
+                } else {
+                    map
+                }
+            }
+
+            val json = objectMapper.writeValueAsString(processedMap)
             return try {
-                val json = objectMapper.writeValueAsString(map)
                 objectMapper.readValue(json, SearchDocument::class.java)
             } catch (_: Exception) {
-                // Fallback to manual construction
-                SearchDocument(
-                    id = map["id"]?.toString() ?: "",
-                    content = map["content"]?.toString() ?: "",
-                    embedding = (map["embedding"] as? List<*>)?.mapNotNull {
-                        when (it) {
-                            is Float -> it
-                            is Double -> it.toFloat()
-                            is Number -> it.toFloat()
-                            else -> null
-                        }
-                    },
-                    metadata = (map["metadata"] as? Map<*, *>)?.let { metaMap ->
-                        @Suppress("UNCHECKED_CAST")
-                        DocumentMetadata.fromMap(metaMap as Map<String, Any?>)
-                    } ?: DocumentMetadata(),
-                    metadataTitle = map[MetadataFields.TITLE]?.toString(),
-                    metadataPath = map[MetadataFields.PATH]?.toString(),
-                    metadataSpaceKey = map[MetadataFields.SPACE_KEY]?.toString(),
-                    metadataKeywords = map[MetadataFields.KEYWORDS]?.toString(),
-                    metadataId = map[MetadataFields.ID]?.toString(),
-                    metadataType = map[MetadataFields.TYPE]?.toString(),
-                    metadataKnowledgeBaseId = (map["knowledgeBaseId"] as? Number)?.toLong()
-                )
+                return SearchDocument() // Return empty document on error
             }
         }
     }

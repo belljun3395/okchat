@@ -18,11 +18,15 @@ class HybridSearchUtilsTest {
                     document = mapOf(
                         "id" to "doc1",
                         "content" to "Content 1",
-                        "metadata.title" to "Title 1",
-                        "metadata.path" to "/path1",
-                        "metadata.spaceKey" to "TEST",
-                        "metadata.keywords" to "keyword1",
-                        "metadata.knowledgeBaseId" to 0L
+                        "metadata" to mapOf(
+                            "title" to "Title 1",
+                            "path" to "/path1",
+                            "spaceKey" to "TEST",
+                            "keywords" to "keyword1",
+                            "knowledgeBaseId" to 1L,
+                            "webUrl" to "http://example.com/doc1",
+                            "downloadUrl" to "http://example.com/download/doc1"
+                        )
                     ),
                     textScore = 0.8,
                     vectorScore = 0.6
@@ -31,11 +35,15 @@ class HybridSearchUtilsTest {
                     document = mapOf(
                         "id" to "doc2",
                         "content" to "Content 2",
-                        "metadata.title" to "Title 2",
-                        "metadata.path" to "/path2",
-                        "metadata.spaceKey" to "TEST",
-                        "metadata.keywords" to "keyword2",
-                        "metadata.knowledgeBaseId" to 0L
+                        "metadata" to mapOf(
+                            "title" to "Title 2",
+                            "path" to "/path2",
+                            "spaceKey" to "TEST",
+                            "keywords" to "keyword2",
+                            "knowledgeBaseId" to 2L,
+                            "webUrl" to "http://example.com/doc2",
+                            "downloadUrl" to "http://example.com/download/doc2"
+                        )
                     ),
                     textScore = 0.5,
                     vectorScore = 0.9
@@ -61,10 +69,15 @@ class HybridSearchUtilsTest {
                     document = mapOf(
                         "id" to "doc1",
                         "content" to "Content 1",
-                        "metadata.title" to "Title 1",
-                        "metadata.path" to "/path1",
-                        "metadata.spaceKey" to "TEST",
-                        "metadata.knowledgeBaseId" to 0L
+                        "metadata" to mapOf(
+                            "title" to "Title 1",
+                            "path" to "/path1",
+                            "spaceKey" to "TEST",
+                            "keywords" to "keyword1",
+                            "knowledgeBaseId" to 1L,
+                            "webUrl" to "http://example.com/doc1",
+                            "downloadUrl" to "http://example.com/download/doc1"
+                        )
                     ),
                     textScore = 0.8,
                     vectorScore = 0.6
@@ -91,10 +104,15 @@ class HybridSearchUtilsTest {
                     document = mapOf(
                         "id" to "page123_chunk_0",
                         "content" to "Content",
-                        "metadata.title" to "Title",
-                        "metadata.path" to "/path",
-                        "metadata.spaceKey" to "TEST",
-                        "metadata.knowledgeBaseId" to 0L
+                        "metadata" to mapOf(
+                            "title" to "Title 1",
+                            "path" to "/path1",
+                            "spaceKey" to "TEST",
+                            "keywords" to "keyword1",
+                            "knowledgeBaseId" to 1L,
+                            "webUrl" to "http://example.com/doc1",
+                            "downloadUrl" to "http://example.com/download/doc1"
+                        )
                     ),
                     textScore = 0.8,
                     vectorScore = 0.6

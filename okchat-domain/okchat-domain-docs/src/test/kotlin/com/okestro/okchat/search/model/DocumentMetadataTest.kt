@@ -1,70 +1,10 @@
 package com.okestro.okchat.search.model
 
-import com.okestro.okchat.search.support.MetadataFields
+import com.okestro.okchat.search.index.DocumentIndex
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 class DocumentMetadataTest {
-
-    @Test
-    fun `fromMap should convert map to DocumentMetadata`() {
-        // Given
-        val map = mapOf(
-            "title" to "Test Title",
-            "path" to "/test/path",
-            "spaceKey" to "TEST",
-            "keywords" to "test, keywords",
-            "id" to "123",
-            "type" to "page"
-        )
-
-        // When
-        val metadata = DocumentMetadata.fromMap(map)
-
-        // Then
-        assertEquals("Test Title", metadata.title)
-        assertEquals("/test/path", metadata.path)
-        assertEquals("TEST", metadata.spaceKey)
-        assertEquals("test, keywords", metadata.keywords)
-        assertEquals("123", metadata.id)
-        assertEquals("page", metadata.type)
-    }
-
-    @Test
-    fun `fromMap should handle missing values`() {
-        // Given
-        val map = mapOf("title" to "Test Title")
-
-        // When
-        val metadata = DocumentMetadata.fromMap(map)
-
-        // Then
-        assertEquals("Test Title", metadata.title)
-        assertNull(metadata.path)
-        assertNull(metadata.spaceKey)
-    }
-
-    @Test
-    fun `fromMap should handle additional properties`() {
-        // Given
-        val map = mapOf(
-            "title" to "Test Title",
-            "customField1" to "value1",
-            "customField2" to 42,
-            "customField3" to true
-        )
-
-        // When
-        val metadata = DocumentMetadata.fromMap(map)
-
-        // Then
-        assertEquals("Test Title", metadata.title)
-        assertEquals(3, metadata.additionalProperties.size)
-        assertEquals("value1", metadata.additionalProperties["customField1"])
-        assertEquals(42, metadata.additionalProperties["customField2"])
-        assertEquals(true, metadata.additionalProperties["customField3"])
-    }
 
     @Test
     fun `toMap should convert DocumentMetadata to map`() {
@@ -112,10 +52,8 @@ class DocumentMetadataTest {
         // Given
         val metadata = DocumentMetadata(
             title = "Test Title",
-            additionalProperties = mapOf(
-                "customField" to "customValue",
-                "isEmpty" to false
-            )
+            knowledgeBaseId = 999L,
+            isEmpty = false
         )
 
         // When
@@ -124,7 +62,7 @@ class DocumentMetadataTest {
         // Then
         assertEquals(3, map.size)
         assertEquals("Test Title", map["title"])
-        assertEquals("customValue", map["customField"])
+        assertEquals(999L, map["knowledgeBaseId"])
         assertEquals(false, map["isEmpty"])
     }
 
@@ -144,12 +82,12 @@ class DocumentMetadataTest {
         val flatMap = metadata.toFlatMap()
 
         // Then
-        assertEquals("Test Title", flatMap[MetadataFields.TITLE])
-        assertEquals("/test/path", flatMap[MetadataFields.PATH])
-        assertEquals("TEST", flatMap[MetadataFields.SPACE_KEY])
-        assertEquals("test, keywords", flatMap[MetadataFields.KEYWORDS])
-        assertEquals("123", flatMap[MetadataFields.ID])
-        assertEquals("confluence-page", flatMap[MetadataFields.TYPE])
+        assertEquals("Test Title", flatMap[DocumentIndex.DocumentCommonMetadata.TITLE.fullKey])
+        assertEquals("/test/path", flatMap[DocumentIndex.DocumentCommonMetadata.PATH.fullKey])
+        assertEquals("TEST", flatMap[DocumentIndex.DocumentCommonMetadata.SPACE_KEY.fullKey])
+        assertEquals("test, keywords", flatMap[DocumentIndex.DocumentCommonMetadata.KEYWORDS.fullKey])
+        assertEquals("123", flatMap[DocumentIndex.DocumentCommonMetadata.ID.fullKey])
+        assertEquals("confluence-page", flatMap[DocumentIndex.DocumentCommonMetadata.TYPE.fullKey])
     }
 
     @Test
@@ -157,52 +95,33 @@ class DocumentMetadataTest {
         // Given
         val metadata = DocumentMetadata(
             title = "Test Title",
-            additionalProperties = mapOf(
-                "customField" to "customValue",
-                "chunkIndex" to 0
-            )
+            webUrl = "http://example.com",
+            chunkIndex = 0
         )
 
         // When
         val flatMap = metadata.toFlatMap()
 
         // Then
-        assertEquals("Test Title", flatMap[MetadataFields.TITLE])
-        assertEquals("customValue", flatMap["metadata.customField"])
+        assertEquals("Test Title", flatMap[DocumentIndex.DocumentCommonMetadata.TITLE.fullKey])
+        assertEquals("http://example.com", flatMap[DocumentIndex.DocumentCommonMetadata.WEB_URL.fullKey])
         assertEquals(0, flatMap["metadata.chunkIndex"])
     }
 
     @Test
-    fun `toFlatMap should filter null values`() {
+    fun `fromFlatMap should create DocumentMetadata from flat structure`() {
         // Given
-        val metadata = DocumentMetadata(
-            title = "Test Title",
-            path = null,
-            spaceKey = null
+        val map = mapOf(
+            DocumentIndex.DocumentCommonMetadata.TITLE.fullKey to "Test Title",
+            DocumentIndex.DocumentCommonMetadata.PATH.fullKey to "/test/path",
+            DocumentIndex.DocumentCommonMetadata.SPACE_KEY.fullKey to "TEST",
+            DocumentIndex.DocumentCommonMetadata.KEYWORDS.fullKey to "test, keywords",
+            DocumentIndex.DocumentCommonMetadata.ID.fullKey to "123",
+            DocumentIndex.DocumentCommonMetadata.KNOWLEDGE_BASE_ID.fullKey to 999
         )
 
         // When
-        val flatMap = metadata.toFlatMap()
-
-        // Then
-        assertEquals(1, flatMap.size)
-        assertEquals("Test Title", flatMap[MetadataFields.TITLE])
-    }
-
-    @Test
-    fun `fromFlatMap should convert flat structure to DocumentMetadata`() {
-        // Given
-        val flatMap = mapOf(
-            MetadataFields.TITLE to "Test Title",
-            MetadataFields.PATH to "/test/path",
-            MetadataFields.SPACE_KEY to "TEST",
-            MetadataFields.KEYWORDS to "test, keywords",
-            MetadataFields.ID to "123",
-            MetadataFields.TYPE to "confluence-page"
-        )
-
-        // When
-        val metadata = DocumentMetadata.fromFlatMap(flatMap)
+        val metadata = DocumentMetadata.fromFlatMap(map)
 
         // Then
         assertEquals("Test Title", metadata.title)
@@ -210,100 +129,24 @@ class DocumentMetadataTest {
         assertEquals("TEST", metadata.spaceKey)
         assertEquals("test, keywords", metadata.keywords)
         assertEquals("123", metadata.id)
-        assertEquals("confluence-page", metadata.type)
+        assertEquals(999L, metadata.knowledgeBaseId)
     }
 
     @Test
-    fun `fromFlatMap should handle additional properties`() {
+    fun `fromFlatMap should handle PDF fields`() {
         // Given
-        val flatMap = mapOf(
-            MetadataFields.TITLE to "Test Title",
-            "metadata.customField" to "customValue",
-            "metadata.chunkIndex" to 0,
-            "metadata.totalChunks" to 5
+        val map = mapOf(
+            DocumentIndex.AttachmentMetadata.PAGE_ID.fullKey to "page-123",
+            DocumentIndex.AttachmentMetadata.CHUNK_INDEX.fullKey to 5,
+            DocumentIndex.AttachmentMetadata.TOTAL_CHUNKS.fullKey to 10
         )
 
         // When
-        val metadata = DocumentMetadata.fromFlatMap(flatMap)
+        val metadata = DocumentMetadata.fromFlatMap(map)
 
         // Then
-        assertEquals("Test Title", metadata.title)
-        assertEquals(3, metadata.additionalProperties.size)
-        assertEquals("customValue", metadata.additionalProperties["customField"])
-        assertEquals(0, metadata.additionalProperties["chunkIndex"])
-        assertEquals(5, metadata.additionalProperties["totalChunks"])
-    }
-
-    @Test
-    fun `fromFlatMap should ignore non-metadata fields`() {
-        // Given
-        val flatMap = mapOf(
-            MetadataFields.TITLE to "Test Title",
-            "id" to "doc123", // non-metadata field
-            "content" to "some content", // non-metadata field
-            "metadata.customField" to "customValue"
-        )
-
-        // When
-        val metadata = DocumentMetadata.fromFlatMap(flatMap)
-
-        // Then
-        assertEquals("Test Title", metadata.title)
-        assertEquals(1, metadata.additionalProperties.size)
-        assertEquals("customValue", metadata.additionalProperties["customField"])
-    }
-
-    @Test
-    fun `round trip conversion should preserve data - nested format`() {
-        // Given
-        val original = DocumentMetadata(
-            title = "Test Title",
-            path = "/test/path",
-            spaceKey = "TEST",
-            keywords = "test, keywords",
-            id = "123",
-            type = "confluence-page",
-            additionalProperties = mapOf("custom" to "value")
-        )
-
-        // When
-        val map = original.toMap()
-        val converted = DocumentMetadata.fromMap(map)
-
-        // Then
-        assertEquals(original.title, converted.title)
-        assertEquals(original.path, converted.path)
-        assertEquals(original.spaceKey, converted.spaceKey)
-        assertEquals(original.keywords, converted.keywords)
-        assertEquals(original.id, converted.id)
-        assertEquals(original.type, converted.type)
-        assertEquals(original.additionalProperties, converted.additionalProperties)
-    }
-
-    @Test
-    fun `round trip conversion should preserve data - flat format`() {
-        // Given
-        val original = DocumentMetadata(
-            title = "Test Title",
-            path = "/test/path",
-            spaceKey = "TEST",
-            keywords = "test, keywords",
-            id = "123",
-            type = "confluence-page",
-            additionalProperties = mapOf("custom" to "value")
-        )
-
-        // When
-        val flatMap = original.toFlatMap()
-        val converted = DocumentMetadata.fromFlatMap(flatMap)
-
-        // Then
-        assertEquals(original.title, converted.title)
-        assertEquals(original.path, converted.path)
-        assertEquals(original.spaceKey, converted.spaceKey)
-        assertEquals(original.keywords, converted.keywords)
-        assertEquals(original.id, converted.id)
-        assertEquals(original.type, converted.type)
-        assertEquals(original.additionalProperties, converted.additionalProperties)
+        assertEquals("page-123", metadata.pageId)
+        assertEquals(5, metadata.chunkIndex)
+        assertEquals(10, metadata.totalChunks)
     }
 }

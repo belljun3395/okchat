@@ -1,6 +1,6 @@
 package com.okestro.okchat.search.model
 
-import com.okestro.okchat.search.support.MetadataFields
+import com.okestro.okchat.search.index.DocumentIndex
 import com.okestro.okchat.search.support.metadata
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -104,10 +104,9 @@ class DocumentMetadataBuilderTest {
 
         // Then
         assertEquals("Test Page", metadata.title)
-        assertEquals(3, metadata.additionalProperties.size)
-        assertEquals(false, metadata.additionalProperties["isEmpty"])
-        assertEquals(0, metadata.additionalProperties["chunkIndex"])
-        assertEquals(5, metadata.additionalProperties["totalChunks"])
+        assertEquals(false, metadata.isEmpty)
+        assertEquals(0, metadata.chunkIndex)
+        assertEquals(5, metadata.totalChunks)
     }
 
     @Test
@@ -115,15 +114,14 @@ class DocumentMetadataBuilderTest {
         // When
         val metadata = metadata {
             title = "Test Page"
-            property("customField", "customValue")
-            property("numericField", 42)
+            property("webUrl", "http://example.com")
+            property("totalPdfPages", 42)
         }
 
         // Then
         assertEquals("Test Page", metadata.title)
-        assertEquals(2, metadata.additionalProperties.size)
-        assertEquals("customValue", metadata.additionalProperties["customField"])
-        assertEquals(42, metadata.additionalProperties["numericField"])
+        assertEquals("http://example.com", metadata.webUrl)
+        assertEquals(42, metadata.totalPdfPages)
     }
 
     @Test
@@ -192,13 +190,13 @@ class DocumentMetadataBuilderTest {
         val flatMap = metadata.toFlatMap()
 
         // Then
-        assertEquals("123", flatMap[MetadataFields.ID])
-        assertEquals("Test Page", flatMap[MetadataFields.TITLE])
-        assertEquals("confluence-page", flatMap[MetadataFields.TYPE])
-        assertEquals("TEST", flatMap[MetadataFields.SPACE_KEY])
-        assertEquals("Space > Page", flatMap[MetadataFields.PATH])
-        assertEquals("key1, key2", flatMap[MetadataFields.KEYWORDS])
-        assertEquals(false, flatMap["metadata.isEmpty"])
+        assertEquals("123", flatMap[DocumentIndex.DocumentCommonMetadata.ID.fullKey])
+        assertEquals("Test Page", flatMap[DocumentIndex.DocumentCommonMetadata.TITLE.fullKey])
+        assertEquals("confluence-page", flatMap[DocumentIndex.DocumentCommonMetadata.TYPE.fullKey])
+        assertEquals("TEST", flatMap[DocumentIndex.DocumentCommonMetadata.SPACE_KEY.fullKey])
+        assertEquals("Space > Page", flatMap[DocumentIndex.DocumentCommonMetadata.PATH.fullKey])
+        assertEquals("key1, key2", flatMap[DocumentIndex.DocumentCommonMetadata.KEYWORDS.fullKey])
+        assertEquals(false, flatMap[DocumentIndex.DocumentCommonMetadata.IS_EMPTY.fullKey])
     }
 
     @Test
@@ -229,13 +227,13 @@ class DocumentMetadataBuilderTest {
         assertEquals("PROJ", metadata.spaceKey)
         assertEquals("Projects > Documentation > API", metadata.path)
         assertEquals("project, documentation, api, rest", metadata.keywords)
-        assertEquals(false, metadata.additionalProperties["isEmpty"])
+        assertEquals(false, metadata.isEmpty)
 
         // Verify flat map conversion
         val flatMap = metadata.toFlatMap()
-        assertNotNull(flatMap[MetadataFields.ID])
-        assertNotNull(flatMap[MetadataFields.TITLE])
-        assertNotNull(flatMap["metadata.isEmpty"])
+        assertNotNull(flatMap[DocumentIndex.DocumentCommonMetadata.ID.fullKey])
+        assertNotNull(flatMap[DocumentIndex.DocumentCommonMetadata.TITLE.fullKey])
+        assertNotNull(flatMap[DocumentIndex.DocumentCommonMetadata.IS_EMPTY.fullKey])
     }
 
     @Test
@@ -257,8 +255,8 @@ class DocumentMetadataBuilderTest {
         // Then
         assertEquals("page123", metadata.id)
         assertEquals("keyword1, keyword2", metadata.keywords)
-        assertEquals(2, metadata.additionalProperties["chunkIndex"])
-        assertEquals(5, metadata.additionalProperties["totalChunks"])
+        assertEquals(2, metadata.chunkIndex)
+        assertEquals(5, metadata.totalChunks)
     }
 
     @Test
@@ -294,24 +292,6 @@ class DocumentMetadataBuilderTest {
         assertEquals("Test Page", metadata.title)
         assertNull(metadata.id)
         assertNull(metadata.path)
-    }
-
-    @Test
-    fun `DSL should support dynamic property values`() {
-        // Given
-        val dynamicValue = calculateSomeValue()
-        val dynamicBoolean = checkSomeCondition()
-
-        // When
-        val metadata = metadata {
-            title = "Test Page"
-            "computedValue" to dynamicValue
-            "conditionResult" to dynamicBoolean
-        }
-
-        // Then
-        assertEquals(42, metadata.additionalProperties["computedValue"])
-        assertEquals(true, metadata.additionalProperties["conditionResult"])
     }
 
     // Helper methods for testing
